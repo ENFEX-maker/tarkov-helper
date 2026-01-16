@@ -9,7 +9,6 @@
         body { background-color: #0f0f0f; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .container { max-width: 1000px; margin-top: 40px; }
         
-        /* Quest Item Styling */
         .quest-item {
             background-color: #1a1a1a;
             border: 1px solid #333;
@@ -29,14 +28,12 @@
         .form-check-input { transform: scale(1.3); margin-right: 15px; cursor: pointer; }
         .trader-badge { font-size: 0.75em; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-right: 10px; }
         
-        /* Result Box Styling */
         #planning-result { display: none; background: #161616; border: 1px solid #333; padding: 25px; border-radius: 12px; margin-top: 30px; margin-bottom: 50px;}
         
-        /* Icons styling */
         .key-icon { width: 40px; height: 40px; object-fit: contain; margin-right: 8px; }
         .item-badge { background-color: #222; border: 1px solid #444; padding: 5px 10px; border-radius: 6px; display: inline-flex; align-items: center; margin: 5px; }
+        .item-badge.special { border-color: #d35400; background-color: #2e1e1e; }
         
-        /* Map Container */
         .map-container {
             width: 100%;
             height: 600px;
@@ -62,7 +59,7 @@
 
 <div class="container pb-5">
     <div class="mb-5">
-        <h1 class="fw-bold text-warning mb-0">Tarkov Raid Planner <span class="badge bg-success fs-6 align-middle">v1.3</span></h1>
+        <h1 class="fw-bold text-warning mb-0">Tarkov Raid Planner <span class="badge bg-success fs-6 align-middle">v1.4</span></h1>
         <p class="text-secondary m-0">Select your active tasks and optimize your route.</p>
     </div>
 
@@ -110,10 +107,9 @@
         
         <h4 class="text-warning mb-3">📍 Tactical Map</h4>
         <div class="map-container">
-            <img id="map-display" src="" class="map-image" alt="Map Preview" referrerpolicy="no-referrer">
-            
+            <img id="map-display" src="" class="map-image" alt="Map Preview">
             <div class="position-absolute bottom-0 end-0 p-2 bg-black bg-opacity-75 text-white small">
-                Source: Tarkov Wiki
+                Source: Tarkov.dev Assets
             </div>
         </div>
 
@@ -138,18 +134,18 @@
     const API_URL = "/api";
     let loadedQuests = [];
 
-    // Map Images - Wiki Re3mr Versions (High Quality)
+    // Official Tarkov.dev Assets (Direct CDN, no hotlink issues)
     const MAP_IMAGES = {
-        "Customs": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/c/c8/Customs_2D_Map_Re3mr.jpg",
-        "Factory": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/4/45/Factory_3D_Map_Re3mr.jpg",
-        "Woods": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/0/05/Woods_2D_Map_Re3mr.jpg",
-        "Interchange": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/0/03/InterchangeMap_Updated_4.24.20.png",
-        "Shoreline": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/d/d4/Shoreline_2D_Map_Re3mr.jpg",
-        "Reserve": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/9/9f/Reserve_Map_Re3mr.jpg",
-        "Lighthouse": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/a/a6/Lighthouse_Map_Re3mr.jpg",
-        "Streets of Tarkov": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/e/e4/Streets_Map_Re3mr.jpg",
-        "Ground Zero": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/3/3d/GroundZero_Map_Re3mr.jpg", 
-        "Labs": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/0/0b/The_Lab_Map_Re3mr.jpg"
+        "Customs": "https://assets.tarkov.dev/maps/customs-2d.jpg",
+        "Factory": "https://assets.tarkov.dev/maps/factory-3d.jpg",
+        "Woods": "https://assets.tarkov.dev/maps/woods-2d.jpg",
+        "Interchange": "https://assets.tarkov.dev/maps/interchange-2d.jpg",
+        "Shoreline": "https://assets.tarkov.dev/maps/shoreline-2d.jpg",
+        "Reserve": "https://assets.tarkov.dev/maps/reserve-2d.jpg",
+        "Lighthouse": "https://assets.tarkov.dev/maps/lighthouse-2d-expansion.jpg",
+        "Streets of Tarkov": "https://assets.tarkov.dev/maps/streets-2d.jpg",
+        "Ground Zero": "https://assets.tarkov.dev/maps/ground-zero-2d.jpg",
+        "Labs": "https://assets.tarkov.dev/maps/labs-2d.jpg"
     };
 
     async function loadQuests() {
@@ -161,7 +157,6 @@
         const loader = document.getElementById('loading');
         const resultBox = document.getElementById('planning-result');
 
-        // Reset UI
         errorBox.classList.add('d-none');
         resultBox.style.display = 'none';
         listContainer.innerHTML = '';
@@ -170,7 +165,7 @@
         
         try {
             const response = await fetch(`${API_URL}/quests/${map}`, { method: 'GET' });
-            if (!response.ok) throw new Error(`Server Error: ${response.status} - Check Backend Logs`);
+            if (!response.ok) throw new Error(`Server Error: ${response.status}`);
             
             const quests = await response.json();
             loadedQuests = quests;
@@ -210,7 +205,6 @@
 
     function toggleSelection(index, divElement, event) {
         const checkbox = document.getElementById(`q-${index}`);
-        // Toggle only if clicked outside checkbox/link
         if (event.target !== checkbox && event.target.tagName !== 'A') {
             checkbox.checked = !checkbox.checked;
         }
@@ -226,14 +220,14 @@
         const mapDisplay = document.getElementById('map-display');
         const mapName = document.getElementById('mapSelect').value;
 
-        // 1. Load Map (With referrer policy hack via HTML attribute)
+        // 1. Load Map
         if (MAP_IMAGES[mapName]) {
             mapDisplay.src = MAP_IMAGES[mapName];
         } else {
             mapDisplay.src = ""; 
         }
 
-        // 2. Gather Selected Data
+        // 2. Gather Data
         const selectedIndices = [];
         loadedQuests.forEach((_, index) => {
             if (document.getElementById(`q-${index}`).checked) selectedIndices.push(index);
@@ -251,7 +245,7 @@
         selectedIndices.forEach(index => {
             const quest = loadedQuests[index];
             
-            // Collect Keys
+            // Keys
             if (quest.neededKeys) {
                 quest.neededKeys.forEach(kGroup => {
                     if(kGroup.keys && kGroup.keys.length > 0) {
@@ -261,7 +255,19 @@
                 });
             }
 
-            // Collect Objectives
+            // NEW: Special Quest Items (Poster, Folder, etc.)
+            if (quest.questItems) {
+                quest.questItems.forEach(qItem => {
+                    neededItems.push({
+                        name: qItem.item.name,
+                        count: 1, // Usually 1 for special items
+                        icon: qItem.item.iconLink,
+                        isSpecial: true
+                    });
+                });
+            }
+
+            // Regular Objectives & Loot
             if (quest.objectives) {
                 quest.objectives.forEach(obj => {
                     objectives.push({ quest: quest.name, desc: obj.description });
@@ -269,7 +275,8 @@
                         neededItems.push({ 
                             name: obj.item.name, 
                             count: obj.count, 
-                            icon: obj.item.iconLink 
+                            icon: obj.item.iconLink,
+                            isSpecial: false
                         });
                     }
                 });
@@ -286,12 +293,12 @@
               `).join('') 
             : '<span class="text-success p-2">No special keys required.</span>';
 
-        // 4. Render Items
+        // 4. Render Items (Including Special Items)
         itemsContainer.innerHTML = neededItems.length > 0 
             ? neededItems.map(i => `
-                <div class="item-badge">
+                <div class="item-badge ${i.isSpecial ? 'special' : ''}">
                     ${i.icon ? `<img src="${i.icon}" class="key-icon">` : '📦'}
-                    <span>${i.count}x ${i.name}</span>
+                    <span>${i.isSpecial ? '' : i.count + 'x'} ${i.name}</span>
                 </div>
               `).join('') 
             : '<span class="text-muted p-2">-</span>';
