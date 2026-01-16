@@ -54,6 +54,14 @@
             max-width: 100%;
             max-height: 100%;
             object-fit: contain; 
+            display: block;
+        }
+        /* Fallback Text falls Bild fehlt */
+        .map-fallback-text {
+            position: absolute;
+            color: #555;
+            font-size: 1.2rem;
+            display: none;
         }
     </style>
 </head>
@@ -62,7 +70,7 @@
 <div class="container pb-5">
     <div class="d-flex justify-content-between align-items-center mb-5">
         <div>
-            <h1 class="fw-bold text-warning mb-0">Tarkov Raid Planner <span class="badge bg-success fs-6 align-middle">v1.1</span></h1>
+            <h1 class="fw-bold text-warning mb-0">Tarkov Raid Planner <span class="badge bg-success fs-6 align-middle">v1.2 (Stable)</span></h1>
             <p class="text-secondary m-0">Select your active tasks and optimize your route.</p>
         </div>
         <div id="status-badge" class="badge bg-dark text-muted border border-secondary">System Ready</div>
@@ -112,7 +120,9 @@
         
         <h4 class="text-warning mb-3">📍 Tactical Map</h4>
         <div class="map-container">
-            <img id="map-display" src="" class="map-image" alt="Map Preview" onerror="this.src='https://via.placeholder.com/800x600?text=Map+Source+Unavailable'">
+            <img id="map-display" src="" class="map-image" alt="Map Preview" onerror="this.onerror=null; this.style.display='none'; document.getElementById('map-fallback').style.display='block';">
+            <div id="map-fallback" class="map-fallback-text">Map image unavailable</div>
+            
             <div class="position-absolute bottom-0 end-0 p-2 bg-black bg-opacity-75 text-white small">
                 Source: TarkovTracker / Wiki
             </div>
@@ -139,7 +149,7 @@
     const API_URL = "/api";
     let loadedQuests = [];
 
-    // Map Images - Using GitHub Raw for best compatibility
+    // Map Images - Using multiple sources for stability
     const MAP_IMAGES = {
         "Customs": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/customs-2d.jpg",
         "Factory": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/factory-3d.jpg",
@@ -211,7 +221,6 @@
 
     function toggleSelection(index, divElement, event) {
         const checkbox = document.getElementById(`q-${index}`);
-        // Toggle only if clicked outside checkbox/link
         if (event.target !== checkbox && event.target.tagName !== 'A') {
             checkbox.checked = !checkbox.checked;
         }
@@ -225,13 +234,20 @@
         const itemsContainer = document.getElementById('required-items');
         const stepsContainer = document.getElementById('mission-steps');
         const mapDisplay = document.getElementById('map-display');
+        const mapFallback = document.getElementById('map-fallback');
         const mapName = document.getElementById('mapSelect').value;
+
+        // Reset map display state
+        mapDisplay.style.display = 'block';
+        mapFallback.style.display = 'none';
 
         // 1. Load Map
         if (MAP_IMAGES[mapName]) {
             mapDisplay.src = MAP_IMAGES[mapName];
         } else {
-            mapDisplay.src = ""; // Clear if no map found
+            // No map URL defined
+            mapDisplay.style.display = 'none';
+            mapFallback.style.display = 'block';
         }
 
         // 2. Gather Selected Data
