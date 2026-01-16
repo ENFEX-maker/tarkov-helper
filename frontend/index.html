@@ -6,155 +6,192 @@
     <title>Tarkov Raid Planner</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background-color: #121212; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .container { max-width: 900px; margin-top: 50px; }
+        body { background-color: #0f0f0f; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .container { max-width: 1000px; margin-top: 40px; }
         
-        /* Karten-Stil für Quests */
+        /* Quest Auswahl */
         .quest-item {
-            background-color: #1e1e1e;
+            background-color: #1a1a1a;
             border: 1px solid #333;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            padding: 12px;
             transition: all 0.2s;
             cursor: pointer;
         }
         .quest-item:hover { background-color: #252525; border-color: #555; }
-        
-        /* Wenn ausgewählt */
         .quest-item.selected {
             background-color: #2c3e50;
-            border-color: #f1c40f;
-            box-shadow: 0 0 10px rgba(241, 196, 15, 0.2);
+            border-color: #f39c12;
+            box-shadow: 0 0 8px rgba(243, 156, 18, 0.3);
         }
 
         .form-check-input { transform: scale(1.3); margin-right: 15px; cursor: pointer; }
-        .trader-badge { font-size: 0.8em; text-transform: uppercase; letter-spacing: 1px; color: #aaa; }
+        .trader-badge { font-size: 0.75em; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-right: 10px; }
         
-        /* Planungs-Box */
-        #planning-result { display: none; background: #222; border: 1px solid #444; padding: 20px; border-radius: 10px; margin-top: 30px; }
-        .key-tag { background-color: #c0392b; color: white; padding: 3px 8px; border-radius: 4px; font-size: 0.9em; margin-right: 5px; }
-        .item-tag { background-color: #2980b9; color: white; padding: 3px 8px; border-radius: 4px; font-size: 0.9em; margin-right: 5px; }
+        /* Ergebnis Box */
+        #planning-result { display: none; background: #161616; border: 1px solid #333; padding: 25px; border-radius: 12px; margin-top: 30px; margin-bottom: 50px;}
+        
+        /* Bilder und Icons */
+        .key-icon { width: 40px; height: 40px; object-fit: contain; margin-right: 8px; }
+        .item-badge { background-color: #222; border: 1px solid #444; padding: 5px 10px; border-radius: 6px; display: inline-flex; align-items: center; margin: 5px; }
+        
+        /* Map Container */
+        .map-container {
+            width: 100%;
+            height: 400px;
+            background-color: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+            margin-bottom: 20px;
+            border: 2px solid #333;
+        }
+        .map-image {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; 
+        }
     </style>
 </head>
 <body>
 
 <div class="container pb-5">
-    <div class="text-center mb-5">
-        <h1 class="display-4 fw-bold text-warning">Tarkov Raid Planner</h1>
-        <p class="lead text-light">Wähle deine aktiven Quests und plane den perfekten Run.</p>
+    <div class="d-flex justify-content-between align-items-center mb-5">
+        <div>
+            <h1 class="fw-bold text-warning mb-0">Tarkov Raid Planner <span class="badge bg-secondary fs-6 align-middle">Beta</span></h1>
+            <p class="text-secondary m-0">Plan & Execute.</p>
+        </div>
+        <div id="status-badge" class="badge bg-dark text-muted border border-secondary">Ready</div>
     </div>
 
-    <div class="row g-2 mb-4 justify-content-center">
-        <div class="col-md-4">
-            <select id="mapSelect" class="form-select form-select-lg bg-dark text-light border-secondary">
-                <option value="Customs">Customs</option>
-                <option value="Factory">Factory</option>
-                <option value="Woods">Woods</option>
-                <option value="Interchange">Interchange</option>
-                <option value="Shoreline">Shoreline</option>
-                <option value="Reserve">Reserve</option>
-                <option value="Lighthouse">Lighthouse</option>
-                <option value="Streets of Tarkov">Streets</option>
-                <option value="Ground Zero">Ground Zero</option>
-            </select>
-        </div>
-        <div class="col-md-3">
-            <button onclick="loadQuests()" class="btn btn-warning btn-lg w-100 fw-bold">1. Quests laden</button>
+    <div class="card bg-dark border-secondary mb-4">
+        <div class="card-body p-4">
+            <div class="row g-3">
+                <div class="col-md-5">
+                    <label class="text-muted small mb-1">Einsatzgebiet</label>
+                    <select id="mapSelect" class="form-select bg-black text-light border-secondary">
+                        <option value="Customs">Customs</option>
+                        <option value="Factory">Factory</option>
+                        <option value="Woods">Woods</option>
+                        <option value="Interchange">Interchange</option>
+                        <option value="Shoreline">Shoreline</option>
+                        <option value="Reserve">Reserve</option>
+                        <option value="Lighthouse">Lighthouse</option>
+                        <option value="Streets of Tarkov">Streets of Tarkov</option>
+                        <option value="Ground Zero">Ground Zero</option>
+                        <option value="Labs">The Lab</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button onclick="loadQuests()" class="btn btn-warning w-100 fw-bold">Daten abrufen</button>
+                </div>
+            </div>
         </div>
     </div>
-
-    <div id="error-box" class="alert alert-danger d-none"></div>
 
     <div id="loading" class="text-center d-none my-5">
-        <div class="spinner-border text-warning" role="status"></div>
-        <p class="mt-2">Hole Daten aus Tarkov...</p>
+        <div class="spinner-grow text-warning" role="status"></div>
+        <p class="mt-2 text-muted">Kommuniziere mit Tarkov Intelligence Center...</p>
     </div>
+    
+    <div id="error-box" class="alert alert-danger d-none"></div>
 
     <div id="quest-selection-area" class="d-none">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h4 class="text-light">Verfügbare Quests <small class="text-muted">(Klick zum Auswählen)</small></h4>
-            <button onclick="planRaid()" class="btn btn-success btn-lg px-5 fw-bold">2. RAID PLANEN 🚀</button>
+        <div class="d-flex justify-content-between align-items-end mb-3">
+            <h5 class="text-light m-0">Verfügbare Operationen</h5>
+            <button onclick="planRaid()" class="btn btn-success fw-bold px-4">RAID PLANEN 🚀</button>
         </div>
-        <div id="quest-list">
-            </div>
+        <div id="quest-list"></div>
     </div>
 
     <div id="planning-result">
-        <h2 class="text-warning border-bottom border-secondary pb-2 mb-4">Dein Schlachtplan</h2>
         
-        <div class="row">
-            <div class="col-md-6 mb-4">
-                <h5 class="text-danger fw-bold">🔑 Benötigte Schlüssel</h5>
-                <div id="required-keys" class="d-flex flex-wrap gap-2 text-muted">Keine Schlüssel benötigt.</div>
-            </div>
-            <div class="col-md-6 mb-4">
-                <h5 class="text-info fw-bold">🎒 Items (Finden/Platzieren)</h5>
-                <div id="required-items" class="d-flex flex-wrap gap-2 text-muted">Keine Items.</div>
+        <h4 class="text-warning mb-3">📍 Taktische Karte</h4>
+        <div class="map-container">
+            <img id="map-display" src="" class="map-image" alt="Map Preview">
+            <div class="position-absolute bottom-0 end-0 p-2 bg-black bg-opacity-75 text-white small">
+                Quelle: Tarkov.dev / Wiki
             </div>
         </div>
 
-        <h5 class="text-light fw-bold mt-2">🎯 Missionsziele (Übersicht)</h5>
-        <ul id="mission-steps" class="list-group list-group-flush bg-transparent">
-            </ul>
-    </div>
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <h5 class="text-danger border-bottom border-danger pb-2 mb-3">🔑 Required Keys</h5>
+                <div id="required-keys" class="d-flex flex-wrap"></div>
+            </div>
+            
+            <div class="col-md-6">
+                <h5 class="text-info border-bottom border-info pb-2 mb-3">🎒 Loot / Place Items</h5>
+                <div id="required-items" class="d-flex flex-wrap"></div>
+            </div>
+        </div>
 
+        <h5 class="text-light border-bottom border-secondary pb-2 mb-3 mt-4">📝 Missions-Log</h5>
+        <ul id="mission-steps" class="list-group list-group-flush"></ul>
+    </div>
 </div>
 
 <script>
     const API_URL = "/api";
-    let loadedQuests = []; // Hier speichern wir alle Daten zwischen
+    let loadedQuests = [];
+
+    // Map Bilder URLs
+    const MAP_IMAGES = {
+        "Customs": "https://assets.tarkov.dev/maps/customs-2d.jpg",
+        "Factory": "https://assets.tarkov.dev/maps/factory-3d.jpg",
+        "Woods": "https://assets.tarkov.dev/maps/woods-2d.jpg",
+        "Interchange": "https://assets.tarkov.dev/maps/interchange-2d.jpg",
+        "Shoreline": "https://assets.tarkov.dev/maps/shoreline-2d.jpg",
+        "Reserve": "https://assets.tarkov.dev/maps/reserve-2d.jpg",
+        "Lighthouse": "https://assets.tarkov.dev/maps/lighthouse-2d-expansion.jpg",
+        "Streets of Tarkov": "https://assets.tarkov.dev/maps/streets-2d.jpg",
+        "Ground Zero": "https://assets.tarkov.dev/maps/ground-zero-2d.jpg",
+        "Labs": "https://assets.tarkov.dev/maps/labs-2d.jpg"
+    };
 
     async function loadQuests() {
-        const map = document.getElementById('mapSelect').value;
+        const mapSelect = document.getElementById('mapSelect');
+        const map = mapSelect.value;
         const listContainer = document.getElementById('quest-list');
         const selectionArea = document.getElementById('quest-selection-area');
         const errorBox = document.getElementById('error-box');
         const loader = document.getElementById('loading');
         const resultBox = document.getElementById('planning-result');
 
-        // Reset
+        // UI Reset
         errorBox.classList.add('d-none');
         resultBox.style.display = 'none';
         listContainer.innerHTML = '';
         selectionArea.classList.add('d-none');
         loader.classList.remove('d-none');
-        loadedQuests = [];
-
+        
         try {
-            const response = await fetch(`${API_URL}/quests/${map}`, {
-                method: 'GET',
-                credentials: 'include'
-            });
-
-            if (!response.ok) throw new Error(`Server Fehler: ${response.status}`);
+            const response = await fetch(`${API_URL}/quests/${map}`, { method: 'GET' });
+            if (!response.ok) throw new Error(`Server Error: ${response.status}`);
             
             const quests = await response.json();
-            
-            if (!Array.isArray(quests)) {
-                throw new Error("Ungültiges Datenformat empfangen.");
-            }
-
-            loadedQuests = quests; // Daten speichern!
+            loadedQuests = quests;
 
             if (quests.length === 0) {
-                listContainer.innerHTML = '<div class="text-center text-muted p-5">Keine Quests für diese Map gefunden.</div>';
+                listContainer.innerHTML = '<div class="text-center text-muted p-4">Keine aktiven Quests auf dieser Map gefunden.</div>';
             } else {
-                // Liste bauen
                 quests.forEach((quest, index) => {
                     const div = document.createElement('div');
                     div.className = 'quest-item d-flex align-items-center';
-                    // Klick-Event für die ganze Box
                     div.onclick = (e) => toggleSelection(index, div, e);
-
                     div.innerHTML = `
-                        <input class="form-check-input" type="checkbox" id="q-${index}" onchange="event.stopPropagation(); toggleSelection(${index}, this.parentElement, event)">
+                        <input class="form-check-input" type="checkbox" id="q-${index}">
                         <div class="ms-3 flex-grow-1">
-                            <h5 class="m-0 fw-bold">${quest.name}</h5>
-                            <span class="trader-badge">${quest.trader.name}</span>
-                            ${quest.minPlayerLevel ? `<span class="badge bg-secondary ms-2">Lvl ${quest.minPlayerLevel}</span>` : ''}
+                            <div class="d-flex align-items-center">
+                                <span class="fw-bold text-light">${quest.name}</span>
+                                ${quest.wikiLink ? `<a href="${quest.wikiLink}" target="_blank" class="ms-2 text-muted small" onclick="event.stopPropagation()">[Wiki]</a>` : ''}
+                            </div>
+                            <div class="mt-1">
+                                <span class="trader-badge">👤 ${quest.trader.name}</span>
+                                <span class="text-secondary small">Lvl ${quest.minPlayerLevel}</span>
+                            </div>
                         </div>
-                        <a href="${quest.wikiLink}" target="_blank" class="btn btn-sm btn-outline-secondary" onclick="event.stopPropagation()">Wiki</a>
                     `;
                     listContainer.appendChild(div);
                 });
@@ -162,7 +199,7 @@
             selectionArea.classList.remove('d-none');
 
         } catch (error) {
-            errorBox.textContent = "Fehler: " + error.message;
+            errorBox.textContent = error.message;
             errorBox.classList.remove('d-none');
         } finally {
             loader.classList.add('d-none');
@@ -170,20 +207,12 @@
     }
 
     function toggleSelection(index, divElement, event) {
-        // Logik damit man auf die Box klicken kann, nicht nur Checkbox
         const checkbox = document.getElementById(`q-${index}`);
-        
-        // Wenn Klick nicht direkt auf Checkbox war, Status ändern
-        if (event.target !== checkbox) {
+        if (event.target !== checkbox && event.target.tagName !== 'A') {
             checkbox.checked = !checkbox.checked;
         }
-
-        // Visuelles Feedback
-        if (checkbox.checked) {
-            divElement.classList.add('selected');
-        } else {
-            divElement.classList.remove('selected');
-        }
+        if (checkbox.checked) divElement.classList.add('selected');
+        else divElement.classList.remove('selected');
     }
 
     function planRaid() {
@@ -191,77 +220,83 @@
         const keysContainer = document.getElementById('required-keys');
         const itemsContainer = document.getElementById('required-items');
         const stepsContainer = document.getElementById('mission-steps');
-        
-        // 1. Welche Quests sind ausgewählt?
+        const mapDisplay = document.getElementById('map-display');
+        const mapName = document.getElementById('mapSelect').value;
+
+        // 1. Map Bild laden
+        mapDisplay.src = MAP_IMAGES[mapName] || "";
+
+        // 2. Daten sammeln
         const selectedIndices = [];
         loadedQuests.forEach((_, index) => {
-            if (document.getElementById(`q-${index}`).checked) {
-                selectedIndices.push(index);
-            }
+            if (document.getElementById(`q-${index}`).checked) selectedIndices.push(index);
         });
 
         if (selectedIndices.length === 0) {
-            alert("Bitte wähle mindestens eine Quest aus!");
+            alert("Wähle mindestens eine Quest aus!");
             return;
         }
 
-        // 2. Daten sammeln
-        const neededKeys = new Set();
+        const neededKeys = new Map(); 
         const neededItems = [];
         const objectives = [];
 
         selectedIndices.forEach(index => {
             const quest = loadedQuests[index];
             
-            // Keys sammeln
+            // Keys
             if (quest.neededKeys) {
                 quest.neededKeys.forEach(kGroup => {
-                    // Nimm den ersten Key aus der Gruppe (meist gibt es Alternativen, wir zeigen den ersten)
                     if(kGroup.keys && kGroup.keys.length > 0) {
-                        neededKeys.add(kGroup.keys[0].name);
+                        const k = kGroup.keys[0];
+                        neededKeys.set(k.name, k); 
                     }
                 });
             }
 
-            // Objectives verarbeiten
+            // Items & Objectives
             if (quest.objectives) {
                 quest.objectives.forEach(obj => {
-                    objectives.push({
-                        quest: quest.name,
-                        desc: obj.description,
-                        type: obj.type
-                    });
-                    
-                    // Items sammeln (Found in Raid etc)
+                    objectives.push({ quest: quest.name, desc: obj.description });
                     if (obj.type === 'GiveItem' && obj.item) {
-                        neededItems.push(`${obj.count}x ${obj.item.name}`);
+                        neededItems.push({ 
+                            name: obj.item.name, 
+                            count: obj.count, 
+                            icon: obj.item.iconLink 
+                        });
                     }
                 });
             }
         });
 
-        // 3. Ergebnis anzeigen
-        
-        // Keys
+        // 3. Render Keys
         keysContainer.innerHTML = neededKeys.size > 0 
-            ? Array.from(neededKeys).map(k => `<span class="key-tag">🔑 ${k}</span>`).join('') 
-            : '<span class="text-success">Keine Schlüssel notwendig! Freie Fahrt.</span>';
+            ? Array.from(neededKeys.values()).map(k => `
+                <div class="item-badge" title="${k.name}">
+                    ${k.iconLink ? `<img src="${k.iconLink}" class="key-icon">` : '🔑'}
+                    <span>${k.shortName || k.name}</span>
+                </div>
+              `).join('') 
+            : '<span class="text-success p-2">Keine Schlüssel benötigt.</span>';
 
-        // Items
+        // 4. Render Items
         itemsContainer.innerHTML = neededItems.length > 0 
-            ? neededItems.map(i => `<span class="item-tag">📦 ${i}</span>`).join('') 
-            : '<span class="text-muted">-</span>';
+            ? neededItems.map(i => `
+                <div class="item-badge">
+                    ${i.icon ? `<img src="${i.icon}" class="key-icon">` : '📦'}
+                    <span>${i.count}x ${i.name}</span>
+                </div>
+              `).join('') 
+            : '<span class="text-muted p-2">-</span>';
 
-        // Missionsziele auflisten
+        // 5. Render Mission Log
         stepsContainer.innerHTML = objectives.map(obj => `
             <li class="list-group-item bg-transparent text-light border-secondary">
-                <strong class="text-warning">${obj.quest}:</strong> ${obj.desc}
+                <span class="text-warning fw-bold">${obj.quest}:</span> ${obj.desc}
             </li>
         `).join('');
 
-        // Anzeigen
         resultBox.style.display = 'block';
-        // Automatisch nach unten scrollen
         resultBox.scrollIntoView({ behavior: 'smooth' });
     }
 </script>

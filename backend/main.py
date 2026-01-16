@@ -15,7 +15,7 @@ app.add_middleware(
 
 TARKOV_API_URL = "https://api.tarkov.dev/graphql"
 
-# Mapping ist immer noch gut, um später saubere Namen zu haben
+# Mapping für saubere Map-Namen
 MAP_MAPPING = {
     "Customs": "Customs",
     "Factory": "Factory",
@@ -31,7 +31,7 @@ MAP_MAPPING = {
 
 def run_query(query: str):
     headers = {"Content-Type": "application/json"}
-    # Timeout auf 30s lassen, sicher ist sicher
+    # Timeout auf 30s für Stabilität
     response = requests.post(TARKOV_API_URL, json={'query': query}, headers=headers, timeout=30)
     if response.status_code == 200:
         return response.json()
@@ -39,6 +39,8 @@ def run_query(query: str):
         raise Exception(f"API Request failed with code {response.status_code}")
 
 def get_all_quests_query():
+    # Wir laden ALLE Quests und filtern später.
+    # Hier sind jetzt auch die Bilder (iconLink) dabei.
     return """
     {
         tasks {
@@ -51,13 +53,13 @@ def get_all_quests_query():
             }
             trader {
                 name
-                imageLink # Trader Bild
+                imageLink
             }
             neededKeys {
                 keys {
                     name
                     shortName
-                    iconLink # <--- WICHTIG: Schlüssel Bild
+                    iconLink
                 }
             }
             objectives {
@@ -66,7 +68,7 @@ def get_all_quests_query():
                 ... on TaskObjectiveItem {
                     item {
                         name
-                        iconLink # <--- WICHTIG: Item Bild
+                        iconLink
                     }
                     count
                     foundInRaid
@@ -79,7 +81,7 @@ def get_all_quests_query():
 @app.get("/quests/{map_name}")
 def get_quests(map_name: str):
     try:
-        # 1. Wir holen ALLE Quests (egal welche Map)
+        # 1. Wir holen ALLE Quests
         query = get_all_quests_query()
         result = run_query(query)
         
@@ -88,8 +90,8 @@ def get_quests(map_name: str):
             print(f"API ERROR: {json.dumps(result['errors'], indent=2)}")
             raise HTTPException(status_code=500, detail=f"Tarkov API Error: {result['errors'][0]['message']}")
 
-        # 2. Wir filtern JETZT hier in Python (viel robuster!)
-        target_map = MAP_MAPPING.get(map_name, map_name) # z.B. "Streets"
+        # 2. Wir filtern in Python
+        target_map = MAP_MAPPING.get(map_name, map_name)
         
         filtered_tasks = []
         all_tasks = result.get("data", {}).get("tasks", [])
@@ -97,7 +99,7 @@ def get_quests(map_name: str):
         print(f"DEBUG: Habe {len(all_tasks)} Quests geladen. Suche nach Map: '{target_map}'")
 
         for task in all_tasks:
-            # Manchmal ist task['map'] null (für Quests die überall gehen), die ignorieren wir hier
+            # Sicherheitscheck: Hat die Quest überhaupt eine Map?
             if task.get('map') and task['map'].get('name') == target_map:
                 filtered_tasks.append(task)
         
