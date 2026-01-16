@@ -46,6 +46,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            flex-direction: column;
         }
         .map-image {
             max-width: 100%;
@@ -53,13 +54,17 @@
             object-fit: contain; 
             display: block;
         }
+        .map-link-fallback {
+            margin-top: 10px;
+            display: none;
+        }
     </style>
 </head>
 <body>
 
 <div class="container pb-5">
     <div class="mb-5">
-        <h1 class="fw-bold text-warning mb-0">Tarkov Raid Planner <span class="badge bg-secondary fs-6 align-middle">v0.9.0</span></h1>
+        <h1 class="fw-bold text-warning mb-0">Tarkov Raid Planner <span class="badge bg-secondary fs-6 align-middle">v0.9.1</span></h1>
         <p class="text-secondary m-0">Select your active tasks and optimize your route.</p>
     </div>
 
@@ -107,10 +112,15 @@
         
         <h4 class="text-warning mb-3">📍 Tactical Map</h4>
         <div class="map-container">
-            <img id="map-display" src="" class="map-image" alt="Map Preview" referrerpolicy="no-referrer">
+            <img id="map-display" src="" class="map-image" alt="Map Preview" onerror="this.style.display='none'; document.getElementById('map-fallback-link').style.display='block';">
             
+            <div id="map-fallback-link" class="map-link-fallback text-center">
+                <p class="text-muted">Map image failed to load.</p>
+                <a id="ext-map-link" href="#" target="_blank" class="btn btn-outline-warning btn-sm">Open Map in Browser ↗️</a>
+            </div>
+
             <div class="position-absolute bottom-0 end-0 p-2 bg-black bg-opacity-75 text-white small">
-                Source: Tarkov Wiki (Re3mr)
+                Source: TarkovTracker / GitHub
             </div>
         </div>
 
@@ -135,18 +145,19 @@
     const API_URL = "/api";
     let loadedQuests = [];
 
-    // Map Images - Wiki Re3mr Versions (High Quality)
+    // Map Images - Using GitHub Raw (Reliable, no hotlink protection)
+    // Falls das Bild nicht lädt, wird der Button angezeigt.
     const MAP_IMAGES = {
-        "Customs": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/c/c8/Customs_2D_Map_Re3mr.jpg",
-        "Factory": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/4/45/Factory_3D_Map_Re3mr.jpg",
-        "Woods": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/0/05/Woods_2D_Map_Re3mr.jpg",
-        "Interchange": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/0/03/InterchangeMap_Updated_4.24.20.png",
-        "Shoreline": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/d/d4/Shoreline_2D_Map_Re3mr.jpg",
-        "Reserve": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/9/9f/Reserve_Map_Re3mr.jpg",
-        "Lighthouse": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/a/a6/Lighthouse_Map_Re3mr.jpg",
-        "Streets of Tarkov": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/e/e4/Streets_Map_Re3mr.jpg",
+        "Customs": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/customs-2d.jpg",
+        "Factory": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/factory-3d.jpg",
+        "Woods": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/woods-2d.jpg",
+        "Interchange": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/interchange-2d.jpg",
+        "Shoreline": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/shoreline-2d.jpg",
+        "Reserve": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/reserve-2d.jpg",
+        "Lighthouse": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/lighthouse-2d-expansion.jpg",
+        "Streets of Tarkov": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/streets-2d.jpg",
         "Ground Zero": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/3/3d/GroundZero_Map_Re3mr.jpg", 
-        "Labs": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/0/0b/The_Lab_Map_Re3mr.jpg"
+        "Labs": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/labs-2d.jpg"
     };
 
     async function loadQuests() {
@@ -219,16 +230,22 @@
         const itemsContainer = document.getElementById('required-items');
         const stepsContainer = document.getElementById('mission-steps');
         const mapDisplay = document.getElementById('map-display');
+        const mapLink = document.getElementById('ext-map-link');
+        const mapFallback = document.getElementById('map-fallback-link');
         const mapName = document.getElementById('mapSelect').value;
 
-        // 1. Load Map
+        // 1. Map Handling
+        mapDisplay.style.display = 'block';
+        mapFallback.style.display = 'none';
+
         if (MAP_IMAGES[mapName]) {
             mapDisplay.src = MAP_IMAGES[mapName];
+            mapLink.href = MAP_IMAGES[mapName]; // Set fallback link
         } else {
-            mapDisplay.src = ""; 
+            mapDisplay.style.display = 'none';
         }
 
-        // 2. Gather Data
+        // 2. Data Gathering
         const selectedIndices = [];
         loadedQuests.forEach((_, index) => {
             if (document.getElementById(`q-${index}`).checked) selectedIndices.push(index);
@@ -246,7 +263,7 @@
         selectedIndices.forEach(index => {
             const quest = loadedQuests[index];
             
-            // Keys
+            // Collect Keys first
             if (quest.neededKeys) {
                 quest.neededKeys.forEach(kGroup => {
                     if(kGroup.keys && kGroup.keys.length > 0) {
@@ -256,16 +273,19 @@
                 });
             }
 
-            // NEW: Try finding "Special Items" in startRewards (e.g. Posters, Markers)
+            // Collect Start Rewards (Items like Posters, Markers)
             if (quest.startRewards && quest.startRewards.items) {
                 quest.startRewards.items.forEach(reward => {
                     if (reward.item) {
-                        neededItems.push({
-                            name: reward.item.name,
-                            count: reward.count,
-                            icon: reward.item.iconLink,
-                            isSpecial: true
-                        });
+                        // DUPLICATE CHECK: Skip if this item is already in neededKeys
+                        if (!neededKeys.has(reward.item.name)) {
+                            neededItems.push({
+                                name: reward.item.name,
+                                count: reward.count,
+                                icon: reward.item.iconLink,
+                                isSpecial: true
+                            });
+                        }
                     }
                 });
             }
@@ -275,6 +295,7 @@
                 quest.objectives.forEach(obj => {
                     objectives.push({ quest: quest.name, desc: obj.description });
                     if (obj.type === 'GiveItem' && obj.item) {
+                        // Simple duplicate check for regular items too (optional but clean)
                         neededItems.push({ 
                             name: obj.item.name, 
                             count: obj.count, 
@@ -296,7 +317,7 @@
               `).join('') 
             : '<span class="text-success p-2">No special keys required.</span>';
 
-        // 4. Render Items (Including Special Items)
+        // 4. Render Items
         itemsContainer.innerHTML = neededItems.length > 0 
             ? neededItems.map(i => `
                 <div class="item-badge ${i.isSpecial ? 'special' : ''}">
