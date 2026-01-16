@@ -15,9 +15,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 # --------------------------------
-
-app = FastAPI(title="Tarkov Helper API", version="0.2.0")
-
 # Die URL der Tarkov Community API
 TARKOV_API_URL = "https://api.tarkov.dev/graphql"
 
