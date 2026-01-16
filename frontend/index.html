@@ -64,7 +64,7 @@
 
 <div class="container pb-5">
     <div class="mb-5">
-        <h1 class="fw-bold text-warning mb-0">Tarkov Raid Planner <span class="badge bg-secondary fs-6 align-middle">v0.9.1</span></h1>
+        <h1 class="fw-bold text-warning mb-0">Tarkov Raid Planner <span class="badge bg-secondary fs-6 align-middle">v0.9.2 (Local)</span></h1>
         <p class="text-secondary m-0">Select your active tasks and optimize your route.</p>
     </div>
 
@@ -115,12 +115,12 @@
             <img id="map-display" src="" class="map-image" alt="Map Preview" onerror="this.style.display='none'; document.getElementById('map-fallback-link').style.display='block';">
             
             <div id="map-fallback-link" class="map-link-fallback text-center">
-                <p class="text-muted">Map image failed to load.</p>
-                <a id="ext-map-link" href="#" target="_blank" class="btn btn-outline-warning btn-sm">Open Map in Browser ↗️</a>
+                <p class="text-muted">Local map file not found.</p>
+                <a id="ext-map-link" href="#" target="_blank" class="btn btn-outline-warning btn-sm">Open Interactive Map ↗️</a>
             </div>
 
             <div class="position-absolute bottom-0 end-0 p-2 bg-black bg-opacity-75 text-white small">
-                Source: TarkovTracker / GitHub
+                Source: Local Intelligence
             </div>
         </div>
 
@@ -145,19 +145,18 @@
     const API_URL = "/api";
     let loadedQuests = [];
 
-    // Map Images - Using GitHub Raw (Reliable, no hotlink protection)
-    // Falls das Bild nicht lädt, wird der Button angezeigt.
-    const MAP_IMAGES = {
-        "Customs": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/customs-2d.jpg",
-        "Factory": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/factory-3d.jpg",
-        "Woods": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/woods-2d.jpg",
-        "Interchange": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/interchange-2d.jpg",
-        "Shoreline": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/shoreline-2d.jpg",
-        "Reserve": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/reserve-2d.jpg",
-        "Lighthouse": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/lighthouse-2d-expansion.jpg",
-        "Streets of Tarkov": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/streets-2d.jpg",
-        "Ground Zero": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/3/3d/GroundZero_Map_Re3mr.jpg", 
-        "Labs": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/labs-2d.jpg"
+    // Konfiguration: Lokale Dateinamen & Externe Fallback-Links
+    const MAP_CONFIG = {
+        "Customs":           { file: "customs.jpg",    url: "https://tarkov.dev/map/customs-2d" },
+        "Factory":           { file: "factory.jpg",    url: "https://tarkov.dev/map/factory-3d" },
+        "Woods":             { file: "woods.jpg",      url: "https://tarkov.dev/map/woods-2d" },
+        "Interchange":       { file: "interchange.jpg",url: "https://tarkov.dev/map/interchange-2d" },
+        "Shoreline":         { file: "shoreline.jpg",  url: "https://tarkov.dev/map/shoreline-2d" },
+        "Reserve":           { file: "reserve.jpg",    url: "https://tarkov.dev/map/reserve-2d" },
+        "Lighthouse":        { file: "lighthouse.jpg", url: "https://tarkov.dev/map/lighthouse-2d" },
+        "Streets of Tarkov": { file: "streets.jpg",    url: "https://tarkov.dev/map/streets-2d" },
+        "Ground Zero":       { file: "groundzero.jpg", url: "https://tarkov.dev/map/ground-zero-2d" },
+        "Labs":              { file: "labs.jpg",       url: "https://tarkov.dev/map/the-lab-2d" }
     };
 
     async function loadQuests() {
@@ -234,18 +233,19 @@
         const mapFallback = document.getElementById('map-fallback-link');
         const mapName = document.getElementById('mapSelect').value;
 
-        // 1. Map Handling
+        // 1. Map Handling (Local File)
         mapDisplay.style.display = 'block';
         mapFallback.style.display = 'none';
 
-        if (MAP_IMAGES[mapName]) {
-            mapDisplay.src = MAP_IMAGES[mapName];
-            mapLink.href = MAP_IMAGES[mapName]; // Set fallback link
+        if (MAP_CONFIG[mapName]) {
+            // Relativer Pfad zum 'maps' Ordner
+            mapDisplay.src = `maps/${MAP_CONFIG[mapName].file}`;
+            mapLink.href = MAP_CONFIG[mapName].url;
         } else {
             mapDisplay.style.display = 'none';
         }
 
-        // 2. Data Gathering
+        // 2. Data Gathering (TWO PASS Logic for Deduplication)
         const selectedIndices = [];
         loadedQuests.forEach((_, index) => {
             if (document.getElementById(`q-${index}`).checked) selectedIndices.push(index);
@@ -260,10 +260,9 @@
         const neededItems = [];
         const objectives = [];
 
+        // PASS 1: Collect ALL Keys first (Global Deduplication)
         selectedIndices.forEach(index => {
             const quest = loadedQuests[index];
-            
-            // Collect Keys first
             if (quest.neededKeys) {
                 quest.neededKeys.forEach(kGroup => {
                     if(kGroup.keys && kGroup.keys.length > 0) {
@@ -272,12 +271,17 @@
                     }
                 });
             }
+        });
 
-            // Collect Start Rewards (Items like Posters, Markers)
+        // PASS 2: Collect Items & Objectives (Check against Global Key Set)
+        selectedIndices.forEach(index => {
+            const quest = loadedQuests[index];
+            
+            // Special Items (Rewards)
             if (quest.startRewards && quest.startRewards.items) {
                 quest.startRewards.items.forEach(reward => {
                     if (reward.item) {
-                        // DUPLICATE CHECK: Skip if this item is already in neededKeys
+                        // Check if this item is ALREADY listed as a required key
                         if (!neededKeys.has(reward.item.name)) {
                             neededItems.push({
                                 name: reward.item.name,
@@ -295,7 +299,6 @@
                 quest.objectives.forEach(obj => {
                     objectives.push({ quest: quest.name, desc: obj.description });
                     if (obj.type === 'GiveItem' && obj.item) {
-                        // Simple duplicate check for regular items too (optional but clean)
                         neededItems.push({ 
                             name: obj.item.name, 
                             count: obj.count, 
