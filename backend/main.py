@@ -5,6 +5,7 @@ import json
 
 app = FastAPI(title="Tarkov Helper API", version="0.6.0")
 
+# CORS Setup
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], 
@@ -15,7 +16,7 @@ app.add_middleware(
 
 TARKOV_API_URL = "https://api.tarkov.dev/graphql"
 
-# Mapping für saubere Map-Namen
+# Mapping: Frontend-Name -> API-Name
 MAP_MAPPING = {
     "Customs": "Customs",
     "Factory": "Factory",
@@ -31,7 +32,7 @@ MAP_MAPPING = {
 
 def run_query(query: str):
     headers = {"Content-Type": "application/json"}
-    # Timeout auf 30s für Stabilität
+    # Timeout auf 30 Sekunden erhöht
     response = requests.post(TARKOV_API_URL, json={'query': query}, headers=headers, timeout=30)
     if response.status_code == 200:
         return response.json()
@@ -39,8 +40,8 @@ def run_query(query: str):
         raise Exception(f"API Request failed with code {response.status_code}")
 
 def get_all_quests_query():
-    # Wir laden ALLE Quests und filtern später.
-    # Hier sind jetzt auch die Bilder (iconLink) dabei.
+    # Wir laden ALLE Quests ohne Filter (API Limitierung umgehen)
+    # Und wir holen die Bilder (iconLink/imageLink)
     return """
     {
         tasks {
@@ -81,25 +82,25 @@ def get_all_quests_query():
 @app.get("/quests/{map_name}")
 def get_quests(map_name: str):
     try:
-        # 1. Wir holen ALLE Quests
+        # 1. Alle Quests holen
         query = get_all_quests_query()
         result = run_query(query)
         
-        # API Fehler abfangen
         if "errors" in result:
             print(f"API ERROR: {json.dumps(result['errors'], indent=2)}")
             raise HTTPException(status_code=500, detail=f"Tarkov API Error: {result['errors'][0]['message']}")
 
-        # 2. Wir filtern in Python
+        # 2. Ziel-Map bestimmen
         target_map = MAP_MAPPING.get(map_name, map_name)
         
         filtered_tasks = []
         all_tasks = result.get("data", {}).get("tasks", [])
         
-        print(f"DEBUG: Habe {len(all_tasks)} Quests geladen. Suche nach Map: '{target_map}'")
+        print(f"DEBUG: Habe {len(all_tasks)} Quests geladen. Filter nach: '{target_map}'")
 
+        # 3. Filtern in Python
         for task in all_tasks:
-            # Sicherheitscheck: Hat die Quest überhaupt eine Map?
+            # Sicherheitscheck: Hat die Quest eine Map?
             if task.get('map') and task['map'].get('name') == target_map:
                 filtered_tasks.append(task)
         

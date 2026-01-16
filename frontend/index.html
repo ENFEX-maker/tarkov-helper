@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -29,7 +29,7 @@
         .form-check-input { transform: scale(1.3); margin-right: 15px; cursor: pointer; }
         .trader-badge { font-size: 0.75em; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-right: 10px; }
         
-        /* Ergebnis Box */
+        /* Result Box */
         #planning-result { display: none; background: #161616; border: 1px solid #333; padding: 25px; border-radius: 12px; margin-top: 30px; margin-bottom: 50px;}
         
         /* Icons */
@@ -39,7 +39,7 @@
         /* Map Container */
         .map-container {
             width: 100%;
-            height: 400px; /* Feste Höhe für bessere Darstellung */
+            height: 500px; /* Taller for better view */
             background-color: #000;
             border-radius: 8px;
             overflow: hidden;
@@ -62,17 +62,17 @@
 <div class="container pb-5">
     <div class="d-flex justify-content-between align-items-center mb-5">
         <div>
-            <h1 class="fw-bold text-warning mb-0">Tarkov Raid Planner <span class="badge bg-secondary fs-6 align-middle">Beta</span></h1>
-            <p class="text-secondary m-0">Plan & Execute.</p>
+            <h1 class="fw-bold text-warning mb-0">Tarkov Raid Planner <span class="badge bg-success fs-6 align-middle">v1.0</span></h1>
+            <p class="text-secondary m-0">Select your active tasks and optimize your route.</p>
         </div>
-        <div id="status-badge" class="badge bg-dark text-muted border border-secondary">Ready</div>
+        <div id="status-badge" class="badge bg-dark text-muted border border-secondary">System Ready</div>
     </div>
 
     <div class="card bg-dark border-secondary mb-4">
         <div class="card-body p-4">
             <div class="row g-3">
                 <div class="col-md-5">
-                    <label class="text-muted small mb-1">Einsatzgebiet</label>
+                    <label class="text-muted small mb-1">Select Location</label>
                     <select id="mapSelect" class="form-select bg-black text-light border-secondary">
                         <option value="Customs">Customs</option>
                         <option value="Factory">Factory</option>
@@ -87,7 +87,7 @@
                     </select>
                 </div>
                 <div class="col-md-3 d-flex align-items-end">
-                    <button onclick="loadQuests()" class="btn btn-warning w-100 fw-bold">Daten abrufen</button>
+                    <button onclick="loadQuests()" class="btn btn-warning w-100 fw-bold">Load Quests</button>
                 </div>
             </div>
         </div>
@@ -95,26 +95,26 @@
 
     <div id="loading" class="text-center d-none my-5">
         <div class="spinner-grow text-warning" role="status"></div>
-        <p class="mt-2 text-muted">Kommuniziere mit Tarkov Intelligence Center...</p>
+        <p class="mt-2 text-muted">Fetching Intel from Tarkov servers...</p>
     </div>
     
     <div id="error-box" class="alert alert-danger d-none"></div>
 
     <div id="quest-selection-area" class="d-none">
         <div class="d-flex justify-content-between align-items-end mb-3">
-            <h5 class="text-light m-0">Verfügbare Operationen</h5>
-            <button onclick="planRaid()" class="btn btn-success fw-bold px-4">RAID PLANEN 🚀</button>
+            <h5 class="text-light m-0">Available Operations</h5>
+            <button onclick="planRaid()" class="btn btn-success fw-bold px-4">PLAN RAID 🚀</button>
         </div>
         <div id="quest-list"></div>
     </div>
 
     <div id="planning-result">
         
-        <h4 class="text-warning mb-3">📍 Taktische Karte</h4>
+        <h4 class="text-warning mb-3">📍 Tactical Map</h4>
         <div class="map-container">
-            <img id="map-display" src="" class="map-image" alt="Map Preview" onerror="this.src='https://via.placeholder.com/800x400?text=Map+Not+Found'">
+            <img id="map-display" src="" class="map-image" alt="Map Preview" onerror="this.src='https://via.placeholder.com/800x500?text=Map+Load+Error'">
             <div class="position-absolute bottom-0 end-0 p-2 bg-black bg-opacity-75 text-white small">
-                Quelle: Wiki / Re3mr
+                Source: Tarkov Wiki / GitHub
             </div>
         </div>
 
@@ -130,7 +130,7 @@
             </div>
         </div>
 
-        <h5 class="text-light border-bottom border-secondary pb-2 mb-3 mt-4">📝 Missions-Log</h5>
+        <h5 class="text-light border-bottom border-secondary pb-2 mb-3 mt-4">📝 Mission Objectives</h5>
         <ul id="mission-steps" class="list-group list-group-flush"></ul>
     </div>
 </div>
@@ -139,19 +139,22 @@
     const API_URL = "/api";
     let loadedQuests = [];
 
-    // Map Bilder URLs (Offizielle Wiki Links - zuverlässiger als Hotlinks)
+    // Map Images - Using GitHub Raw for reliability (No hotlink protection)
     const MAP_IMAGES = {
-        "Customs": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/c/c8/Customs_2D_Map_Re3mr.jpg",
-        "Factory": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/4/45/Factory_3D_Map_Re3mr.jpg",
-        "Woods": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/0/05/Woods_2D_Map_Re3mr.jpg",
-        "Interchange": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/0/03/InterchangeMap_Updated_4.24.20.png",
-        "Shoreline": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/d/d4/Shoreline_2D_Map_Re3mr.jpg",
-        "Reserve": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/9/9f/Reserve_Map_Re3mr.jpg",
-        "Lighthouse": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/a/a6/Lighthouse_Map_Re3mr.jpg",
-        "Streets of Tarkov": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/e/e4/Streets_Map_Re3mr.jpg",
-        "Ground Zero": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/3/3d/GroundZero_Map_Re3mr.jpg",
-        "Labs": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/0/0b/The_Lab_Map_Re3mr.jpg"
+        "Customs": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/customs-2d.jpg",
+        "Factory": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/factory-3d.jpg",
+        "Woods": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/woods-2d.jpg",
+        "Interchange": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/interchange-2d.jpg",
+        "Shoreline": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/shoreline-2d.jpg",
+        "Reserve": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/reserve-2d.jpg",
+        "Lighthouse": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/lighthouse-2d-expansion.jpg",
+        "Streets of Tarkov": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/streets-2d.jpg",
+        "Ground Zero": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/3/3d/GroundZero_Map_Re3mr.jpg", 
+        "Labs": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/labs-2d.jpg"
     };
+    
+    // Fallback for Ground Zero as it's newer and might not be in the repo yet
+    // Ground Zero uses Wiki link, others use GitHub
 
     async function loadQuests() {
         const mapSelect = document.getElementById('mapSelect');
@@ -177,7 +180,7 @@
             loadedQuests = quests;
 
             if (quests.length === 0) {
-                listContainer.innerHTML = '<div class="text-center text-muted p-4">Keine aktiven Quests auf dieser Map gefunden.</div>';
+                listContainer.innerHTML = '<div class="text-center text-muted p-4">No active quests found for this map.</div>';
             } else {
                 quests.forEach((quest, index) => {
                     const div = document.createElement('div');
@@ -226,22 +229,21 @@
         const mapDisplay = document.getElementById('map-display');
         const mapName = document.getElementById('mapSelect').value;
 
-        // 1. Map Bild laden (jetzt vom Wiki)
-        // Fallback falls ein Link defekt ist
+        // 1. Load Map Image
         if (MAP_IMAGES[mapName]) {
             mapDisplay.src = MAP_IMAGES[mapName];
         } else {
             mapDisplay.src = "";
         }
 
-        // 2. Daten sammeln
+        // 2. Gather Data
         const selectedIndices = [];
         loadedQuests.forEach((_, index) => {
             if (document.getElementById(`q-${index}`).checked) selectedIndices.push(index);
         });
 
         if (selectedIndices.length === 0) {
-            alert("Wähle mindestens eine Quest aus!");
+            alert("Please select at least one quest!");
             return;
         }
 
@@ -285,7 +287,7 @@
                     <span>${k.shortName || k.name}</span>
                 </div>
               `).join('') 
-            : '<span class="text-success p-2">Keine Schlüssel benötigt.</span>';
+            : '<span class="text-success p-2">No keys required.</span>';
 
         // 4. Render Items
         itemsContainer.innerHTML = neededItems.length > 0 
