@@ -56,24 +56,14 @@
             object-fit: contain; 
             display: block;
         }
-        /* Fallback Text falls Bild fehlt */
-        .map-fallback-text {
-            position: absolute;
-            color: #555;
-            font-size: 1.2rem;
-            display: none;
-        }
     </style>
 </head>
 <body>
 
 <div class="container pb-5">
-    <div class="d-flex justify-content-between align-items-center mb-5">
-        <div>
-            <h1 class="fw-bold text-warning mb-0">Tarkov Raid Planner <span class="badge bg-success fs-6 align-middle">v1.2 (Stable)</span></h1>
-            <p class="text-secondary m-0">Select your active tasks and optimize your route.</p>
-        </div>
-        <div id="status-badge" class="badge bg-dark text-muted border border-secondary">System Ready</div>
+    <div class="mb-5">
+        <h1 class="fw-bold text-warning mb-0">Tarkov Raid Planner <span class="badge bg-success fs-6 align-middle">v0.9 (alpha)</span></h1>
+        <p class="text-secondary m-0">Select your active tasks and optimize your route.</p>
     </div>
 
     <div class="card bg-dark border-secondary mb-4">
@@ -120,11 +110,10 @@
         
         <h4 class="text-warning mb-3">📍 Tactical Map</h4>
         <div class="map-container">
-            <img id="map-display" src="" class="map-image" alt="Map Preview" onerror="this.onerror=null; this.style.display='none'; document.getElementById('map-fallback').style.display='block';">
-            <div id="map-fallback" class="map-fallback-text">Map image unavailable</div>
+            <img id="map-display" src="" class="map-image" alt="Map Preview" referrerpolicy="no-referrer">
             
             <div class="position-absolute bottom-0 end-0 p-2 bg-black bg-opacity-75 text-white small">
-                Source: TarkovTracker / Wiki
+                Source: Tarkov Wiki
             </div>
         </div>
 
@@ -149,18 +138,18 @@
     const API_URL = "/api";
     let loadedQuests = [];
 
-    // Map Images - Using multiple sources for stability
+    // Map Images - Wiki Re3mr Versions (High Quality)
     const MAP_IMAGES = {
-        "Customs": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/customs-2d.jpg",
-        "Factory": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/factory-3d.jpg",
-        "Woods": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/woods-2d.jpg",
-        "Interchange": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/interchange-2d.jpg",
-        "Shoreline": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/shoreline-2d.jpg",
-        "Reserve": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/reserve-2d.jpg",
-        "Lighthouse": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/lighthouse-2d-expansion.jpg",
-        "Streets of Tarkov": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/streets-2d.jpg",
+        "Customs": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/c/c8/Customs_2D_Map_Re3mr.jpg",
+        "Factory": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/4/45/Factory_3D_Map_Re3mr.jpg",
+        "Woods": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/0/05/Woods_2D_Map_Re3mr.jpg",
+        "Interchange": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/0/03/InterchangeMap_Updated_4.24.20.png",
+        "Shoreline": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/d/d4/Shoreline_2D_Map_Re3mr.jpg",
+        "Reserve": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/9/9f/Reserve_Map_Re3mr.jpg",
+        "Lighthouse": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/a/a6/Lighthouse_Map_Re3mr.jpg",
+        "Streets of Tarkov": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/e/e4/Streets_Map_Re3mr.jpg",
         "Ground Zero": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/3/3d/GroundZero_Map_Re3mr.jpg", 
-        "Labs": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/labs-2d.jpg"
+        "Labs": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/0/0b/The_Lab_Map_Re3mr.jpg"
     };
 
     async function loadQuests() {
@@ -221,6 +210,7 @@
 
     function toggleSelection(index, divElement, event) {
         const checkbox = document.getElementById(`q-${index}`);
+        // Toggle only if clicked outside checkbox/link
         if (event.target !== checkbox && event.target.tagName !== 'A') {
             checkbox.checked = !checkbox.checked;
         }
@@ -234,20 +224,13 @@
         const itemsContainer = document.getElementById('required-items');
         const stepsContainer = document.getElementById('mission-steps');
         const mapDisplay = document.getElementById('map-display');
-        const mapFallback = document.getElementById('map-fallback');
         const mapName = document.getElementById('mapSelect').value;
 
-        // Reset map display state
-        mapDisplay.style.display = 'block';
-        mapFallback.style.display = 'none';
-
-        // 1. Load Map
+        // 1. Load Map (With referrer policy hack via HTML attribute)
         if (MAP_IMAGES[mapName]) {
             mapDisplay.src = MAP_IMAGES[mapName];
         } else {
-            // No map URL defined
-            mapDisplay.style.display = 'none';
-            mapFallback.style.display = 'block';
+            mapDisplay.src = ""; 
         }
 
         // 2. Gather Selected Data
