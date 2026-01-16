@@ -39,8 +39,6 @@ def run_query(query: str):
         raise Exception(f"API Request failed with code {response.status_code}")
 
 def get_all_quests_query():
-    # WICHTIG: Keine Argumente mehr bei tasks()! Wir laden alles.
-    # Wir holen 'map { name }' um selbst zu filtern.
     return """
     {
         tasks {
@@ -48,27 +46,27 @@ def get_all_quests_query():
             name
             wikiLink
             minPlayerLevel
-            # Hier holen wir die Map Info direkt vom Task
             map {
                 name
             }
             trader {
                 name
+                imageLink # Trader Bild
             }
             neededKeys {
                 keys {
                     name
                     shortName
+                    iconLink # <--- WICHTIG: Schlüssel Bild
                 }
             }
             objectives {
                 description
                 type
-                # Wir entfernen TaskObjectiveZone (das gab den Fehler)
-                # und nehmen nur Items, das ist stabil.
                 ... on TaskObjectiveItem {
                     item {
                         name
+                        iconLink # <--- WICHTIG: Item Bild
                     }
                     count
                     foundInRaid
