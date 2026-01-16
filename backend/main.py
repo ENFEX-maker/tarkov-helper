@@ -18,7 +18,7 @@ TARKOV_API_URL = "https://api.tarkov.dev/graphql"
 def run_query(query: str):
     headers = {"Content-Type": "application/json"}
     # Timeout hinzugefügt, damit wir nicht ewig hängen
-    response = requests.post(TARKOV_API_URL, json={'query': query}, headers=headers, timeout=10)
+    response = requests.post(TARKOV_API_URL, json={'query': query}, headers=headers, timeout=30)
     if response.status_code == 200:
         return response.json()
     else:
