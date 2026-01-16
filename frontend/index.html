@@ -9,7 +9,7 @@
         body { background-color: #0f0f0f; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .container { max-width: 1000px; margin-top: 40px; }
         
-        /* Quest Auswahl */
+        /* Quest Item */
         .quest-item {
             background-color: #1a1a1a;
             border: 1px solid #333;
@@ -32,24 +32,27 @@
         /* Ergebnis Box */
         #planning-result { display: none; background: #161616; border: 1px solid #333; padding: 25px; border-radius: 12px; margin-top: 30px; margin-bottom: 50px;}
         
-        /* Bilder und Icons */
+        /* Icons */
         .key-icon { width: 40px; height: 40px; object-fit: contain; margin-right: 8px; }
         .item-badge { background-color: #222; border: 1px solid #444; padding: 5px 10px; border-radius: 6px; display: inline-flex; align-items: center; margin: 5px; }
         
         /* Map Container */
         .map-container {
             width: 100%;
-            height: 400px;
+            height: 400px; /* Feste Höhe für bessere Darstellung */
             background-color: #000;
             border-radius: 8px;
             overflow: hidden;
             position: relative;
             margin-bottom: 20px;
             border: 2px solid #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         .map-image {
-            width: 100%;
-            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
             object-fit: contain; 
         }
     </style>
@@ -109,9 +112,9 @@
         
         <h4 class="text-warning mb-3">📍 Taktische Karte</h4>
         <div class="map-container">
-            <img id="map-display" src="" class="map-image" alt="Map Preview">
+            <img id="map-display" src="" class="map-image" alt="Map Preview" onerror="this.src='https://via.placeholder.com/800x400?text=Map+Not+Found'">
             <div class="position-absolute bottom-0 end-0 p-2 bg-black bg-opacity-75 text-white small">
-                Quelle: Tarkov.dev / Wiki
+                Quelle: Wiki / Re3mr
             </div>
         </div>
 
@@ -136,18 +139,18 @@
     const API_URL = "/api";
     let loadedQuests = [];
 
-    // Map Bilder URLs
+    // Map Bilder URLs (Offizielle Wiki Links - zuverlässiger als Hotlinks)
     const MAP_IMAGES = {
-        "Customs": "https://assets.tarkov.dev/maps/customs-2d.jpg",
-        "Factory": "https://assets.tarkov.dev/maps/factory-3d.jpg",
-        "Woods": "https://assets.tarkov.dev/maps/woods-2d.jpg",
-        "Interchange": "https://assets.tarkov.dev/maps/interchange-2d.jpg",
-        "Shoreline": "https://assets.tarkov.dev/maps/shoreline-2d.jpg",
-        "Reserve": "https://assets.tarkov.dev/maps/reserve-2d.jpg",
-        "Lighthouse": "https://assets.tarkov.dev/maps/lighthouse-2d-expansion.jpg",
-        "Streets of Tarkov": "https://assets.tarkov.dev/maps/streets-2d.jpg",
-        "Ground Zero": "https://assets.tarkov.dev/maps/ground-zero-2d.jpg",
-        "Labs": "https://assets.tarkov.dev/maps/labs-2d.jpg"
+        "Customs": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/c/c8/Customs_2D_Map_Re3mr.jpg",
+        "Factory": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/4/45/Factory_3D_Map_Re3mr.jpg",
+        "Woods": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/0/05/Woods_2D_Map_Re3mr.jpg",
+        "Interchange": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/0/03/InterchangeMap_Updated_4.24.20.png",
+        "Shoreline": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/d/d4/Shoreline_2D_Map_Re3mr.jpg",
+        "Reserve": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/9/9f/Reserve_Map_Re3mr.jpg",
+        "Lighthouse": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/a/a6/Lighthouse_Map_Re3mr.jpg",
+        "Streets of Tarkov": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/e/e4/Streets_Map_Re3mr.jpg",
+        "Ground Zero": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/3/3d/GroundZero_Map_Re3mr.jpg",
+        "Labs": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/0/0b/The_Lab_Map_Re3mr.jpg"
     };
 
     async function loadQuests() {
@@ -223,8 +226,13 @@
         const mapDisplay = document.getElementById('map-display');
         const mapName = document.getElementById('mapSelect').value;
 
-        // 1. Map Bild laden
-        mapDisplay.src = MAP_IMAGES[mapName] || "";
+        // 1. Map Bild laden (jetzt vom Wiki)
+        // Fallback falls ein Link defekt ist
+        if (MAP_IMAGES[mapName]) {
+            mapDisplay.src = MAP_IMAGES[mapName];
+        } else {
+            mapDisplay.src = "";
+        }
 
         // 2. Daten sammeln
         const selectedIndices = [];
