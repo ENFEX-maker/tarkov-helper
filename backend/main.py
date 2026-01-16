@@ -1,82 +1,105 @@
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware # <--- NEU
+from fastapi.middleware.cors import CORSMiddleware
 import requests
 
-app = FastAPI(title="Tarkov Helper API", version="0.2.0")
+app = FastAPI(title="Tarkov Helper API", version="0.3.0")
 
-# --- CORS KONFIGURATION (NEU) ---
-# Das erlaubt Zugriff von überall (für Entwicklung okay).
-# In Production würde man hier später nur die echte Domain eintragen.
+# --- CORS KONFIGURATION ---
+# Erlaubt Zugriff vom Frontend (inkl. Cookies/Credentials)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # In Produktion später auf deine Domain einschränken!
+    allow_origins=["https://tarkov.marcel-kopplin.de", "http://localhost"], # Localhost für Tests erlaubt
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-# --------------------------------
+
 # Die URL der Tarkov Community API
 TARKOV_API_URL = "https://api.tarkov.dev/graphql"
 
 def run_query(query: str):
-    """
-    Hilfsfunktion, die die Anfrage an Tarkov.dev schickt.
-    """
     headers = {"Content-Type": "application/json"}
-    response = requests.post(TARKOV_API_URL, headers=headers, json={'query': query})
-    
+    response = requests.post(TARKOV_API_URL, json={'query': query}, headers=headers)
     if response.status_code == 200:
         return response.json()
     else:
-        # Falls die Tarkov-API down ist, werfen wir einen Fehler
-        raise Exception(f"Query failed with code {response.status_code}")
+        raise Exception(f"Query failed to run by returning code of {response.status_code}. {query}")
 
-@app.get("/")
-def read_root():
-    return {"Status": "Online", "Message": "Geh auf /docs für die API Dokumentation"}
+# --- NEUE, MÄCHTIGE QUERY ---
+def get_quests_query(map_name: str):
+    # Wir holen jetzt:
+    # 1. neededKeys: Welche Schlüssel brauche ich?
+    # 2. objectives: Wo muss ich hin (Zones) und was muss ich holen (Items)?
+    # 3. minPlayerLevel: Ab wann kann ich das machen?
+    return f"""
+    {{
+        tasks(map: {map_name}) {{
+            id
+            name
+            minPlayerLevel
+            wikiLink
+            trader {{
+                name
+            }}
+            # Was brauche ich dafür? (Schlüssel)
+            neededKeys {{
+                keys {{
+                    name
+                    shortName
+                    iconLink
+                }}
+            }}
+            # Was muss ich tun? (Töten, Finden, Markieren)
+            objectives {{
+                description
+                type
+                # Wenn es ein Ort ist (für deine Karte später)
+                ... on TaskObjectiveZone {{
+                    zone {{
+                        position {{
+                            x
+                            y
+                            z
+                        }}
+                    }}
+                }}
+                # Wenn wir ein Item brauchen (Found in Raid etc.)
+                ... on TaskObjectiveItem {{
+                    item {{
+                        name
+                        iconLink
+                    }}
+                    count
+                    foundInRaid
+                }}
+                # Wenn wir was markieren müssen
+                ... on TaskObjectiveMark {{
+                    markerItem {{
+                        name
+                    }}
+                }}
+            }}
+        }}
+    }}
+    """
 
 @app.get("/quests/{map_name}")
-def get_quests_by_map(map_name: str):
-    """
-    Holt alle Quests für eine bestimmte Map (z.B. 'Customs', 'Woods').
-    """
-    # GraphQL Query: Wir filtern NICHT hier (API kann das nur begrenzt), 
-    # sondern holen Quests und filtern im Python-Code (einfacher für den Anfang).
-    # Wir holen: Quest Name, Händler, Map und Wiki-Link.
-    query = """
-    {
-        tasks(lang: en) {
-            name
-            trader {
-                name
-            }
-            map {
-                name
-            }
-            wikiLink
-        }
-    }
-    """
+def get_quests(map_name: str):
+    # API nutzt teils spezifische Namen, wir reichen den String direkt durch
+    # (Frontend muss "Customs", "Factory" etc. sauber senden)
+    query = get_quests_query(map_name)
     
     try:
-        data = run_query(query)
-        all_tasks = data["data"]["tasks"]
-        
-        # Jetzt filtern wir in Python nach der Map, die der User eingegeben hat.
-        # Wir machen alles kleingeschrieben (.lower()), damit 'customs' und 'Customs' funktionieren.
-        filtered_tasks = []
-        
-        for task in all_tasks:
-            # Manche Quests haben keine Map (sind 'null'), die überspringen wir
-            if task["map"] and task["map"]["name"].lower() == map_name.lower():
-                filtered_tasks.append(task)
-                
-        return {
-            "map": map_name,
-            "count": len(filtered_tasks),
-            "quests": filtered_tasks
-        }
-
+        result = run_query(query)
+        # Kleiner Check, ob die API Daten liefert
+        if "data" not in result or "tasks" not in result["data"]:
+             return []
+        return result["data"]["tasks"]
     except Exception as e:
-        # HTTP 500 = Server Error
+        print(f"Error fetching quests: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# Health Check (immer gut zu haben)
+@app.get("/")
+def read_root():
+    return {"status": "ok", "version": "0.3.0 - Data Upgrade"}
