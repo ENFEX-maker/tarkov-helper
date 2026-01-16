@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import requests
 import json
 
-app = FastAPI(title="Tarkov Helper API", version="0.8.0")
+app = FastAPI(title="Tarkov Helper API", version="0.9.0")
 
 # CORS Setup
 app.add_middleware(
@@ -32,6 +32,7 @@ MAP_MAPPING = {
 
 def run_query(query: str):
     headers = {"Content-Type": "application/json"}
+    # Timeout 30s
     response = requests.post(TARKOV_API_URL, json={'query': query}, headers=headers, timeout=30)
     if response.status_code == 200:
         return response.json()
@@ -39,7 +40,8 @@ def run_query(query: str):
         raise Exception(f"API Request failed with code {response.status_code}")
 
 def get_all_quests_query():
-    # Neu: 'questItems' hinzugefügt für spezielle Items (Poster, Ordner, etc.)
+    # 'questItems' entfernt (gab es nicht). 
+    # Dafür 'startRewards' hinzugefügt für Initial-Items (Marker, Poster etc.)
     return """
     {
         tasks {
@@ -61,12 +63,14 @@ def get_all_quests_query():
                     iconLink
                 }
             }
-            questItems {
-                item {
-                    name
-                    iconLink
+            startRewards {
+                items {
+                    item {
+                        name
+                        iconLink
+                    }
+                    count
                 }
-                count
             }
             objectives {
                 description
@@ -105,6 +109,7 @@ def get_quests(map_name: str):
 
         # 3. Filtern in Python
         for task in all_tasks:
+            # Sicherheitscheck: Hat die Quest eine Map?
             if task.get('map') and task['map'].get('name') == target_map:
                 filtered_tasks.append(task)
         

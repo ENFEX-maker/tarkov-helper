@@ -59,7 +59,7 @@
 
 <div class="container pb-5">
     <div class="mb-5">
-        <h1 class="fw-bold text-warning mb-0">Tarkov Raid Planner <span class="badge bg-success fs-6 align-middle">v1.4</span></h1>
+        <h1 class="fw-bold text-warning mb-0">Tarkov Raid Planner <span class="badge bg-secondary fs-6 align-middle">v0.9.0</span></h1>
         <p class="text-secondary m-0">Select your active tasks and optimize your route.</p>
     </div>
 
@@ -107,9 +107,10 @@
         
         <h4 class="text-warning mb-3">📍 Tactical Map</h4>
         <div class="map-container">
-            <img id="map-display" src="" class="map-image" alt="Map Preview">
+            <img id="map-display" src="" class="map-image" alt="Map Preview" referrerpolicy="no-referrer">
+            
             <div class="position-absolute bottom-0 end-0 p-2 bg-black bg-opacity-75 text-white small">
-                Source: Tarkov.dev Assets
+                Source: Tarkov Wiki (Re3mr)
             </div>
         </div>
 
@@ -134,18 +135,18 @@
     const API_URL = "/api";
     let loadedQuests = [];
 
-    // Official Tarkov.dev Assets (Direct CDN, no hotlink issues)
+    // Map Images - Wiki Re3mr Versions (High Quality)
     const MAP_IMAGES = {
-        "Customs": "https://assets.tarkov.dev/maps/customs-2d.jpg",
-        "Factory": "https://assets.tarkov.dev/maps/factory-3d.jpg",
-        "Woods": "https://assets.tarkov.dev/maps/woods-2d.jpg",
-        "Interchange": "https://assets.tarkov.dev/maps/interchange-2d.jpg",
-        "Shoreline": "https://assets.tarkov.dev/maps/shoreline-2d.jpg",
-        "Reserve": "https://assets.tarkov.dev/maps/reserve-2d.jpg",
-        "Lighthouse": "https://assets.tarkov.dev/maps/lighthouse-2d-expansion.jpg",
-        "Streets of Tarkov": "https://assets.tarkov.dev/maps/streets-2d.jpg",
-        "Ground Zero": "https://assets.tarkov.dev/maps/ground-zero-2d.jpg",
-        "Labs": "https://assets.tarkov.dev/maps/labs-2d.jpg"
+        "Customs": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/c/c8/Customs_2D_Map_Re3mr.jpg",
+        "Factory": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/4/45/Factory_3D_Map_Re3mr.jpg",
+        "Woods": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/0/05/Woods_2D_Map_Re3mr.jpg",
+        "Interchange": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/0/03/InterchangeMap_Updated_4.24.20.png",
+        "Shoreline": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/d/d4/Shoreline_2D_Map_Re3mr.jpg",
+        "Reserve": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/9/9f/Reserve_Map_Re3mr.jpg",
+        "Lighthouse": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/a/a6/Lighthouse_Map_Re3mr.jpg",
+        "Streets of Tarkov": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/e/e4/Streets_Map_Re3mr.jpg",
+        "Ground Zero": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/3/3d/GroundZero_Map_Re3mr.jpg", 
+        "Labs": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/0/0b/The_Lab_Map_Re3mr.jpg"
     };
 
     async function loadQuests() {
@@ -255,15 +256,17 @@
                 });
             }
 
-            // NEW: Special Quest Items (Poster, Folder, etc.)
-            if (quest.questItems) {
-                quest.questItems.forEach(qItem => {
-                    neededItems.push({
-                        name: qItem.item.name,
-                        count: 1, // Usually 1 for special items
-                        icon: qItem.item.iconLink,
-                        isSpecial: true
-                    });
+            // NEW: Try finding "Special Items" in startRewards (e.g. Posters, Markers)
+            if (quest.startRewards && quest.startRewards.items) {
+                quest.startRewards.items.forEach(reward => {
+                    if (reward.item) {
+                        neededItems.push({
+                            name: reward.item.name,
+                            count: reward.count,
+                            icon: reward.item.iconLink,
+                            isSpecial: true
+                        });
+                    }
                 });
             }
 
