@@ -1,9 +1,9 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import requests
-import json # Für schönes Logging
+import json
 
-app = FastAPI(title="Tarkov Helper API", version="0.5.0")
+app = FastAPI(title="Tarkov Helper API", version="0.6.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -15,8 +15,7 @@ app.add_middleware(
 
 TARKOV_API_URL = "https://api.tarkov.dev/graphql"
 
-# --- WICHTIG: Übersetzungstabelle für Map-Namen ---
-# Links: Was dein Frontend sendet. Rechts: Was die API verlangt.
+# Mapping ist immer noch gut, um später saubere Namen zu haben
 MAP_MAPPING = {
     "Customs": "Customs",
     "Factory": "Factory",
@@ -25,88 +24,88 @@ MAP_MAPPING = {
     "Shoreline": "Shoreline",
     "Reserve": "Reserve",
     "Lighthouse": "Lighthouse",
-    "Streets of Tarkov": "Streets", # API nennt es nur "Streets"
-    "Ground Zero": "GroundZero",    # API schreibt es zusammen
-    "Labs": "Laboratory"            # Falls du Labs mal brauchst
+    "Streets of Tarkov": "Streets",
+    "Ground Zero": "GroundZero",
+    "Labs": "Laboratory"
 }
 
 def run_query(query: str):
     headers = {"Content-Type": "application/json"}
-    # Timeout auf 30s lassen, das war gut!
+    # Timeout auf 30s lassen, sicher ist sicher
     response = requests.post(TARKOV_API_URL, json={'query': query}, headers=headers, timeout=30)
-    
     if response.status_code == 200:
         return response.json()
     else:
         raise Exception(f"API Request failed with code {response.status_code}")
 
-def get_quests_query(map_enum: str):
-    # Hier nutzen wir den sauberen API-Namen (z.B. "Streets")
-    return f"""
-    {{
-        tasks(map: {map_enum}) {{
+def get_all_quests_query():
+    # WICHTIG: Keine Argumente mehr bei tasks()! Wir laden alles.
+    # Wir holen 'map { name }' um selbst zu filtern.
+    return """
+    {
+        tasks {
             id
             name
             wikiLink
             minPlayerLevel
-            trader {{
+            # Hier holen wir die Map Info direkt vom Task
+            map {
                 name
-            }}
-            neededKeys {{
-                keys {{
+            }
+            trader {
+                name
+            }
+            neededKeys {
+                keys {
                     name
                     shortName
-                }}
-            }}
-            objectives {{
+                }
+            }
+            objectives {
                 description
                 type
-                ... on TaskObjectiveItem {{
-                    item {{
+                # Wir entfernen TaskObjectiveZone (das gab den Fehler)
+                # und nehmen nur Items, das ist stabil.
+                ... on TaskObjectiveItem {
+                    item {
                         name
-                    }}
+                    }
                     count
                     foundInRaid
-                }}
-                ... on TaskObjectiveZone {{
-                    zone {{
-                        id
-                    }}
-                }}
-            }}
-        }}
-    }}
+                }
+            }
+        }
+    }
     """
 
 @app.get("/quests/{map_name}")
 def get_quests(map_name: str):
     try:
-        # 1. Map Namen übersetzen
-        # Wenn der Name nicht in der Liste ist, nehmen wir ihn so wie er ist (Fallback)
-        api_map_name = MAP_MAPPING.get(map_name, map_name)
-        
-        print(f"DEBUG: Frontend fragt '{map_name}', wir fragen API nach '{api_map_name}'")
-
-        query = get_quests_query(api_map_name)
+        # 1. Wir holen ALLE Quests (egal welche Map)
+        query = get_all_quests_query()
         result = run_query(query)
         
-        # 2. Fehlerprüfung (Ganz wichtig!)
+        # API Fehler abfangen
         if "errors" in result:
             print(f"API ERROR: {json.dumps(result['errors'], indent=2)}")
-            # Wir werfen den Fehler, damit du ihn im Browser siehst (statt "Keine Quests")
             raise HTTPException(status_code=500, detail=f"Tarkov API Error: {result['errors'][0]['message']}")
 
-        # 3. Datenprüfung
-        if "data" in result and result["data"]["tasks"]:
-            tasks = result["data"]["tasks"]
-            print(f"SUCCESS: {len(tasks)} Quests gefunden.")
-            return tasks
-        else:
-            print("WARNING: API lieferte 200 OK, aber keine Tasks (leere Liste).")
-            return []
-            
-    except HTTPException as he:
-        raise he
+        # 2. Wir filtern JETZT hier in Python (viel robuster!)
+        target_map = MAP_MAPPING.get(map_name, map_name) # z.B. "Streets"
+        
+        filtered_tasks = []
+        all_tasks = result.get("data", {}).get("tasks", [])
+        
+        print(f"DEBUG: Habe {len(all_tasks)} Quests geladen. Suche nach Map: '{target_map}'")
+
+        for task in all_tasks:
+            # Manchmal ist task['map'] null (für Quests die überall gehen), die ignorieren wir hier
+            if task.get('map') and task['map'].get('name') == target_map:
+                filtered_tasks.append(task)
+        
+        print(f"SUCCESS: {len(filtered_tasks)} Quests für {target_map} gefunden.")
+        return filtered_tasks
+
     except Exception as e:
         print(f"CRITICAL SERVER ERROR: {e}")
         raise HTTPException(status_code=500, detail=str(e))
