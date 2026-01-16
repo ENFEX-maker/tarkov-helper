@@ -9,7 +9,7 @@
         body { background-color: #0f0f0f; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .container { max-width: 1000px; margin-top: 40px; }
         
-        /* Quest Item */
+        /* Quest Item Styling */
         .quest-item {
             background-color: #1a1a1a;
             border: 1px solid #333;
@@ -29,23 +29,23 @@
         .form-check-input { transform: scale(1.3); margin-right: 15px; cursor: pointer; }
         .trader-badge { font-size: 0.75em; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-right: 10px; }
         
-        /* Result Box */
+        /* Result Box Styling */
         #planning-result { display: none; background: #161616; border: 1px solid #333; padding: 25px; border-radius: 12px; margin-top: 30px; margin-bottom: 50px;}
         
-        /* Icons */
+        /* Icons styling */
         .key-icon { width: 40px; height: 40px; object-fit: contain; margin-right: 8px; }
         .item-badge { background-color: #222; border: 1px solid #444; padding: 5px 10px; border-radius: 6px; display: inline-flex; align-items: center; margin: 5px; }
         
         /* Map Container */
         .map-container {
             width: 100%;
-            height: 500px; /* Taller for better view */
-            background-color: #000;
+            height: 600px;
+            background-color: #050505;
             border-radius: 8px;
             overflow: hidden;
             position: relative;
             margin-bottom: 20px;
-            border: 2px solid #333;
+            border: 1px solid #333;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -62,7 +62,7 @@
 <div class="container pb-5">
     <div class="d-flex justify-content-between align-items-center mb-5">
         <div>
-            <h1 class="fw-bold text-warning mb-0">Tarkov Raid Planner <span class="badge bg-success fs-6 align-middle">v1.0</span></h1>
+            <h1 class="fw-bold text-warning mb-0">Tarkov Raid Planner <span class="badge bg-success fs-6 align-middle">v1.1</span></h1>
             <p class="text-secondary m-0">Select your active tasks and optimize your route.</p>
         </div>
         <div id="status-badge" class="badge bg-dark text-muted border border-secondary">System Ready</div>
@@ -94,7 +94,7 @@
     </div>
 
     <div id="loading" class="text-center d-none my-5">
-        <div class="spinner-grow text-warning" role="status"></div>
+        <div class="spinner-border text-warning" role="status"></div>
         <p class="mt-2 text-muted">Fetching Intel from Tarkov servers...</p>
     </div>
     
@@ -112,9 +112,9 @@
         
         <h4 class="text-warning mb-3">📍 Tactical Map</h4>
         <div class="map-container">
-            <img id="map-display" src="" class="map-image" alt="Map Preview" onerror="this.src='https://via.placeholder.com/800x500?text=Map+Load+Error'">
+            <img id="map-display" src="" class="map-image" alt="Map Preview" onerror="this.src='https://via.placeholder.com/800x600?text=Map+Source+Unavailable'">
             <div class="position-absolute bottom-0 end-0 p-2 bg-black bg-opacity-75 text-white small">
-                Source: Tarkov Wiki / GitHub
+                Source: TarkovTracker / Wiki
             </div>
         </div>
 
@@ -139,7 +139,7 @@
     const API_URL = "/api";
     let loadedQuests = [];
 
-    // Map Images - Using GitHub Raw for reliability (No hotlink protection)
+    // Map Images - Using GitHub Raw for best compatibility
     const MAP_IMAGES = {
         "Customs": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/customs-2d.jpg",
         "Factory": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/factory-3d.jpg",
@@ -152,9 +152,6 @@
         "Ground Zero": "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/3/3d/GroundZero_Map_Re3mr.jpg", 
         "Labs": "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps/labs-2d.jpg"
     };
-    
-    // Fallback for Ground Zero as it's newer and might not be in the repo yet
-    // Ground Zero uses Wiki link, others use GitHub
 
     async function loadQuests() {
         const mapSelect = document.getElementById('mapSelect');
@@ -165,7 +162,7 @@
         const loader = document.getElementById('loading');
         const resultBox = document.getElementById('planning-result');
 
-        // UI Reset
+        // Reset UI
         errorBox.classList.add('d-none');
         resultBox.style.display = 'none';
         listContainer.innerHTML = '';
@@ -174,7 +171,7 @@
         
         try {
             const response = await fetch(`${API_URL}/quests/${map}`, { method: 'GET' });
-            if (!response.ok) throw new Error(`Server Error: ${response.status}`);
+            if (!response.ok) throw new Error(`Server Error: ${response.status} - Check Backend Logs`);
             
             const quests = await response.json();
             loadedQuests = quests;
@@ -187,7 +184,7 @@
                     div.className = 'quest-item d-flex align-items-center';
                     div.onclick = (e) => toggleSelection(index, div, e);
                     div.innerHTML = `
-                        <input class="form-check-input" type="checkbox" id="q-${index}">
+                        <input class="form-check-input" type="checkbox" id="q-${index}" onchange="event.stopPropagation(); toggleSelection(${index}, this.parentElement, event)">
                         <div class="ms-3 flex-grow-1">
                             <div class="d-flex align-items-center">
                                 <span class="fw-bold text-light">${quest.name}</span>
@@ -205,7 +202,7 @@
             selectionArea.classList.remove('d-none');
 
         } catch (error) {
-            errorBox.textContent = error.message;
+            errorBox.textContent = "Error: " + error.message;
             errorBox.classList.remove('d-none');
         } finally {
             loader.classList.add('d-none');
@@ -214,6 +211,7 @@
 
     function toggleSelection(index, divElement, event) {
         const checkbox = document.getElementById(`q-${index}`);
+        // Toggle only if clicked outside checkbox/link
         if (event.target !== checkbox && event.target.tagName !== 'A') {
             checkbox.checked = !checkbox.checked;
         }
@@ -229,14 +227,14 @@
         const mapDisplay = document.getElementById('map-display');
         const mapName = document.getElementById('mapSelect').value;
 
-        // 1. Load Map Image
+        // 1. Load Map
         if (MAP_IMAGES[mapName]) {
             mapDisplay.src = MAP_IMAGES[mapName];
         } else {
-            mapDisplay.src = "";
+            mapDisplay.src = ""; // Clear if no map found
         }
 
-        // 2. Gather Data
+        // 2. Gather Selected Data
         const selectedIndices = [];
         loadedQuests.forEach((_, index) => {
             if (document.getElementById(`q-${index}`).checked) selectedIndices.push(index);
@@ -254,7 +252,7 @@
         selectedIndices.forEach(index => {
             const quest = loadedQuests[index];
             
-            // Keys
+            // Collect Keys
             if (quest.neededKeys) {
                 quest.neededKeys.forEach(kGroup => {
                     if(kGroup.keys && kGroup.keys.length > 0) {
@@ -264,7 +262,7 @@
                 });
             }
 
-            // Items & Objectives
+            // Collect Objectives
             if (quest.objectives) {
                 quest.objectives.forEach(obj => {
                     objectives.push({ quest: quest.name, desc: obj.description });
@@ -287,7 +285,7 @@
                     <span>${k.shortName || k.name}</span>
                 </div>
               `).join('') 
-            : '<span class="text-success p-2">No keys required.</span>';
+            : '<span class="text-success p-2">No special keys required.</span>';
 
         // 4. Render Items
         itemsContainer.innerHTML = neededItems.length > 0 
