@@ -9,150 +9,277 @@
     <script src="https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
 
     <style>
-        /* Kontrast-Verbesserungen: Helleres Grau statt Schwarz/Dunkelgrau */
-        body { background-color: #0f0f0f; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .text-muted { color: #adb5bd !important; } /* Überschreibt Bootstrap Standard */
+        /* --- EFT WIKI THEME --- */
+        :root {
+            --bg-dark: #0e0e0e;       /* Very Dark BG */
+            --bg-panel: #141414;      /* Slightly lighter panel */
+            --bg-element: #1f1f1f;    /* Interactive elements */
+            --border-color: #333;
+            --text-main: #e0e0e0;
+            --text-muted: #999;
+            --eft-beige: #d2c4a6;     /* The classic Tarkov/Wiki beige */
+            --eft-gold: #9e8f6b;      /* Darker gold/beige for borders */
+            --eft-green: #4f6b4f;     /* Status OK */
+            --eft-red: #8c3b3b;       /* Status Bad */
+        }
+
+        body { 
+            background-color: var(--bg-dark); 
+            color: var(--text-main); 
+            font-family: 'Verdana', 'Segoe UI', sans-serif; /* Wiki Font style */
+            font-size: 0.95rem;
+        }
+
+        h1, h2, h3, h4, h5 {
+            color: var(--eft-beige);
+            font-family: 'Georgia', serif; /* Wiki Headers often serif */
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
         
-        .container { max-width: 1200px; margin-top: 40px; }
-        
-        /* Quest Styling */
-        .quest-item {
-            background-color: #1a1a1a;
-            border: 1px solid #333;
-            border-radius: 6px;
-            margin-bottom: 8px;
-            padding: 12px;
+        .container { max-width: 1400px; margin-top: 40px; }
+        .text-beige { color: var(--eft-beige); }
+
+        /* Panels */
+        .card {
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 0;
+        }
+
+        /* Inputs & Buttons */
+        .form-select {
+            background-color: #000;
+            color: var(--eft-beige);
+            border: 1px solid var(--eft-gold);
+            border-radius: 0;
+        }
+        .form-select:focus { box-shadow: none; border-color: #fff; }
+
+        .btn-tarkov {
+            background-color: var(--bg-element);
+            color: var(--eft-beige);
+            border: 1px solid var(--eft-gold);
+            border-radius: 0;
+            text-transform: uppercase;
+            font-weight: bold;
             transition: all 0.2s;
+        }
+        .btn-tarkov:hover {
+            background-color: var(--eft-gold);
+            color: #000;
+        }
+        .btn-reset {
+            color: var(--eft-red);
+            border-color: var(--eft-red);
+            background: transparent;
+        }
+        .btn-reset:hover { background: var(--eft-red); color: #fff; }
+
+        /* Quest List */
+        .quest-item {
+            background-color: var(--bg-element);
+            border: 1px solid var(--border-color);
+            margin-bottom: 4px;
+            padding: 10px 15px;
             cursor: pointer;
+            border-left: 3px solid transparent;
         }
-        .quest-item:hover { background-color: #252525; border-color: #666; }
+        .quest-item:hover { background-color: #2a2a2a; }
+        
         .quest-item.selected {
-            background-color: #2c3e50;
-            border-color: #f39c12;
-            box-shadow: 0 0 8px rgba(243, 156, 18, 0.3);
+            background-color: #252525;
+            border-left: 3px solid var(--eft-beige);
+        }
+        
+        .form-check-input {
+            background-color: #000;
+            border-color: var(--eft-gold);
+            border-radius: 0;
+        }
+        .form-check-input:checked {
+            background-color: var(--eft-beige);
+            border-color: var(--eft-beige);
         }
 
-        /* Accordion Styling (Gruppen) */
-        .accordion-item { background-color: transparent; border: 1px solid #333; margin-bottom: 8px; }
-        .accordion-button { background-color: #161616; color: #e0e0e0; font-weight: bold; }
-        .accordion-button:not(.collapsed) { background-color: #252525; color: #fff; box-shadow: none; }
-        .accordion-button::after { filter: invert(1); }
-        .accordion-body { background-color: #0f0f0f; padding: 10px; border-top: 1px solid #333; }
-        
-        /* NEU: Wenn Items in der Gruppe ausgewählt sind */
+        /* Accordion (Groups) */
+        .accordion-item { 
+            background: transparent; 
+            border: none; 
+            margin-bottom: 5px;
+        }
+        .accordion-button {
+            background-color: #111;
+            color: var(--eft-beige);
+            border: 1px solid var(--border-color);
+            border-radius: 0 !important;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .accordion-button:not(.collapsed) {
+            background-color: #1a1a1a;
+            color: var(--eft-beige);
+            box-shadow: none;
+            border-bottom: 1px solid var(--eft-gold);
+        }
+        .accordion-button::after { filter: invert(0.8) sepia(1) saturate(0.5) hue-rotate(0deg); }
+        .accordion-body { 
+            background-color: #0a0a0a; 
+            border: 1px solid var(--border-color); 
+            border-top: none; 
+            padding: 10px; 
+        }
+
+        /* Active Group Indicator */
         .accordion-button.has-selection {
-            border-left: 4px solid #f39c12;
-            background-color: #222;
+            background-color: #2a2a2a;
+            border-left: 4px solid var(--eft-beige);
         }
 
-        .form-check-input { transform: scale(1.3); margin-right: 15px; cursor: pointer; }
-        .trader-badge { font-size: 0.75em; text-transform: uppercase; letter-spacing: 1px; color: #aaa; margin-right: 10px; }
-        
-        #planning-result { display: none; background: #161616; border: 1px solid #333; padding: 25px; border-radius: 12px; margin-top: 30px; margin-bottom: 50px;}
-        
-        .key-icon { width: 40px; height: 40px; object-fit: contain; margin-right: 8px; }
-        .item-badge { background-color: #222; border: 1px solid #444; padding: 5px 10px; border-radius: 6px; display: inline-flex; align-items: center; margin: 5px; }
-        
-        /* Status Farben für Items */
-        .item-badge.provided { border-color: #27ae60; background-color: #1e3a2a; color: #a8e6cf; }
-        .item-badge.acquire { border-color: #d35400; background-color: #3a2216; color: #edc2a8; }
-        
-        .map-container {
-            width: 100%; height: 600px; background-color: #050505; border-radius: 8px; overflow: hidden; position: relative; margin-bottom: 20px; border: 1px solid #333; display: flex; align-items: center; justify-content: center;
+        /* Badges */
+        .badge-tarkov {
+            background-color: #333;
+            color: #aaa;
+            border: 1px solid #444;
+            border-radius: 2px;
+            font-weight: normal;
         }
-        .map-image { max-width: 100%; max-height: 100%; object-fit: contain; display: block; cursor: grab; transition: none; }
-        .map-image:active { cursor: grabbing; }
-        .map-controls { position: absolute; bottom: 20px; right: 20px; z-index: 100; display: flex; gap: 5px; background: rgba(0,0,0,0.6); padding: 5px; border-radius: 8px; }
-        .map-btn { width: 35px; height: 35px; border: 1px solid #555; background: #222; color: #fff; border-radius: 4px; cursor: pointer; }
-        .map-btn:hover { background: #444; }
+        .badge-active {
+            background-color: var(--eft-beige);
+            color: #000;
+            font-weight: bold;
+        }
+
+        /* Planning Result */
+        #planning-result {
+            display: none;
+            background: var(--bg-panel);
+            border: 1px solid var(--eft-gold);
+            padding: 30px;
+            margin-top: 30px;
+        }
+
+        .map-container {
+            width: 100%; height: 650px;
+            background-color: #000;
+            border: 1px solid var(--eft-gold);
+            position: relative;
+            overflow: hidden;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .map-image { max-width: 100%; max-height: 100%; display: block; }
+        
+        .section-header {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+            color: var(--eft-beige);
+        }
+
+        /* Items */
+        .item-box {
+            background: #181818;
+            border: 1px solid #333;
+            padding: 6px 12px;
+            margin: 4px;
+            display: inline-flex;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+        .item-box img { width: 35px; height: 35px; margin-right: 10px; object-fit: contain; }
+        
+        .status-provide { color: #8cb58c; border-color: #2f452f; background: #121c12; }
+        .status-acquire { color: #d6a685; border-color: #4f3a2c; background: #241a15; }
+
     </style>
 </head>
 <body>
 
 <div class="container pb-5">
-    <div class="mb-5">
-        <h1 class="fw-bold text-warning mb-0">Tarkov Raid Planner <span class="badge bg-secondary fs-6 align-middle">v0.9 (Alpha)</span></h1>
-        <p class="text-light m-0 opacity-75">Select your active tasks and optimize your route.</p>
+    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-secondary pb-3">
+        <div>
+            <h1 class="mb-0">RAID PLANNER <span style="font-size: 0.5em; vertical-align: middle; color: #666;">v0.9</span></h1>
+        </div>
     </div>
 
-    <div class="card bg-dark border-secondary mb-4">
-        <div class="card-body p-4">
-            <div class="row g-3">
-                <div class="col-md-5">
-                    <label class="text-light small mb-1">Select Location</label>
-                    <select id="mapSelect" class="form-select bg-black text-light border-secondary">
-                        <option value="Customs">Customs</option>
-                        <option value="Factory">Factory</option>
-                        <option value="Woods">Woods</option>
-                        <option value="Interchange">Interchange</option>
-                        <option value="Shoreline">Shoreline</option>
-                        <option value="Reserve">Reserve</option>
-                        <option value="Lighthouse">Lighthouse</option>
-                        <option value="Streets of Tarkov">Streets of Tarkov</option>
-                        <option value="Ground Zero">Ground Zero</option>
-                        <option value="Labs">The Lab</option>
-                        <option value="Any">Any Location / Global</option>
-                    </select>
-                </div>
-                <div class="col-md-3 d-flex align-items-end">
-                    <button onclick="loadQuests()" class="btn btn-warning w-100 fw-bold">Load Quests</button>
-                </div>
+    <div class="card p-4 mb-4">
+        <div class="row g-3">
+            <div class="col-md-5">
+                <label class="text-muted small mb-1 text-uppercase">Operational Area</label>
+                <select id="mapSelect" class="form-select">
+                    <option value="Customs">Customs</option>
+                    <option value="Factory">Factory</option>
+                    <option value="Woods">Woods</option>
+                    <option value="Interchange">Interchange</option>
+                    <option value="Shoreline">Shoreline</option>
+                    <option value="Reserve">Reserve</option>
+                    <option value="Lighthouse">Lighthouse</option>
+                    <option value="Streets of Tarkov">Streets of Tarkov</option>
+                    <option value="Ground Zero">Ground Zero</option>
+                    <option value="Labs">The Lab</option>
+                    <option value="Any">Global / Any</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button onclick="loadQuests()" class="btn btn-tarkov w-100">Load Operations</button>
             </div>
         </div>
     </div>
 
     <div id="loading" class="text-center d-none my-5">
-        <div class="spinner-border text-warning" role="status"></div>
-        <p class="mt-2 text-light">Retrieving Intel...</p>
+        <div class="spinner-border text-secondary" role="status"></div>
+        <p class="mt-2 text-beige">Retrieving Intelligence...</p>
     </div>
-    <div id="error-box" class="alert alert-danger d-none"></div>
+    <div id="error-box" class="alert alert-danger d-none rounded-0 border-danger"></div>
 
     <div id="quest-selection-area" class="d-none">
         <div class="d-flex justify-content-between align-items-end mb-3">
-            <h5 class="text-light m-0">Available Operations</h5>
+            <h5 class="m-0 text-muted">Select Active Tasks</h5>
             <div>
-                <button onclick="clearSelection()" class="btn btn-outline-danger me-2 btn-sm">Reset</button>
-                <button onclick="planRaid()" class="btn btn-success fw-bold px-4">PLAN RAID 🚀</button>
+                <button onclick="clearSelection()" class="btn btn-tarkov btn-reset me-2 btn-sm">Reset</button>
+                <button onclick="planRaid()" class="btn btn-tarkov px-4">Initialize Plan</button>
             </div>
         </div>
         <div id="quest-list" class="accordion" id="questAccordion"></div>
     </div>
 
     <div id="planning-result">
-        <h4 class="text-warning mb-3">📍 Tactical Map</h4>
+        <h4 class="mb-3">Tactical Overview</h4>
+        
         <div class="map-container" id="map-container-div">
-            <img id="map-display" src="" class="map-image" alt="Map Preview" onerror="handleMapError()">
-            <div class="map-controls" id="map-controls">
-                <button class="map-btn" id="zoom-in">+</button>
-                <button class="map-btn" id="zoom-out">-</button>
-                <button class="map-btn" id="zoom-reset">↺</button>
+            <img id="map-display" src="" class="map-image" alt="Map" onerror="handleMapError()">
+            <div style="position: absolute; bottom: 15px; right: 15px; z-index: 10;">
+                <button class="btn btn-sm btn-dark border-secondary" id="zoom-in">+</button>
+                <button class="btn btn-sm btn-dark border-secondary" id="zoom-out">-</button>
+                <button class="btn btn-sm btn-dark border-secondary" id="zoom-reset">R</button>
             </div>
-            <div id="map-fallback-link" class="text-center" style="display:none; position:absolute; margin-top:10px;">
-                <p class="text-light" id="map-fallback-text">No local map.</p>
-                <a id="ext-map-link" href="#" target="_blank" class="btn btn-outline-warning btn-sm">Open Web Map ↗️</a>
+            <div id="map-fallback-link" class="text-center" style="display:none; position:absolute;">
+                <p class="text-muted">No tactical map available.</p>
+                <a id="ext-map-link" href="#" target="_blank" class="text-beige">Open External Map</a>
             </div>
         </div>
 
-        <div class="row mt-4">
+        <div class="row mt-5">
             <div class="col-md-6">
-                <h5 class="text-danger border-bottom border-danger pb-2 mb-3">🔑 Required Keys</h5>
+                <div class="section-header">Required Keys</div>
                 <div id="required-keys" class="d-flex flex-wrap"></div>
             </div>
             
             <div class="col-md-6">
-                <h5 class="text-info border-bottom border-info pb-2 mb-3">🎒 Required Items</h5>
-                <p class="small text-light opacity-75 mb-2">Items to bring into raid (Place, Mark, or Handover).</p>
+                <div class="section-header">Required Items</div>
+                <p class="small text-muted mb-2">Items to place, mark, or handover.</p>
                 <div id="required-items" class="d-flex flex-wrap"></div>
             </div>
         </div>
 
-        <div class="row mt-4">
+        <div class="row mt-5">
             <div class="col-md-7">
-                <h5 class="text-light border-bottom border-secondary pb-2 mb-3">📝 Objectives</h5>
-                <ul id="mission-steps" class="list-group list-group-flush"></ul>
+                <div class="section-header">Operational Objectives</div>
+                <ul id="mission-steps" class="list-group list-group-flush" style="border-left: 2px solid #333; padding-left: 10px;"></ul>
             </div>
             <div class="col-md-5">
-                <h5 class="text-purple border-bottom border-secondary pb-2 mb-3" style="color: #a29bfe;">🔮 Future Unlocks</h5>
+                <div class="section-header" style="color: #a29bfe;">Intel: Unlocks</div>
                 <div id="progression-list" class="small"></div>
             </div>
         </div>
@@ -165,7 +292,6 @@
     let loadedQuests = [];
     let panzoomInstance = null; 
 
-    // Config
     const MAP_CONFIG = {
         "Customs": { file: "customs.jpg", url: "https://tarkov.dev/map/customs-2d" },
         "Factory": { file: "factory.jpg", url: "https://tarkov.dev/map/factory-3d" },
@@ -183,28 +309,44 @@
         const saved = localStorage.getItem(STORAGE_KEY);
         return saved ? new Set(JSON.parse(saved)) : new Set();
     }
+    
     function saveQuestState(questId, isChecked) {
         const savedSet = getSavedQuests();
         if (isChecked) savedSet.add(questId); else savedSet.delete(questId);
         localStorage.setItem(STORAGE_KEY, JSON.stringify([...savedSet]));
     }
+
+    // --- FIX: Reset Logic ---
     function clearSelection() {
-        if(confirm("Deselect all?")) {
+        if(confirm("Reset mission parameters?")) {
             localStorage.removeItem(STORAGE_KEY);
             document.querySelectorAll('.quest-checkbox').forEach(cb => cb.checked = false);
             document.querySelectorAll('.quest-item').forEach(div => div.classList.remove('selected'));
+            
+            // Clean up Panzoom to avoid errors on next plan
+            if (panzoomInstance) {
+                panzoomInstance.dispose();
+                panzoomInstance = null;
+            }
+            
             document.getElementById('planning-result').style.display = 'none';
-            loadQuests(); // Reload list to update groups
+            
+            // Update all group headers to show 0 active
+            document.querySelectorAll('.accordion-button').forEach(btn => {
+                btn.classList.remove('has-selection');
+                const badge = btn.querySelector('.badge-indicator');
+                if(badge) badge.innerHTML = btn.dataset.total + " Tasks";
+                if(badge) badge.className = 'badge-indicator badge-tarkov ms-2 px-2';
+            });
         }
     }
+
     function handleMapError() {
         document.getElementById('map-display').style.display = 'none';
-        document.getElementById('map-controls').style.display = 'none';
         document.getElementById('map-fallback-link').style.display = 'block';
-        if(panzoomInstance) panzoomInstance.pause();
     }
 
-    // --- RENDER LOGIC WITH GROUPING ---
+    // --- RENDER LOGIC ---
     function renderQuestList(quests) {
         const listContainer = document.getElementById('quest-list');
         listContainer.innerHTML = '';
@@ -224,21 +366,30 @@
             }
         });
 
-        // Groups Render
+        // Groups
         for (const [groupName, groupQuests] of Object.entries(groups)) {
             const groupId = groupName.replace(/[^a-zA-Z0-9]/g, '');
+            
+            // Calculate Active
+            const activeCount = groupQuests.filter(q => savedSet.has(q.id)).length;
+            const hasActive = activeCount > 0;
+            
             const accordItem = document.createElement('div');
             accordItem.className = 'accordion-item';
             
-            // NEU: Zählen, wie viele Quests in dieser Gruppe aktiv sind
-            const activeCount = groupQuests.filter(q => savedSet.has(q.id)).length;
-            const activeClass = activeCount > 0 ? 'has-selection' : '';
-            const badgeHtml = activeCount > 0 ? `<span class="badge bg-warning text-dark ms-2">✅ ${activeCount} Active</span>` : `<span class="badge bg-dark ms-2 border border-secondary">${groupQuests.length} Parts</span>`;
-
             let groupHtml = `
                 <h2 class="accordion-header" id="heading-${groupId}">
-                    <button class="accordion-button collapsed ${activeClass}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-${groupId}">
-                        📂 ${groupName} ${badgeHtml}
+                    <button class="accordion-button collapsed ${hasActive ? 'has-selection' : ''}" 
+                            type="button" 
+                            id="btn-${groupId}"
+                            data-bs-toggle="collapse" 
+                            data-bs-target="#collapse-${groupId}"
+                            data-group-id="${groupId}"
+                            data-total="${groupQuests.length}">
+                        ${groupName} 
+                        <span class="badge-indicator ${hasActive ? 'badge-active' : 'badge-tarkov'} ms-2 px-2">
+                            ${hasActive ? activeCount + ' Active' : groupQuests.length + ' Tasks'}
+                        </span>
                     </button>
                 </h2>
                 <div id="collapse-${groupId}" class="accordion-collapse collapse" data-bs-parent="#questAccordion">
@@ -246,7 +397,7 @@
             `;
             
             groupQuests.forEach(q => {
-                groupHtml += createQuestItemHtml(q, q.originalIndex, savedSet);
+                groupHtml += createQuestItemHtml(q, q.originalIndex, savedSet, groupId);
             });
             
             groupHtml += `</div></div>`;
@@ -254,34 +405,39 @@
             listContainer.appendChild(accordItem);
         }
 
-        // Standalone Render
+        // Standalone
         if (standalone.length > 0) {
             const standaloneContainer = document.createElement('div');
+            standaloneContainer.className = 'mt-3';
             standalone.forEach(q => {
-                standaloneContainer.innerHTML += createQuestItemHtml(q, q.originalIndex, savedSet);
+                standaloneContainer.innerHTML += createQuestItemHtml(q, q.originalIndex, savedSet, null);
             });
             listContainer.appendChild(standaloneContainer);
         }
     }
 
-    function createQuestItemHtml(quest, index, savedSet) {
+    function createQuestItemHtml(quest, index, savedSet, groupId) {
         const isChecked = savedSet.has(quest.id);
+        const groupAttr = groupId ? `data-parent-group="${groupId}"` : '';
+        
         return `
-            <div class="quest-item d-flex align-items-center ${isChecked ? 'selected' : ''}" onclick="toggleSelection(${index}, this, event)">
+            <div class="quest-item d-flex align-items-center ${isChecked ? 'selected' : ''}" 
+                 onclick="toggleSelection(${index}, this, event)">
                 <input class="form-check-input quest-checkbox" 
                        type="checkbox" 
                        id="q-${index}" 
                        value="${quest.id}"
                        ${isChecked ? 'checked' : ''}
+                       ${groupAttr}
                        onchange="event.stopPropagation(); toggleSelection(${index}, this.parentElement, event)">
                 <div class="ms-3 flex-grow-1">
                     <div class="d-flex align-items-center">
-                        <span class="fw-bold text-light">${quest.name}</span>
-                        ${quest.wikiLink ? `<a href="${quest.wikiLink}" target="_blank" class="ms-2 text-muted small" onclick="event.stopPropagation()">[Wiki]</a>` : ''}
+                        <span class="fw-bold" style="color:#e0e0e0;">${quest.name}</span>
+                        ${quest.wikiLink ? `<a href="${quest.wikiLink}" target="_blank" class="ms-2 text-muted small" style="text-decoration:none;" onclick="event.stopPropagation()">[Wiki]</a>` : ''}
                     </div>
-                    <div class="mt-1">
-                        <span class="trader-badge">👤 ${quest.trader.name}</span>
-                        <span class="text-secondary small">Lvl ${quest.minPlayerLevel}</span>
+                    <div class="mt-1 d-flex justify-content-between" style="font-size:0.8em; color:#888;">
+                        <span>${quest.trader.name}</span>
+                        <span>Lvl ${quest.minPlayerLevel}</span>
                     </div>
                 </div>
             </div>
@@ -300,11 +456,11 @@
 
         try {
             const response = await fetch(`${API_URL}/quests/${map}`);
-            if (!response.ok) throw new Error(`Server Error: ${response.status}`);
+            if (!response.ok) throw new Error(`Comm Error: ${response.status}`);
             loadedQuests = await response.json();
 
             if (loadedQuests.length === 0) {
-                document.getElementById('quest-list').innerHTML = '<div class="text-center text-muted p-4">No active quests found.</div>';
+                document.getElementById('quest-list').innerHTML = '<div class="text-center text-muted p-4">No operations found.</div>';
             } else {
                 renderQuestList(loadedQuests);
             }
@@ -318,46 +474,75 @@
         }
     }
 
+    // --- FIX: Live Group Updates ---
     function toggleSelection(index, divElement, event) {
         const checkbox = document.getElementById(`q-${index}`);
+        
+        // Handle click on DIV vs Checkbox
         if (event.target !== checkbox && event.target.tagName !== 'A') {
             checkbox.checked = !checkbox.checked;
         }
+        
         if (checkbox.checked) divElement.classList.add('selected');
         else divElement.classList.remove('selected');
         
         saveQuestState(loadedQuests[index].id, checkbox.checked);
         
-        // UI der Gruppe aktualisieren ohne kompletten Reload (optional, aber nice to have)
-        // Einfachste Methode: Wir lassen es so, beim nächsten "Load Quests" wird es aktualisiert.
+        // Update Group Header if part of a group
+        const groupId = checkbox.getAttribute('data-parent-group');
+        if (groupId) {
+            updateGroupHeader(groupId);
+        }
+    }
+
+    function updateGroupHeader(groupId) {
+        const btn = document.getElementById(`btn-${groupId}`);
+        const checkboxes = document.querySelectorAll(`input[data-parent-group="${groupId}"]`);
+        const checkedCount = Array.from(checkboxes).filter(c => c.checked).length;
+        const badge = btn.querySelector('.badge-indicator');
+        const total = btn.dataset.total;
+
+        if (checkedCount > 0) {
+            btn.classList.add('has-selection');
+            badge.className = 'badge-indicator badge-active ms-2 px-2';
+            badge.textContent = `${checkedCount} Active`;
+        } else {
+            btn.classList.remove('has-selection');
+            badge.className = 'badge-indicator badge-tarkov ms-2 px-2';
+            badge.textContent = `${total} Tasks`;
+        }
     }
 
     function planRaid() {
         const resultBox = document.getElementById('planning-result');
         const mapName = document.getElementById('mapSelect').value;
-        
-        // Map Setup
         const mapDisplay = document.getElementById('map-display');
-        const mapControls = document.getElementById('map-controls');
         const mapFallback = document.getElementById('map-fallback-link');
         const mapLink = document.getElementById('ext-map-link');
 
-        mapDisplay.style.display = 'block';
-        mapControls.style.display = 'flex';
-        mapFallback.style.display = 'none';
+        // Logic
+        const selectedIndices = [];
+        loadedQuests.forEach((_, index) => {
+            const cb = document.getElementById(`q-${index}`);
+            if (cb && cb.checked) selectedIndices.push(index);
+        });
 
+        if (selectedIndices.length === 0) { alert("No operations selected."); return; }
+
+        // Map Setup
         if (mapName === "Any") {
             mapDisplay.style.display = 'none';
-            mapControls.style.display = 'none';
             mapFallback.style.display = 'block';
-            document.getElementById('map-fallback-text').textContent = "Global Tasks.";
             mapLink.style.display = 'none';
         } else if (MAP_CONFIG[mapName]) {
+            mapDisplay.style.display = 'block';
+            mapFallback.style.display = 'none';
             mapDisplay.src = `maps/${MAP_CONFIG[mapName].file}`;
             mapLink.href = MAP_CONFIG[mapName].url;
-            mapLink.style.display = 'inline-block';
             
-            if (panzoomInstance) panzoomInstance.dispose(); 
+            // Panzoom Fix: Dispose old instance
+            if (panzoomInstance) panzoomInstance.dispose();
+            
             const elem = document.getElementById('map-display');
             panzoomInstance = Panzoom(elem, { maxScale: 5, minScale: 0.5, contain: 'outside', startScale: 1 });
             elem.parentElement.addEventListener('wheel', panzoomInstance.zoomWithWheel);
@@ -368,15 +553,6 @@
             handleMapError();
         }
 
-        // Logic
-        const selectedIndices = [];
-        loadedQuests.forEach((_, index) => {
-            const cb = document.getElementById(`q-${index}`);
-            if (cb && cb.checked) selectedIndices.push(index);
-        });
-
-        if (selectedIndices.length === 0) { alert("Select a quest!"); return; }
-
         const neededKeys = new Map();
         const neededItems = [];
         const objectives = [];
@@ -385,7 +561,7 @@
         selectedIndices.forEach(index => {
             const quest = loadedQuests[index];
             
-            // 1. Initial Rewards
+            // 1. Provided Items (Start Rewards)
             const providedItemIds = new Set();
             if (quest.startRewards && quest.startRewards.items) {
                 quest.startRewards.items.forEach(r => {
@@ -400,7 +576,7 @@
                 });
             }
 
-            // 3. Objectives & Items
+            // 3. Objectives & Items (FIXED LOGIC)
             if (quest.objectives) {
                 quest.objectives.forEach(obj => {
                     objectives.push({ quest: quest.name, desc: obj.description });
@@ -408,13 +584,15 @@
                     let item = null;
                     let count = 0;
 
-                    if (obj.type === 'GiveItem' && obj.item) {
+                    // Check for Item Handover/Find
+                    if (obj.item) {
                         item = obj.item;
-                        count = obj.count;
+                        count = obj.count || 1;
                     }
-                    else if (obj.type === 'Mark' && obj.markerItem) {
+                    // Check for Marking
+                    else if (obj.markerItem) {
                         item = obj.markerItem;
-                        count = 1; // FIX: Fallback, da API count nicht liefert
+                        count = 1; 
                     }
 
                     if (item) {
@@ -438,37 +616,40 @@
         // Rendering Results
         document.getElementById('required-keys').innerHTML = neededKeys.size > 0 
             ? Array.from(neededKeys.values()).map(k => `
-                <div class="item-badge" title="${k.name}">
-                    ${k.iconLink ? `<img src="${k.iconLink}" class="key-icon">` : '🔑'}
+                <div class="item-box">
+                    ${k.iconLink ? `<img src="${k.iconLink}">` : ''}
                     <span>${k.shortName || k.name}</span>
                 </div>`).join('') 
-            : '<span class="text-success p-2">No special keys required.</span>';
+            : '<span class="text-muted p-2">None required.</span>';
 
+        // Required Items HTML
         document.getElementById('required-items').innerHTML = neededItems.length > 0 
             ? neededItems.map(i => `
-                <div class="item-badge ${i.status}">
-                    ${i.icon ? `<img src="${i.icon}" class="key-icon">` : '📦'}
-                    <span>${i.count}x ${i.name}</span>
-                    <span class="ms-2 badge bg-dark bg-opacity-50" style="font-size:0.7em">
-                        ${i.status === 'provided' ? '🎁 Provided' : '🔍 Acquire'}
-                    </span>
+                <div class="item-box ${i.status === 'provided' ? 'status-provide' : 'status-acquire'}">
+                    ${i.icon ? `<img src="${i.icon}">` : ''}
+                    <div>
+                        <div style="line-height:1;">${i.count}x ${i.name}</div>
+                        <div style="font-size:0.7em; text-transform:uppercase; margin-top:2px; opacity:0.8;">
+                            ${i.status === 'provided' ? 'Provided' : 'Acquire'}
+                        </div>
+                    </div>
                 </div>`).join('') 
-            : '<span class="text-muted p-2">-</span>';
+            : '<span class="text-muted p-2">None required.</span>';
 
         document.getElementById('mission-steps').innerHTML = objectives.map(obj => `
-            <li class="list-group-item bg-transparent text-light border-secondary">
-                <span class="text-warning fw-bold">${obj.quest}:</span> ${obj.desc}
+            <li class="list-group-item bg-transparent text-light border-0 ps-0">
+                <span class="text-beige fw-bold">${obj.quest}:</span> <span style="color:#bbb;">${obj.desc}</span>
             </li>`).join('');
 
         const progressContainer = document.getElementById('progression-list');
         progressContainer.innerHTML = unlocks.length > 0 
             ? unlocks.map(u => `
-                <div class="mb-2 p-2 border border-secondary rounded bg-dark bg-opacity-50">
-                    <div class="text-muted" style="font-size: 0.85em;">Completing <em class="text-light">${u.from}</em> unlocks:</div>
-                    <div class="fw-bold" style="color: #a29bfe;">➥ ${u.nextName}</div>
-                    <div class="d-flex justify-content-between mt-1 small text-secondary"><span>🗺️ ${u.nextMap}</span><span>👤 ${u.trader}</span></div>
+                <div class="mb-2 p-2 border border-secondary" style="background:#111;">
+                    <div style="font-size: 0.85em; color:#777;">Completing ${u.from} unlocks:</div>
+                    <div class="fw-bold text-light mt-1">➔ ${u.nextName}</div>
+                    <div class="d-flex justify-content-between mt-1 small" style="color:#999;"><span>${u.nextMap}</span><span>${u.trader}</span></div>
                 </div>`).join('')
-            : '<div class="text-muted p-2 fst-italic">No direct follow-up quests.</div>';
+            : '<div class="text-muted p-2 fst-italic">No immediate unlocks.</div>';
 
         resultBox.style.display = 'block';
         resultBox.scrollIntoView({ behavior: 'smooth' });

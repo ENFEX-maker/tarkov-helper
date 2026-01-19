@@ -4,8 +4,7 @@ import httpx
 import json
 import time
 
-# Version Update: Network Stabilizer
-app = FastAPI(title="Tarkov Helper API", version="1.1.4-NETFIX")
+app = FastAPI(title="Tarkov Raid Planner", version="0.9.1 (Alpha - Wiki Style)")
 
 app.add_middleware(
     CORSMiddleware,
@@ -74,55 +73,46 @@ async def fetch_tarkov_data():
     if cached_data and (current_time - last_fetch_time < CACHE_TTL):
         return cached_data
 
-    # HEADERS WICHTIG: Sagen dem Server, dass wir komprimierte Daten können (stabiler)
     headers = {
         "Content-Type": "application/json",
         "Accept-Encoding": "gzip, deflate", 
-        "User-Agent": "TarkovRaidPlanner/1.1"
+        "User-Agent": "TarkovRaidPlanner/0.9"
     }
 
-    # TIMEOUT CONFIG: Wir geben dem Server mehr Zeit
+    # Timeout hoch, HTTP/1.1 erzwingen für Stabilität
     timeout_config = httpx.Timeout(60.0, connect=20.0, read=60.0)
 
-    # CLIENT CONFIG: http2=False ist der wichtigste Fix hier!
     async with httpx.AsyncClient(http2=False, timeout=timeout_config) as client:
         try:
-            print("DEBUG: Fetching data from Tarkov API (HTTP/1.1)...")
+            print("DEBUG: Fetching data from Tarkov API...")
             response = await client.post(TARKOV_API_URL, json={'query': QUESTS_QUERY}, headers=headers)
-            
-            # Fehler werfen bei HTTP Fehlern (z.B. 500er vom Tarkov Server)
             response.raise_for_status()
-            
             data = response.json()
             
             if "errors" in data:
-                print(f"API ERROR: {data['errors'][0]['message']}")
                 raise Exception(data['errors'][0]['message'])
             
-            # --- DATEN SICHER AUSLESEN ---
             data_content = data.get("data") or {}
             all_tasks = data_content.get("tasks") or []
             
             unlocks_map = {}
 
+            # Unlocks berechnen
             for child_task in all_tasks:
                 reqs = child_task.get("taskRequirements") or []
-                
                 for req in reqs:
                     if not req: continue
-                    
                     parent = req.get("task")
                     if parent:
                         p_id = parent["id"]
-                        if p_id not in unlocks_map:
-                            unlocks_map[p_id] = []
+                        if p_id not in unlocks_map: unlocks_map[p_id] = []
                         
                         c_map = child_task.get("map")
                         c_trader = child_task.get("trader")
                         
                         unlocks_map[p_id].append({
                             "name": child_task.get("name", "Unknown"),
-                            "map": c_map["name"] if c_map else "Any/Global",
+                            "map": c_map["name"] if c_map else "Global",
                             "trader": c_trader["name"] if c_trader else "?"
                         })
             
@@ -132,12 +122,8 @@ async def fetch_tarkov_data():
 
             cached_data = data
             last_fetch_time = current_time
-            print(f"DEBUG: Success! Loaded {len(all_tasks)} tasks.")
             return data
 
-        except httpx.RemoteProtocolError as e:
-            print(f"NETWORK ERROR (Protocol): {e}")
-            raise e
         except Exception as e:
             print(f"FETCH EXCEPTION: {e}")
             raise e
@@ -152,7 +138,6 @@ async def get_quests(map_name: str):
         all_tasks = data_content.get("tasks") or []
         
         filtered = []
-        
         for task in all_tasks:
             t_map = task.get('map')
             if target_map == "Any":
@@ -164,5 +149,5 @@ async def get_quests(map_name: str):
         return filtered
 
     except Exception as e:
-        print(f"CRITICAL SERVER ERROR: {e}")
+        print(f"SERVER ERROR: {e}")
         raise HTTPException(status_code=500, detail=str(e))
