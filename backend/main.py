@@ -4,7 +4,7 @@ import httpx
 import json
 import time
 
-app = FastAPI(title="Tarkov Helper API", version="0.9.9-LOGIC")
+app = FastAPI(title="Tarkov Helper API", version="1.1.0-VETERAN")
 
 app.add_middleware(
     CORSMiddleware,
@@ -26,7 +26,7 @@ MAP_MAPPING = {
     "Ground Zero": "GroundZero", "Labs": "Laboratory", "Any": "Any"
 }
 
-# Wir holen Requirements, um die Abhängigkeiten selbst zu berechnen
+# QUERY UPDATE: Wir brauchen jetzt auch "TaskObjectiveMark" für Marker/Repeater
 QUESTS_QUERY = """
 {
     tasks {
@@ -41,7 +41,7 @@ QUESTS_QUERY = """
         }
         startRewards {
             items {
-                item { name, iconLink },
+                item { id, name, iconLink },
                 count
             }
         }
@@ -49,12 +49,15 @@ QUESTS_QUERY = """
             description
             type
             ... on TaskObjectiveItem {
-                item { name, iconLink }
+                item { id, name, iconLink }
                 count
                 foundInRaid
             }
+            ... on TaskObjectiveMark {
+                markerItem { id, name, iconLink }
+                count
+            }
         }
-        # Das hier ist der Schlüssel: Was braucht diese Quest als Voraussetzung?
         taskRequirements {
             task {
                 id
@@ -81,8 +84,7 @@ async def fetch_tarkov_data():
             if "errors" in data:
                 raise Exception(data['errors'][0]['message'])
             
-            # --- LOGIK: Reverse Lookup bauen ---
-            # Wir bauen eine Map: { Parent_ID: [Child_Quest1, Child_Quest2] }
+            # --- LOGIK: Reverse Lookup (Unlocks) ---
             all_tasks = data.get("data", {}).get("tasks", [])
             unlocks_map = {}
 
@@ -95,22 +97,16 @@ async def fetch_tarkov_data():
                         if p_id not in unlocks_map:
                             unlocks_map[p_id] = []
                         
-                        # Wir speichern die Infos der Child-Quest beim Parent
                         unlocks_map[p_id].append({
                             "name": child_task["name"],
                             "map": child_task["map"]["name"] if child_task.get("map") else "Any/Global",
                             "trader": child_task["trader"]["name"] if child_task.get("trader") else "?"
                         })
             
-            # Jetzt fügen wir das neue Feld "derived_unlocks" in jede Task ein
             for task in all_tasks:
                 task_id = task["id"]
-                if task_id in unlocks_map:
-                    task["derived_unlocks"] = unlocks_map[task_id]
-                else:
-                    task["derived_unlocks"] = []
+                task["derived_unlocks"] = unlocks_map.get(task_id, [])
 
-            # Cache speichern (mit den berechneten Daten)
             cached_data = data
             last_fetch_time = current_time
             return data
@@ -134,6 +130,9 @@ async def get_quests(map_name: str):
                 if t_map is None: filtered.append(task)
             else:
                 if t_map and t_map.get('name') == target_map: filtered.append(task)
+        
+        # Sortieren nach Name für bessere Gruppierung im Frontend
+        filtered.sort(key=lambda x: x['name'])
         return filtered
 
     except Exception as e:
