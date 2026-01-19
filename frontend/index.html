@@ -157,14 +157,22 @@
         }
 
         .map-container {
-            width: 100%; height: 650px;
+            width: 100%; 
+            height: 650px;
             background-color: #000;
             border: 1px solid var(--eft-gold);
             position: relative;
-            overflow: hidden;
-            display: flex; align-items: center; justify-content: center;
+            overflow: hidden; /* Wichtig, damit Map nicht rausragt */
+            /* FIX: Flexbox entfernt, da es Panzoom Positionierung stört */
+            display: block; 
         }
-        .map-image { max-width: 100%; max-height: 100%; display: block; }
+        
+        .map-image { 
+            width: 100%; /* Startet passend zur Breite */
+            height: auto;
+            display: block; 
+            transform-origin: top left; /* Wichtig für konsistentes Zoomen */
+        }
         
         .section-header {
             border-bottom: 1px solid var(--border-color);
@@ -188,6 +196,17 @@
         
         .status-provide { color: #8cb58c; border-color: #2f452f; background: #121c12; }
         .status-acquire { color: #d6a685; border-color: #4f3a2c; background: #241a15; }
+        
+        /* Links in Unlocks */
+        a.unlock-link {
+            color: var(--eft-beige);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        a.unlock-link:hover {
+            color: #fff;
+            text-decoration: underline;
+        }
 
     </style>
 </head>
@@ -196,7 +215,7 @@
 <div class="container pb-5">
     <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-secondary pb-3">
         <div>
-            <h1 class="mb-0">RAID PLANNER <span style="font-size: 0.5em; vertical-align: middle; color: #888;">v0.9.3</span></h1>
+            <h1 class="mb-0">RAID PLANNER <span style="font-size: 0.5em; vertical-align: middle; color: #888;">v0.9.4</span></h1>
         </div>
     </div>
 
@@ -240,7 +259,7 @@
             <h5 class="m-0 text-beige">Select Active Tasks</h5>
             <div>
                 <button onclick="clearSelection()" class="btn btn-tarkov btn-reset me-2 btn-sm">Reset</button>
-                <button onclick="planRaid()" class="btn btn-tarkov px-4">Initialize Plan</button>
+                <button onclick="planRaid()" id="btn-initialize" class="btn btn-tarkov px-4">Initialize Plan</button>
             </div>
         </div>
         
@@ -257,7 +276,7 @@
                 <button class="btn btn-sm btn-dark border-secondary" id="zoom-out">-</button>
                 <button class="btn btn-sm btn-dark border-secondary" id="zoom-reset">R</button>
             </div>
-            <div id="map-fallback-link" class="text-center" style="display:none; position:absolute;">
+            <div id="map-fallback-link" class="text-center" style="display:none; position:absolute; top: 45%; width: 100%;">
                 <p class="text-sub">No tactical map available.</p>
                 <a id="ext-map-link" href="#" target="_blank" class="text-beige">Open External Map</a>
             </div>
@@ -294,7 +313,6 @@
     let loadedQuests = [];
     let panzoomInstance = null; 
 
-    // MUSS EXAKT ZUM BACKEND PASSEN:
     const MAP_CONFIG = {
         "Customs": { file: "customs.jpg", url: "https://tarkov.dev/map/customs-2d" },
         "Factory": { file: "factory.jpg", url: "https://tarkov.dev/map/factory-3d" },
@@ -317,34 +335,40 @@
         const savedSet = getSavedQuests();
         if (isChecked) savedSet.add(questId); else savedSet.delete(questId);
         localStorage.setItem(STORAGE_KEY, JSON.stringify([...savedSet]));
+        updatePlanButton(); // NEW: Update button on save
     }
 
-    // SEARCH LOGIC
     document.getElementById('questSearch').addEventListener('input', function(e) {
         const term = e.target.value.toLowerCase();
         const filtered = loadedQuests.filter(q => q.name.toLowerCase().includes(term));
         renderQuestList(filtered);
     });
 
-    // MAP RESET LOGIC
     document.getElementById('zoom-reset').addEventListener('click', function() {
         if(panzoomInstance) panzoomInstance.reset();
     });
 
-    // SELECTION RESET LOGIC
+    // --- NEW: Button Update Logic ---
+    function updatePlanButton() {
+        const savedSet = getSavedQuests();
+        const count = savedSet.size;
+        const btn = document.getElementById('btn-initialize');
+        if(btn) {
+            btn.innerHTML = count > 0 ? `Initialize Plan (${count})` : "Initialize Plan";
+        }
+    }
+
     function clearSelection() {
         if(confirm("Reset mission parameters?")) {
             localStorage.removeItem(STORAGE_KEY);
             document.querySelectorAll('.quest-checkbox').forEach(cb => cb.checked = false);
             document.querySelectorAll('.quest-item').forEach(div => div.classList.remove('selected'));
             
-            // Panzoom aufräumen
             if (panzoomInstance) {
                 panzoomInstance.dispose();
                 panzoomInstance = null;
             }
             
-            // Map-Bild verstecken
             const mapImg = document.getElementById('map-display');
             mapImg.src = ""; 
             mapImg.style.display = 'none';
@@ -352,8 +376,8 @@
             document.getElementById('planning-result').style.display = 'none';
             document.getElementById('questSearch').value = '';
             
-            // Liste neu laden
             renderQuestList(loadedQuests);
+            updatePlanButton(); // Reset Counter
         }
     }
 
@@ -362,12 +386,14 @@
         document.getElementById('map-fallback-link').style.display = 'block';
     }
 
-    // RENDER LOGIC
     function renderQuestList(questsToRender) {
         const listContainer = document.getElementById('quest-list');
         listContainer.innerHTML = '';
         const savedSet = getSavedQuests();
         const isFiltering = document.getElementById('questSearch').value.length > 0;
+
+        // Init Button Counter
+        updatePlanButton();
 
         const groups = {};
         const standalone = [];
@@ -533,7 +559,6 @@
         // Logic
         const selectedIds = new Set();
         document.querySelectorAll('.quest-checkbox:checked').forEach(cb => selectedIds.add(cb.value));
-        
         const selectedQuests = loadedQuests.filter(q => selectedIds.has(q.id));
 
         if (selectedQuests.length === 0) { alert("No operations selected."); return; }
@@ -552,11 +577,21 @@
             if (panzoomInstance) panzoomInstance.dispose();
             
             const elem = document.getElementById('map-display');
-            panzoomInstance = Panzoom(elem, { maxScale: 5, minScale: 0.5, contain: 'outside', startScale: 1 });
-            elem.parentElement.addEventListener('wheel', panzoomInstance.zoomWithWheel);
             
-            document.getElementById('zoom-in').onclick = panzoomInstance.zoomIn;
-            document.getElementById('zoom-out').onclick = panzoomInstance.zoomOut;
+            // FIX: MAP LOADING & PANZOOM INIT
+            // Wir warten bis das Bild geladen ist, bevor Panzoom startet
+            elem.onload = function() {
+                panzoomInstance = Panzoom(elem, { 
+                    maxScale: 5, 
+                    minScale: 0.1, // Mehr rauszoomen erlaubt
+                    contain: false, // WICHTIG: Erlaubt Bild über Ränder zu schieben -> kein Cutoff!
+                    startScale: 1 
+                });
+                elem.parentElement.addEventListener('wheel', panzoomInstance.zoomWithWheel);
+            };
+
+            document.getElementById('zoom-in').onclick = () => panzoomInstance.zoomIn();
+            document.getElementById('zoom-out').onclick = () => panzoomInstance.zoomOut();
         } else {
             handleMapError();
         }
@@ -567,7 +602,6 @@
         const unlocks = [];
 
         selectedQuests.forEach(quest => {
-            // 1. Provided Items
             const providedItemIds = new Set();
             if (quest.startRewards && quest.startRewards.items) {
                 quest.startRewards.items.forEach(r => {
@@ -575,14 +609,12 @@
                 });
             }
 
-            // 2. Keys
             if (quest.neededKeys) {
                 quest.neededKeys.forEach(g => {
                     if(g.keys && g.keys.length > 0) neededKeys.set(g.keys[0].name, g.keys[0]);
                 });
             }
 
-            // 3. Objectives
             if (quest.objectives) {
                 quest.objectives.forEach(obj => {
                     objectives.push({ quest: quest.name, desc: obj.description });
@@ -611,13 +643,17 @@
                 });
             }
 
-            // 4. Unlocks
             if (quest.derived_unlocks) {
-                quest.derived_unlocks.forEach(u => unlocks.push({ from: quest.name, nextName: u.name, nextMap: u.map, trader: u.trader }));
+                quest.derived_unlocks.forEach(u => unlocks.push({ 
+                    from: quest.name, 
+                    nextName: u.name, 
+                    nextMap: u.map, 
+                    trader: u.trader,
+                    wikiLink: u.wikiLink // Added
+                }));
             }
         });
 
-        // Rendering Results
         document.getElementById('required-keys').innerHTML = neededKeys.size > 0 
             ? Array.from(neededKeys.values()).map(k => `
                 <div class="item-box">
@@ -644,12 +680,14 @@
                 <span class="text-beige fw-bold">${obj.quest}:</span> <span style="color:#bbb;">${obj.desc}</span>
             </li>`).join('');
 
-        const progressContainer = document.getElementById('progression-list');
-        progressContainer.innerHTML = unlocks.length > 0 
+        // UPDATE: Rendering mit Links
+        document.getElementById('progression-list').innerHTML = unlocks.length > 0 
             ? unlocks.map(u => `
                 <div class="mb-2 p-2 border border-secondary" style="background:#111;">
                     <div style="font-size: 0.85em; color:#777;">Completing ${u.from} unlocks:</div>
-                    <div class="fw-bold text-light mt-1">➔ ${u.nextName}</div>
+                    <div class="fw-bold text-light mt-1">
+                        ➔ ${u.wikiLink ? `<a href="${u.wikiLink}" target="_blank" class="unlock-link">${u.nextName}</a>` : u.nextName}
+                    </div>
                     <div class="d-flex justify-content-between mt-1 small" style="color:#999;"><span>${u.nextMap}</span><span>${u.trader}</span></div>
                 </div>`).join('')
             : '<div class="text-sub p-2 fst-italic">No immediate unlocks.</div>';
