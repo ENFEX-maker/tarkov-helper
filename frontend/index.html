@@ -405,18 +405,21 @@
                 });
             }
 
-            // Unlocks
-            if (quest.unlocksTask && quest.unlocksTask.length > 0) {
-                quest.unlocksTask.forEach(nextTask => {
-                    unlocks.push({
-                        from: quest.name,
-                        nextName: nextTask.name,
-                        nextMap: nextTask.map ? nextTask.map.name : 'Any/Multi',
-                        trader: nextTask.trader ? nextTask.trader.name : '?'
-                    });
+// NEU: Unlocks via finishRewards verarbeiten
+            if (quest.finishRewards && quest.finishRewards.length > 0) {
+                quest.finishRewards.forEach(reward => {
+                    // Prüfen, ob dieser Reward eine Task freischaltet
+                    if (reward.task) {
+                        const nextTask = reward.task;
+                        unlocks.push({
+                            from: quest.name,
+                            nextName: nextTask.name,
+                            nextMap: nextTask.map ? nextTask.map.name : 'Any/Multi',
+                            trader: nextTask.trader ? nextTask.trader.name : '?'
+                        });
+                    }
                 });
             }
-        });
 
         // 3. Rendering
         document.getElementById('required-keys').innerHTML = neededKeys.size > 0 

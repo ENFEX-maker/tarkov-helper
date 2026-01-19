@@ -36,6 +36,7 @@ MAP_MAPPING = {
 }
 
 # Erweiterte Query inkl. Follow-up Quests (unlocksTask)
+# Erweiterte Query: Unlocks sind jetzt Teil von finishRewards
 QUESTS_QUERY = """
 {
     tasks {
@@ -63,12 +64,17 @@ QUESTS_QUERY = """
                 foundInRaid
             }
         }
-        unlocksTask {
-            id
-            name
-            minPlayerLevel
-            map { name }
-            trader { name }
+        # --- KORREKTUR: Unlocks via finishRewards ---
+        finishRewards {
+            ... on TaskRewardTaskUnlock {
+                task {
+                    id
+                    name
+                    minPlayerLevel
+                    map { name }
+                    trader { name }
+                }
+            }
         }
     }
 }
