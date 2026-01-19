@@ -162,16 +162,15 @@
             background-color: #000;
             border: 1px solid var(--eft-gold);
             position: relative;
-            overflow: hidden; /* Wichtig, damit Map nicht rausragt */
-            /* FIX: Flexbox entfernt, da es Panzoom Positionierung stört */
+            overflow: hidden; 
             display: block; 
         }
         
         .map-image { 
-            width: 100%; /* Startet passend zur Breite */
+            width: 100%; 
             height: auto;
             display: block; 
-            transform-origin: top left; /* Wichtig für konsistentes Zoomen */
+            transform-origin: top left; 
         }
         
         .section-header {
@@ -197,7 +196,6 @@
         .status-provide { color: #8cb58c; border-color: #2f452f; background: #121c12; }
         .status-acquire { color: #d6a685; border-color: #4f3a2c; background: #241a15; }
         
-        /* Links in Unlocks */
         a.unlock-link {
             color: var(--eft-beige);
             text-decoration: none;
@@ -215,7 +213,7 @@
 <div class="container pb-5">
     <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-secondary pb-3">
         <div>
-            <h1 class="mb-0">RAID PLANNER <span style="font-size: 0.5em; vertical-align: middle; color: #888;">v0.9.4</span></h1>
+            <h1 class="mb-0">RAID PLANNER <span style="font-size: 0.5em; vertical-align: middle; color: #888;">v0.9.5</span></h1>
         </div>
     </div>
 
@@ -335,7 +333,7 @@
         const savedSet = getSavedQuests();
         if (isChecked) savedSet.add(questId); else savedSet.delete(questId);
         localStorage.setItem(STORAGE_KEY, JSON.stringify([...savedSet]));
-        updatePlanButton(); // NEW: Update button on save
+        updatePlanButton();
     }
 
     document.getElementById('questSearch').addEventListener('input', function(e) {
@@ -348,7 +346,6 @@
         if(panzoomInstance) panzoomInstance.reset();
     });
 
-    // --- NEW: Button Update Logic ---
     function updatePlanButton() {
         const savedSet = getSavedQuests();
         const count = savedSet.size;
@@ -377,7 +374,7 @@
             document.getElementById('questSearch').value = '';
             
             renderQuestList(loadedQuests);
-            updatePlanButton(); // Reset Counter
+            updatePlanButton();
         }
     }
 
@@ -392,7 +389,6 @@
         const savedSet = getSavedQuests();
         const isFiltering = document.getElementById('questSearch').value.length > 0;
 
-        // Init Button Counter
         updatePlanButton();
 
         const groups = {};
@@ -578,13 +574,11 @@
             
             const elem = document.getElementById('map-display');
             
-            // FIX: MAP LOADING & PANZOOM INIT
-            // Wir warten bis das Bild geladen ist, bevor Panzoom startet
             elem.onload = function() {
                 panzoomInstance = Panzoom(elem, { 
                     maxScale: 5, 
-                    minScale: 0.1, // Mehr rauszoomen erlaubt
-                    contain: false, // WICHTIG: Erlaubt Bild über Ränder zu schieben -> kein Cutoff!
+                    minScale: 0.1, 
+                    contain: false, 
                     startScale: 1 
                 });
                 elem.parentElement.addEventListener('wheel', panzoomInstance.zoomWithWheel);
@@ -597,7 +591,9 @@
         }
 
         const neededKeys = new Map();
-        const neededItems = [];
+        // --- NEW: Aggregation Map ---
+        const itemsMap = new Map(); // Key: ItemID, Value: {data, count, status}
+        
         const objectives = [];
         const unlocks = [];
 
@@ -632,13 +628,20 @@
                     }
 
                     if (item) {
-                        const isProvided = providedItemIds.has(item.id);
-                        neededItems.push({
-                            name: item.name,
-                            count: count,
-                            icon: item.iconLink,
-                            status: isProvided ? 'provided' : 'acquire'
-                        });
+                        // AGGREGATION LOGIC
+                        if (!itemsMap.has(item.id)) {
+                            itemsMap.set(item.id, {
+                                name: item.name,
+                                icon: item.iconLink,
+                                count: 0,
+                                provided: providedItemIds.has(item.id) // Status base check
+                            });
+                        }
+                        
+                        const entry = itemsMap.get(item.id);
+                        entry.count += count;
+                        // If one quest provides it, we treat it as provided for now (simplified)
+                        if (providedItemIds.has(item.id)) entry.provided = true; 
                     }
                 });
             }
@@ -649,10 +652,18 @@
                     nextName: u.name, 
                     nextMap: u.map, 
                     trader: u.trader,
-                    wikiLink: u.wikiLink // Added
+                    wikiLink: u.wikiLink
                 }));
             }
         });
+
+        // Convert Maps to Arrays for Rendering
+        const neededItems = Array.from(itemsMap.values()).map(i => ({
+            name: i.name,
+            count: i.count,
+            icon: i.icon,
+            status: i.provided ? 'provided' : 'acquire'
+        }));
 
         document.getElementById('required-keys').innerHTML = neededKeys.size > 0 
             ? Array.from(neededKeys.values()).map(k => `
@@ -680,7 +691,6 @@
                 <span class="text-beige fw-bold">${obj.quest}:</span> <span style="color:#bbb;">${obj.desc}</span>
             </li>`).join('');
 
-        // UPDATE: Rendering mit Links
         document.getElementById('progression-list').innerHTML = unlocks.length > 0 
             ? unlocks.map(u => `
                 <div class="mb-2 p-2 border border-secondary" style="background:#111;">
