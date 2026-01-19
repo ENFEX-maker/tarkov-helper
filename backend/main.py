@@ -4,8 +4,8 @@ import httpx
 import json
 import time
 
-# Version Bump auf 1.1.2 (Bugfix Release)
-app = FastAPI(title="Tarkov Helper API", version="1.1.2-STABLE")
+# Version Bump
+app = FastAPI(title="Tarkov Helper API", version="1.1.3-STABLE")
 
 app.add_middleware(
     CORSMiddleware,
@@ -71,7 +71,6 @@ async def fetch_tarkov_data():
     global last_fetch_time, cached_data
     current_time = time.time()
     
-    # Cache nur nutzen, wenn er existiert
     if cached_data and (current_time - last_fetch_time < CACHE_TTL):
         return cached_data
 
@@ -86,27 +85,34 @@ async def fetch_tarkov_data():
                 print(f"API ERROR: {data['errors'][0]['message']}")
                 raise Exception(data['errors'][0]['message'])
             
-            # --- LOGIK: Reverse Lookup (Unlocks) ---
-            # FIX: Wir nutzen .get('tasks') OR [], falls 'tasks' null ist
-            all_tasks = data.get("data", {}).get("tasks") or []
+            # --- CRASH FIX: Sicheres Auslesen der Daten ---
+            # data['data'] kann null sein, tasks kann null sein.
+            data_content = data.get("data") or {}
+            all_tasks = data_content.get("tasks") or []
+            
             unlocks_map = {}
 
             for child_task in all_tasks:
-                # CRITICAL FIX: 'taskRequirements' kann null sein!
-                # 'or []' verhindert den Crash, wenn die API null sendet.
+                # CRASH FIX: taskRequirements kann null sein!
                 reqs = child_task.get("taskRequirements") or []
                 
                 for req in reqs:
+                    if not req: continue # Skip if req itself is weirdly null
+                    
                     parent = req.get("task")
                     if parent:
                         p_id = parent["id"]
                         if p_id not in unlocks_map:
                             unlocks_map[p_id] = []
                         
+                        # Sicheres Auslesen der Child-Infos
+                        c_map = child_task.get("map")
+                        c_trader = child_task.get("trader")
+                        
                         unlocks_map[p_id].append({
                             "name": child_task.get("name", "Unknown"),
-                            "map": child_task["map"]["name"] if child_task.get("map") else "Any/Global",
-                            "trader": child_task["trader"]["name"] if child_task.get("trader") else "?"
+                            "map": c_map["name"] if c_map else "Any/Global",
+                            "trader": c_trader["name"] if c_trader else "?"
                         })
             
             # Die berechneten Unlocks in die Tasks einfügen
@@ -129,7 +135,9 @@ async def get_quests(map_name: str):
         target_map = MAP_MAPPING.get(map_name, map_name)
         
         # Auch hier: Sicherstellen, dass es eine Liste ist
-        all_tasks = result.get("data", {}).get("tasks") or []
+        data_content = result.get("data") or {}
+        all_tasks = data_content.get("tasks") or []
+        
         filtered = []
         
         for task in all_tasks:
@@ -139,10 +147,10 @@ async def get_quests(map_name: str):
             else:
                 if t_map and t_map.get('name') == target_map: filtered.append(task)
         
-        # Sortieren (mit Fallback falls Name fehlt, zur Sicherheit)
+        # Sortieren (mit Fallback)
         filtered.sort(key=lambda x: x.get('name', ''))
         return filtered
 
     except Exception as e:
-        print(f"CRITICAL SERVER ERROR: {e}") # Damit wir es im Log sehen
+        print(f"CRITICAL SERVER ERROR: {e}")
         raise HTTPException(status_code=500, detail=str(e))
