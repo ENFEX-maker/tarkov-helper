@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tarkov Raid Planner</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
+
     <style>
         body { background-color: #0f0f0f; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .container { max-width: 1000px; margin-top: 40px; }
@@ -34,37 +36,72 @@
         .item-badge { background-color: #222; border: 1px solid #444; padding: 5px 10px; border-radius: 6px; display: inline-flex; align-items: center; margin: 5px; }
         .item-badge.special { border-color: #d35400; background-color: #2e1e1e; }
         
+        /* --- NEU: Map Styles & Controls --- */
         .map-container {
             width: 100%;
             height: 600px;
             background-color: #050505;
             border-radius: 8px;
-            overflow: hidden;
+            overflow: hidden; /* Wichtig, damit das Bild nicht rausragt */
             position: relative;
             margin-bottom: 20px;
             border: 1px solid #333;
-            display: flex;
+            /* Flexbox entfernen, da Panzoom absolute positioning besser handhabt oder zentriert */
+            display: flex; 
             align-items: center;
             justify-content: center;
-            flex-direction: column;
         }
         .map-image {
             max-width: 100%;
             max-height: 100%;
             object-fit: contain; 
             display: block;
+            cursor: grab; /* Zeigt an, dass man ziehen kann */
+            transition: none; /* Wichtig für flüssiges Draggen */
+        }
+        .map-image:active {
+            cursor: grabbing;
         }
         .map-link-fallback {
             margin-top: 10px;
             display: none;
+            position: absolute;
+            z-index: 10;
         }
+        
+        /* Schwebende Zoom Controls */
+        .map-controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 100;
+            display: flex;
+            gap: 5px;
+            background: rgba(0,0,0,0.6);
+            padding: 5px;
+            border-radius: 8px;
+        }
+        .map-btn {
+            width: 35px;
+            height: 35px;
+            border: 1px solid #555;
+            background: #222;
+            color: #fff;
+            border-radius: 4px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        .map-btn:hover { background: #444; }
     </style>
 </head>
 <body>
 
 <div class="container pb-5">
     <div class="mb-5">
-        <h1 class="fw-bold text-warning mb-0">Tarkov Raid Planner <span class="badge bg-secondary fs-6 align-middle">v0.9.3 (Persistent)</span></h1>
+        <h1 class="fw-bold text-warning mb-0">Tarkov Raid Planner <span class="badge bg-secondary fs-6 align-middle">v0.9.4 (Zoom)</span></h1>
         <p class="text-secondary m-0">Select your active tasks and optimize your route.</p>
     </div>
 
@@ -114,16 +151,23 @@
     <div id="planning-result">
         
         <h4 class="text-warning mb-3">📍 Tactical Map</h4>
-        <div class="map-container">
-            <img id="map-display" src="" class="map-image" alt="Map Preview" onerror="this.style.display='none'; document.getElementById('map-fallback-link').style.display='block';">
+        
+        <div class="map-container" id="map-container-div">
+            <img id="map-display" src="" class="map-image" alt="Map Preview" onerror="handleMapError()">
             
+            <div class="map-controls">
+                <button class="map-btn" id="zoom-in" title="Zoom In">+</button>
+                <button class="map-btn" id="zoom-out" title="Zoom Out">-</button>
+                <button class="map-btn" id="zoom-reset" title="Reset View">↺</button>
+            </div>
+
             <div id="map-fallback-link" class="map-link-fallback text-center">
                 <p class="text-muted">Local map file not found.</p>
                 <a id="ext-map-link" href="#" target="_blank" class="btn btn-outline-warning btn-sm">Open Interactive Map ↗️</a>
             </div>
 
-            <div class="position-absolute bottom-0 end-0 p-2 bg-black bg-opacity-75 text-white small">
-                Source: Local Intelligence
+            <div class="position-absolute bottom-0 start-0 p-2 text-secondary small" style="pointer-events: none;">
+                Scroll to Zoom • Drag to Pan
             </div>
         </div>
 
@@ -146,10 +190,10 @@
 
 <script>
     const API_URL = "/api";
-    const STORAGE_KEY = "tarkov_planner_selected_quests"; // Key für LocalStorage
+    const STORAGE_KEY = "tarkov_planner_selected_quests"; 
     let loadedQuests = [];
+    let panzoomInstance = null; // Speichert die aktuelle Zoom-Instanz
 
-    // Konfiguration: Lokale Dateinamen & Externe Fallback-Links
     const MAP_CONFIG = {
         "Customs":           { file: "customs.jpg",    url: "https://tarkov.dev/map/customs-2d" },
         "Factory":           { file: "factory.jpg",    url: "https://tarkov.dev/map/factory-3d" },
@@ -163,7 +207,6 @@
         "Labs":              { file: "labs.jpg",       url: "https://tarkov.dev/map/the-lab-2d" }
     };
 
-    // --- NEU: Helper für LocalStorage ---
     function getSavedQuests() {
         const saved = localStorage.getItem(STORAGE_KEY);
         return saved ? new Set(JSON.parse(saved)) : new Set();
@@ -171,24 +214,27 @@
 
     function saveQuestState(questId, isChecked) {
         const savedSet = getSavedQuests();
-        if (isChecked) {
-            savedSet.add(questId);
-        } else {
-            savedSet.delete(questId);
-        }
+        if (isChecked) savedSet.add(questId);
+        else savedSet.delete(questId);
         localStorage.setItem(STORAGE_KEY, JSON.stringify([...savedSet]));
     }
 
     function clearSelection() {
         if(confirm("Deselect all quests?")) {
             localStorage.removeItem(STORAGE_KEY);
-            // UI Update ohne Reload
             document.querySelectorAll('.quest-checkbox').forEach(cb => cb.checked = false);
             document.querySelectorAll('.quest-item').forEach(div => div.classList.remove('selected'));
             document.getElementById('planning-result').style.display = 'none';
         }
     }
-    // ------------------------------------
+
+    // --- NEU: Fehlerbehandlung für fehlende Bilder ---
+    function handleMapError() {
+        document.getElementById('map-display').style.display = 'none';
+        document.getElementById('map-fallback-link').style.display = 'block';
+        // Zoom deaktivieren, wenn kein Bild da ist
+        if(panzoomInstance) panzoomInstance.pause();
+    }
 
     async function loadQuests() {
         const mapSelect = document.getElementById('mapSelect');
@@ -211,8 +257,6 @@
             
             const quests = await response.json();
             loadedQuests = quests;
-
-            // Gespeicherte Quests laden
             const savedSet = getSavedQuests();
 
             if (quests.length === 0) {
@@ -259,42 +303,58 @@
 
     function toggleSelection(index, divElement, event) {
         const checkbox = document.getElementById(`q-${index}`);
-        
-        // Verhindert doppeltes Umschalten, wenn direkt auf Checkbox geklickt wird
         if (event.target !== checkbox && event.target.tagName !== 'A') {
             checkbox.checked = !checkbox.checked;
         }
-
-        // Visuelles Feedback
         if (checkbox.checked) divElement.classList.add('selected');
         else divElement.classList.remove('selected');
-
-        // NEU: In LocalStorage speichern
         saveQuestState(loadedQuests[index].id, checkbox.checked);
     }
 
     function planRaid() {
         const resultBox = document.getElementById('planning-result');
-        const keysContainer = document.getElementById('required-keys');
-        const itemsContainer = document.getElementById('required-items');
-        const stepsContainer = document.getElementById('mission-steps');
         const mapDisplay = document.getElementById('map-display');
         const mapLink = document.getElementById('ext-map-link');
         const mapFallback = document.getElementById('map-fallback-link');
         const mapName = document.getElementById('mapSelect').value;
 
-        // 1. Map Handling (Local File)
+        // 1. Map Handling & Zoom Reset
         mapDisplay.style.display = 'block';
         mapFallback.style.display = 'none';
 
         if (MAP_CONFIG[mapName]) {
             mapDisplay.src = `maps/${MAP_CONFIG[mapName].file}`;
             mapLink.href = MAP_CONFIG[mapName].url;
+            
+            // --- NEU: Zoom Initialisierung ---
+            // Wenn schon eine Instanz läuft, zerstören wir sie zuerst
+            if (panzoomInstance) {
+                panzoomInstance.dispose(); 
+            }
+            
+            // Panzoom auf dem BILD Element initialisieren
+            const elem = document.getElementById('map-display');
+            panzoomInstance = Panzoom(elem, {
+                maxScale: 5, // Maximale Vergrößerung
+                minScale: 0.5,
+                contain: 'outside', // Verhindert, dass man das Bild komplett aus dem Sichtfeld schiebt
+                startScale: 1
+            });
+
+            // Mausrad aktivieren
+            elem.parentElement.addEventListener('wheel', panzoomInstance.zoomWithWheel);
+
+            // Buttons verknüpfen
+            document.getElementById('zoom-in').onclick = panzoomInstance.zoomIn;
+            document.getElementById('zoom-out').onclick = panzoomInstance.zoomOut;
+            document.getElementById('zoom-reset').onclick = panzoomInstance.reset;
+            // ---------------------------------
+
         } else {
-            mapDisplay.style.display = 'none';
+            handleMapError();
         }
 
-        // 2. Data Gathering
+        // 2. Data Gathering (gleich wie vorher)
         const selectedIndices = [];
         loadedQuests.forEach((_, index) => {
             if (document.getElementById(`q-${index}`).checked) selectedIndices.push(index);
@@ -305,86 +365,60 @@
             return;
         }
 
+        // Logic (Items & Keys)
         const neededKeys = new Map(); 
         const neededItems = [];
         const objectives = [];
 
-        // PASS 1: Keys deduplizieren
         selectedIndices.forEach(index => {
             const quest = loadedQuests[index];
             if (quest.neededKeys) {
                 quest.neededKeys.forEach(kGroup => {
-                    if(kGroup.keys && kGroup.keys.length > 0) {
-                        const k = kGroup.keys[0];
-                        neededKeys.set(k.name, k); 
-                    }
+                    if(kGroup.keys && kGroup.keys.length > 0) neededKeys.set(kGroup.keys[0].name, kGroup.keys[0]);
                 });
             }
         });
 
-        // PASS 2: Items & Objectives sammeln
         selectedIndices.forEach(index => {
             const quest = loadedQuests[index];
-            
-            // Special Items (Rewards)
             if (quest.startRewards && quest.startRewards.items) {
                 quest.startRewards.items.forEach(reward => {
-                    if (reward.item) {
-                        // Prüfen, ob Item schon als Key gelistet ist
-                        if (!neededKeys.has(reward.item.name)) {
-                            neededItems.push({
-                                name: reward.item.name,
-                                count: reward.count,
-                                icon: reward.item.iconLink,
-                                isSpecial: true
-                            });
-                        }
+                    if (reward.item && !neededKeys.has(reward.item.name)) {
+                        neededItems.push({ name: reward.item.name, count: reward.count, icon: reward.item.iconLink, isSpecial: true });
                     }
                 });
             }
-
-            // Objectives
             if (quest.objectives) {
                 quest.objectives.forEach(obj => {
                     objectives.push({ quest: quest.name, desc: obj.description });
                     if (obj.type === 'GiveItem' && obj.item) {
-                        neededItems.push({ 
-                            name: obj.item.name, 
-                            count: obj.count, 
-                            icon: obj.item.iconLink,
-                            isSpecial: false
-                        });
+                        neededItems.push({ name: obj.item.name, count: obj.count, icon: obj.item.iconLink, isSpecial: false });
                     }
                 });
             }
         });
 
-        // 3. Render Keys
-        keysContainer.innerHTML = neededKeys.size > 0 
+        // Render functions
+        document.getElementById('required-keys').innerHTML = neededKeys.size > 0 
             ? Array.from(neededKeys.values()).map(k => `
                 <div class="item-badge" title="${k.name}">
                     ${k.iconLink ? `<img src="${k.iconLink}" class="key-icon">` : '🔑'}
                     <span>${k.shortName || k.name}</span>
-                </div>
-              `).join('') 
+                </div>`).join('') 
             : '<span class="text-success p-2">No special keys required.</span>';
 
-        // 4. Render Items
-        itemsContainer.innerHTML = neededItems.length > 0 
+        document.getElementById('required-items').innerHTML = neededItems.length > 0 
             ? neededItems.map(i => `
                 <div class="item-badge ${i.isSpecial ? 'special' : ''}">
                     ${i.icon ? `<img src="${i.icon}" class="key-icon">` : '📦'}
                     <span>${i.isSpecial ? '' : i.count + 'x'} ${i.name}</span>
-                </div>
-              `).join('') 
+                </div>`).join('') 
             : '<span class="text-muted p-2">-</span>';
 
-        // 5. Render Mission Log
-        stepsContainer.innerHTML = objectives.map(obj => `
+        document.getElementById('mission-steps').innerHTML = objectives.map(obj => `
             <li class="list-group-item bg-transparent text-light border-secondary">
                 <span class="text-warning fw-bold">${obj.quest}:</span> ${obj.desc}
-            </li>
-        `).join('');
+            </li>`).join('');
 
         resultBox.style.display = 'block';
         resultBox.scrollIntoView({ behavior: 'smooth' });
