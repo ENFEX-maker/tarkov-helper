@@ -11,34 +11,36 @@
     <style>
         /* --- EFT WIKI THEME --- */
         :root {
-            --bg-dark: #0e0e0e;       /* Very Dark BG */
-            --bg-panel: #141414;      /* Slightly lighter panel */
-            --bg-element: #1f1f1f;    /* Interactive elements */
+            --bg-dark: #0e0e0e;       
+            --bg-panel: #141414;      
+            --bg-element: #1f1f1f;    
             --border-color: #333;
             --text-main: #e0e0e0;
-            --text-muted: #999;
-            --eft-beige: #d2c4a6;     /* The classic Tarkov/Wiki beige */
-            --eft-gold: #9e8f6b;      /* Darker gold/beige for borders */
-            --eft-green: #4f6b4f;     /* Status OK */
-            --eft-red: #8c3b3b;       /* Status Bad */
+            --text-bright: #ffffff;   /* Neuer High-Contrast Wert */
+            --text-sub: #cccccc;      /* Helleres Grau für Subtexte */
+            --eft-beige: #d2c4a6;     
+            --eft-gold: #9e8f6b;      
+            --eft-green: #4f6b4f;     
+            --eft-red: #8c3b3b;       
         }
 
         body { 
             background-color: var(--bg-dark); 
             color: var(--text-main); 
-            font-family: 'Verdana', 'Segoe UI', sans-serif; /* Wiki Font style */
+            font-family: 'Verdana', 'Segoe UI', sans-serif; 
             font-size: 0.95rem;
         }
 
         h1, h2, h3, h4, h5 {
             color: var(--eft-beige);
-            font-family: 'Georgia', serif; /* Wiki Headers often serif */
+            font-family: 'Georgia', serif; 
             text-transform: uppercase;
             letter-spacing: 1px;
         }
         
         .container { max-width: 1400px; margin-top: 40px; }
-        .text-beige { color: var(--eft-beige); }
+        .text-beige { color: var(--eft-beige) !important; }
+        .text-sub { color: var(--text-sub) !important; }
 
         /* Panels */
         .card {
@@ -139,7 +141,7 @@
         /* Badges */
         .badge-tarkov {
             background-color: #333;
-            color: #aaa;
+            color: #ccc; /* Hellerer Text */
             border: 1px solid #444;
             border-radius: 2px;
             font-weight: normal;
@@ -186,6 +188,7 @@
             display: inline-flex;
             align-items: center;
             font-size: 0.9rem;
+            color: var(--text-main);
         }
         .item-box img { width: 35px; height: 35px; margin-right: 10px; object-fit: contain; }
         
@@ -199,14 +202,14 @@
 <div class="container pb-5">
     <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-secondary pb-3">
         <div>
-            <h1 class="mb-0">RAID PLANNER <span style="font-size: 0.5em; vertical-align: middle; color: #666;">v0.9</span></h1>
+            <h1 class="mb-0">RAID PLANNER <span style="font-size: 0.5em; vertical-align: middle; color: #888;">v0.9.1</span></h1>
         </div>
     </div>
 
     <div class="card p-4 mb-4">
         <div class="row g-3">
             <div class="col-md-5">
-                <label class="text-muted small mb-1 text-uppercase">Operational Area</label>
+                <label class="text-beige small mb-1 fw-bold text-uppercase">Operational Area</label>
                 <select id="mapSelect" class="form-select">
                     <option value="Customs">Customs</option>
                     <option value="Factory">Factory</option>
@@ -235,7 +238,7 @@
 
     <div id="quest-selection-area" class="d-none">
         <div class="d-flex justify-content-between align-items-end mb-3">
-            <h5 class="m-0 text-muted">Select Active Tasks</h5>
+            <h5 class="m-0 text-beige">Select Active Tasks</h5>
             <div>
                 <button onclick="clearSelection()" class="btn btn-tarkov btn-reset me-2 btn-sm">Reset</button>
                 <button onclick="planRaid()" class="btn btn-tarkov px-4">Initialize Plan</button>
@@ -255,7 +258,7 @@
                 <button class="btn btn-sm btn-dark border-secondary" id="zoom-reset">R</button>
             </div>
             <div id="map-fallback-link" class="text-center" style="display:none; position:absolute;">
-                <p class="text-muted">No tactical map available.</p>
+                <p class="text-sub">No tactical map available.</p>
                 <a id="ext-map-link" href="#" target="_blank" class="text-beige">Open External Map</a>
             </div>
         </div>
@@ -268,7 +271,7 @@
             
             <div class="col-md-6">
                 <div class="section-header">Required Items</div>
-                <p class="small text-muted mb-2">Items to place, mark, or handover.</p>
+                <p class="small text-sub mb-2">Items to place, mark, or handover.</p>
                 <div id="required-items" class="d-flex flex-wrap"></div>
             </div>
         </div>
@@ -316,14 +319,12 @@
         localStorage.setItem(STORAGE_KEY, JSON.stringify([...savedSet]));
     }
 
-    // --- FIX: Reset Logic ---
     function clearSelection() {
         if(confirm("Reset mission parameters?")) {
             localStorage.removeItem(STORAGE_KEY);
             document.querySelectorAll('.quest-checkbox').forEach(cb => cb.checked = false);
             document.querySelectorAll('.quest-item').forEach(div => div.classList.remove('selected'));
             
-            // Clean up Panzoom to avoid errors on next plan
             if (panzoomInstance) {
                 panzoomInstance.dispose();
                 panzoomInstance = null;
@@ -331,12 +332,14 @@
             
             document.getElementById('planning-result').style.display = 'none';
             
-            // Update all group headers to show 0 active
+            // Reset Badges
             document.querySelectorAll('.accordion-button').forEach(btn => {
                 btn.classList.remove('has-selection');
                 const badge = btn.querySelector('.badge-indicator');
-                if(badge) badge.innerHTML = btn.dataset.total + " Tasks";
-                if(badge) badge.className = 'badge-indicator badge-tarkov ms-2 px-2';
+                if(badge) {
+                    badge.innerHTML = btn.dataset.total + " Tasks";
+                    badge.className = 'badge-indicator badge-tarkov ms-2 px-2';
+                }
             });
         }
     }
@@ -369,8 +372,6 @@
         // Groups
         for (const [groupName, groupQuests] of Object.entries(groups)) {
             const groupId = groupName.replace(/[^a-zA-Z0-9]/g, '');
-            
-            // Calculate Active
             const activeCount = groupQuests.filter(q => savedSet.has(q.id)).length;
             const hasActive = activeCount > 0;
             
@@ -433,9 +434,9 @@
                 <div class="ms-3 flex-grow-1">
                     <div class="d-flex align-items-center">
                         <span class="fw-bold" style="color:#e0e0e0;">${quest.name}</span>
-                        ${quest.wikiLink ? `<a href="${quest.wikiLink}" target="_blank" class="ms-2 text-muted small" style="text-decoration:none;" onclick="event.stopPropagation()">[Wiki]</a>` : ''}
+                        ${quest.wikiLink ? `<a href="${quest.wikiLink}" target="_blank" class="ms-2 text-sub small" style="text-decoration:none;" onclick="event.stopPropagation()">[Wiki]</a>` : ''}
                     </div>
-                    <div class="mt-1 d-flex justify-content-between" style="font-size:0.8em; color:#888;">
+                    <div class="mt-1 d-flex justify-content-between" style="font-size:0.8em; color:#bbb;">
                         <span>${quest.trader.name}</span>
                         <span>Lvl ${quest.minPlayerLevel}</span>
                     </div>
@@ -460,7 +461,7 @@
             loadedQuests = await response.json();
 
             if (loadedQuests.length === 0) {
-                document.getElementById('quest-list').innerHTML = '<div class="text-center text-muted p-4">No operations found.</div>';
+                document.getElementById('quest-list').innerHTML = '<div class="text-center text-sub p-4">No operations found.</div>';
             } else {
                 renderQuestList(loadedQuests);
             }
@@ -474,21 +475,16 @@
         }
     }
 
-    // --- FIX: Live Group Updates ---
     function toggleSelection(index, divElement, event) {
         const checkbox = document.getElementById(`q-${index}`);
-        
-        // Handle click on DIV vs Checkbox
         if (event.target !== checkbox && event.target.tagName !== 'A') {
             checkbox.checked = !checkbox.checked;
         }
-        
         if (checkbox.checked) divElement.classList.add('selected');
         else divElement.classList.remove('selected');
         
         saveQuestState(loadedQuests[index].id, checkbox.checked);
         
-        // Update Group Header if part of a group
         const groupId = checkbox.getAttribute('data-parent-group');
         if (groupId) {
             updateGroupHeader(groupId);
@@ -540,7 +536,6 @@
             mapDisplay.src = `maps/${MAP_CONFIG[mapName].file}`;
             mapLink.href = MAP_CONFIG[mapName].url;
             
-            // Panzoom Fix: Dispose old instance
             if (panzoomInstance) panzoomInstance.dispose();
             
             const elem = document.getElementById('map-display');
@@ -561,7 +556,7 @@
         selectedIndices.forEach(index => {
             const quest = loadedQuests[index];
             
-            // 1. Provided Items (Start Rewards)
+            // 1. Provided Items
             const providedItemIds = new Set();
             if (quest.startRewards && quest.startRewards.items) {
                 quest.startRewards.items.forEach(r => {
@@ -576,7 +571,7 @@
                 });
             }
 
-            // 3. Objectives & Items (FIXED LOGIC)
+            // 3. Objectives & Items
             if (quest.objectives) {
                 quest.objectives.forEach(obj => {
                     objectives.push({ quest: quest.name, desc: obj.description });
@@ -584,12 +579,10 @@
                     let item = null;
                     let count = 0;
 
-                    // Check for Item Handover/Find
                     if (obj.item) {
                         item = obj.item;
                         count = obj.count || 1;
                     }
-                    // Check for Marking
                     else if (obj.markerItem) {
                         item = obj.markerItem;
                         count = 1; 
@@ -620,9 +613,8 @@
                     ${k.iconLink ? `<img src="${k.iconLink}">` : ''}
                     <span>${k.shortName || k.name}</span>
                 </div>`).join('') 
-            : '<span class="text-muted p-2">None required.</span>';
+            : '<span class="text-sub p-2">None required.</span>';
 
-        // Required Items HTML
         document.getElementById('required-items').innerHTML = neededItems.length > 0 
             ? neededItems.map(i => `
                 <div class="item-box ${i.status === 'provided' ? 'status-provide' : 'status-acquire'}">
@@ -634,7 +626,7 @@
                         </div>
                     </div>
                 </div>`).join('') 
-            : '<span class="text-muted p-2">None required.</span>';
+            : '<span class="text-sub p-2">None required.</span>';
 
         document.getElementById('mission-steps').innerHTML = objectives.map(obj => `
             <li class="list-group-item bg-transparent text-light border-0 ps-0">
@@ -649,7 +641,7 @@
                     <div class="fw-bold text-light mt-1">➔ ${u.nextName}</div>
                     <div class="d-flex justify-content-between mt-1 small" style="color:#999;"><span>${u.nextMap}</span><span>${u.trader}</span></div>
                 </div>`).join('')
-            : '<div class="text-muted p-2 fst-italic">No immediate unlocks.</div>';
+            : '<div class="text-sub p-2 fst-italic">No immediate unlocks.</div>';
 
         resultBox.style.display = 'block';
         resultBox.scrollIntoView({ behavior: 'smooth' });
