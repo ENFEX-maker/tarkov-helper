@@ -4,8 +4,8 @@ import httpx
 import json
 import time
 
-# VERSION FESTGELEGT AUF 0.9 (Alpha)
-app = FastAPI(title="Tarkov Helper API", version="0.9 (Alpha)")
+# Version Bump auf 1.1.2 (Bugfix Release)
+app = FastAPI(title="Tarkov Helper API", version="1.1.2-STABLE")
 
 app.add_middleware(
     CORSMiddleware,
@@ -27,7 +27,6 @@ MAP_MAPPING = {
     "Ground Zero": "GroundZero", "Labs": "Laboratory", "Any": "Any"
 }
 
-# QUERY: Ohne "count" bei TaskObjectiveMark (da API dies nicht unterstützt)
 QUESTS_QUERY = """
 {
     tasks {
@@ -72,24 +71,31 @@ async def fetch_tarkov_data():
     global last_fetch_time, cached_data
     current_time = time.time()
     
+    # Cache nur nutzen, wenn er existiert
     if cached_data and (current_time - last_fetch_time < CACHE_TTL):
         return cached_data
 
     headers = {"Content-Type": "application/json"}
     async with httpx.AsyncClient() as client:
         try:
-            print("DEBUG: Fetching raw data from Tarkov...")
+            print("DEBUG: Fetching data from Tarkov API...")
             response = await client.post(TARKOV_API_URL, json={'query': QUESTS_QUERY}, headers=headers, timeout=30.0)
             data = response.json()
+            
             if "errors" in data:
+                print(f"API ERROR: {data['errors'][0]['message']}")
                 raise Exception(data['errors'][0]['message'])
             
             # --- LOGIK: Reverse Lookup (Unlocks) ---
-            all_tasks = data.get("data", {}).get("tasks", [])
+            # FIX: Wir nutzen .get('tasks') OR [], falls 'tasks' null ist
+            all_tasks = data.get("data", {}).get("tasks") or []
             unlocks_map = {}
 
             for child_task in all_tasks:
-                reqs = child_task.get("taskRequirements", [])
+                # CRITICAL FIX: 'taskRequirements' kann null sein!
+                # 'or []' verhindert den Crash, wenn die API null sendet.
+                reqs = child_task.get("taskRequirements") or []
+                
                 for req in reqs:
                     parent = req.get("task")
                     if parent:
@@ -98,13 +104,14 @@ async def fetch_tarkov_data():
                             unlocks_map[p_id] = []
                         
                         unlocks_map[p_id].append({
-                            "name": child_task["name"],
+                            "name": child_task.get("name", "Unknown"),
                             "map": child_task["map"]["name"] if child_task.get("map") else "Any/Global",
                             "trader": child_task["trader"]["name"] if child_task.get("trader") else "?"
                         })
             
+            # Die berechneten Unlocks in die Tasks einfügen
             for task in all_tasks:
-                task_id = task["id"]
+                task_id = task.get("id")
                 task["derived_unlocks"] = unlocks_map.get(task_id, [])
 
             cached_data = data
@@ -112,7 +119,7 @@ async def fetch_tarkov_data():
             return data
 
         except Exception as e:
-            print(f"FETCH ERROR: {e}")
+            print(f"FETCH EXCEPTION: {e}")
             raise e
 
 @app.get("/quests/{map_name}")
@@ -121,7 +128,8 @@ async def get_quests(map_name: str):
         result = await fetch_tarkov_data()
         target_map = MAP_MAPPING.get(map_name, map_name)
         
-        all_tasks = result.get("data", {}).get("tasks", [])
+        # Auch hier: Sicherstellen, dass es eine Liste ist
+        all_tasks = result.get("data", {}).get("tasks") or []
         filtered = []
         
         for task in all_tasks:
@@ -131,8 +139,10 @@ async def get_quests(map_name: str):
             else:
                 if t_map and t_map.get('name') == target_map: filtered.append(task)
         
-        filtered.sort(key=lambda x: x['name'])
+        # Sortieren (mit Fallback falls Name fehlt, zur Sicherheit)
+        filtered.sort(key=lambda x: x.get('name', ''))
         return filtered
 
     except Exception as e:
+        print(f"CRITICAL SERVER ERROR: {e}") # Damit wir es im Log sehen
         raise HTTPException(status_code=500, detail=str(e))
