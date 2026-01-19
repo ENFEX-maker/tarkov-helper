@@ -64,7 +64,7 @@
 
 <div class="container pb-5">
     <div class="mb-5">
-        <h1 class="fw-bold text-warning mb-0">Tarkov Raid Planner <span class="badge bg-secondary fs-6 align-middle">v0.9.2 (Local)</span></h1>
+        <h1 class="fw-bold text-warning mb-0">Tarkov Raid Planner <span class="badge bg-secondary fs-6 align-middle">v0.9.3 (Persistent)</span></h1>
         <p class="text-secondary m-0">Select your active tasks and optimize your route.</p>
     </div>
 
@@ -103,7 +103,10 @@
     <div id="quest-selection-area" class="d-none">
         <div class="d-flex justify-content-between align-items-end mb-3">
             <h5 class="text-light m-0">Available Operations</h5>
-            <button onclick="planRaid()" class="btn btn-success fw-bold px-4">PLAN RAID 🚀</button>
+            <div>
+                <button onclick="clearSelection()" class="btn btn-outline-danger me-2 btn-sm">Reset Selection</button>
+                <button onclick="planRaid()" class="btn btn-success fw-bold px-4">PLAN RAID 🚀</button>
+            </div>
         </div>
         <div id="quest-list"></div>
     </div>
@@ -143,6 +146,7 @@
 
 <script>
     const API_URL = "/api";
+    const STORAGE_KEY = "tarkov_planner_selected_quests"; // Key für LocalStorage
     let loadedQuests = [];
 
     // Konfiguration: Lokale Dateinamen & Externe Fallback-Links
@@ -158,6 +162,33 @@
         "Ground Zero":       { file: "groundzero.jpg", url: "https://tarkov.dev/map/ground-zero-2d" },
         "Labs":              { file: "labs.jpg",       url: "https://tarkov.dev/map/the-lab-2d" }
     };
+
+    // --- NEU: Helper für LocalStorage ---
+    function getSavedQuests() {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        return saved ? new Set(JSON.parse(saved)) : new Set();
+    }
+
+    function saveQuestState(questId, isChecked) {
+        const savedSet = getSavedQuests();
+        if (isChecked) {
+            savedSet.add(questId);
+        } else {
+            savedSet.delete(questId);
+        }
+        localStorage.setItem(STORAGE_KEY, JSON.stringify([...savedSet]));
+    }
+
+    function clearSelection() {
+        if(confirm("Deselect all quests?")) {
+            localStorage.removeItem(STORAGE_KEY);
+            // UI Update ohne Reload
+            document.querySelectorAll('.quest-checkbox').forEach(cb => cb.checked = false);
+            document.querySelectorAll('.quest-item').forEach(div => div.classList.remove('selected'));
+            document.getElementById('planning-result').style.display = 'none';
+        }
+    }
+    // ------------------------------------
 
     async function loadQuests() {
         const mapSelect = document.getElementById('mapSelect');
@@ -181,15 +212,27 @@
             const quests = await response.json();
             loadedQuests = quests;
 
+            // Gespeicherte Quests laden
+            const savedSet = getSavedQuests();
+
             if (quests.length === 0) {
                 listContainer.innerHTML = '<div class="text-center text-muted p-4">No active quests found for this map.</div>';
             } else {
                 quests.forEach((quest, index) => {
+                    const isChecked = savedSet.has(quest.id);
                     const div = document.createElement('div');
-                    div.className = 'quest-item d-flex align-items-center';
+                    
+                    div.className = `quest-item d-flex align-items-center ${isChecked ? 'selected' : ''}`;
                     div.onclick = (e) => toggleSelection(index, div, e);
+                    
                     div.innerHTML = `
-                        <input class="form-check-input" type="checkbox" id="q-${index}" onchange="event.stopPropagation(); toggleSelection(${index}, this.parentElement, event)">
+                        <input class="form-check-input quest-checkbox" 
+                               type="checkbox" 
+                               id="q-${index}" 
+                               value="${quest.id}"
+                               ${isChecked ? 'checked' : ''}
+                               onchange="event.stopPropagation(); toggleSelection(${index}, this.parentElement, event)">
+                        
                         <div class="ms-3 flex-grow-1">
                             <div class="d-flex align-items-center">
                                 <span class="fw-bold text-light">${quest.name}</span>
@@ -216,11 +259,18 @@
 
     function toggleSelection(index, divElement, event) {
         const checkbox = document.getElementById(`q-${index}`);
+        
+        // Verhindert doppeltes Umschalten, wenn direkt auf Checkbox geklickt wird
         if (event.target !== checkbox && event.target.tagName !== 'A') {
             checkbox.checked = !checkbox.checked;
         }
+
+        // Visuelles Feedback
         if (checkbox.checked) divElement.classList.add('selected');
         else divElement.classList.remove('selected');
+
+        // NEU: In LocalStorage speichern
+        saveQuestState(loadedQuests[index].id, checkbox.checked);
     }
 
     function planRaid() {
@@ -238,14 +288,13 @@
         mapFallback.style.display = 'none';
 
         if (MAP_CONFIG[mapName]) {
-            // Relativer Pfad zum 'maps' Ordner
             mapDisplay.src = `maps/${MAP_CONFIG[mapName].file}`;
             mapLink.href = MAP_CONFIG[mapName].url;
         } else {
             mapDisplay.style.display = 'none';
         }
 
-        // 2. Data Gathering (TWO PASS Logic for Deduplication)
+        // 2. Data Gathering
         const selectedIndices = [];
         loadedQuests.forEach((_, index) => {
             if (document.getElementById(`q-${index}`).checked) selectedIndices.push(index);
@@ -260,7 +309,7 @@
         const neededItems = [];
         const objectives = [];
 
-        // PASS 1: Collect ALL Keys first (Global Deduplication)
+        // PASS 1: Keys deduplizieren
         selectedIndices.forEach(index => {
             const quest = loadedQuests[index];
             if (quest.neededKeys) {
@@ -273,7 +322,7 @@
             }
         });
 
-        // PASS 2: Collect Items & Objectives (Check against Global Key Set)
+        // PASS 2: Items & Objectives sammeln
         selectedIndices.forEach(index => {
             const quest = loadedQuests[index];
             
@@ -281,7 +330,7 @@
             if (quest.startRewards && quest.startRewards.items) {
                 quest.startRewards.items.forEach(reward => {
                     if (reward.item) {
-                        // Check if this item is ALREADY listed as a required key
+                        // Prüfen, ob Item schon als Key gelistet ist
                         if (!neededKeys.has(reward.item.name)) {
                             neededItems.push({
                                 name: reward.item.name,
@@ -294,7 +343,7 @@
                 });
             }
 
-            // Regular Objectives & Loot
+            // Objectives
             if (quest.objectives) {
                 quest.objectives.forEach(obj => {
                     objectives.push({ quest: quest.name, desc: obj.description });

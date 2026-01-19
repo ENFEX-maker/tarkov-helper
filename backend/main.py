@@ -1,9 +1,10 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-import requests
+import httpx  # Ersetzt requests für Async Support
 import json
+import time
 
-app = FastAPI(title="Tarkov Helper API", version="0.9.0")
+app = FastAPI(title="Tarkov Helper API", version="0.9.1")
 
 # CORS Setup
 app.add_middleware(
@@ -15,6 +16,9 @@ app.add_middleware(
 )
 
 TARKOV_API_URL = "https://api.tarkov.dev/graphql"
+CACHE_TTL = 300  # Cache für 5 Minuten (300 Sekunden) speichern
+last_fetch_time = 0
+cached_data = None
 
 # Mapping: Frontend-Name -> API-Name
 MAP_MAPPING = {
@@ -30,90 +34,101 @@ MAP_MAPPING = {
     "Labs": "Laboratory"
 }
 
-def run_query(query: str):
-    headers = {"Content-Type": "application/json"}
-    # Timeout 30s
-    response = requests.post(TARKOV_API_URL, json={'query': query}, headers=headers, timeout=30)
-    if response.status_code == 200:
-        return response.json()
-    else:
-        raise Exception(f"API Request failed with code {response.status_code}")
-
-def get_all_quests_query():
-    # 'questItems' entfernt (gab es nicht). 
-    # Dafür 'startRewards' hinzugefügt für Initial-Items (Marker, Poster etc.)
-    return """
-    {
-        tasks {
-            id
-            name
-            wikiLink
-            minPlayerLevel
-            map {
-                name
+# Die GraphQL Query ausgelagert für bessere Lesbarkeit
+QUESTS_QUERY = """
+{
+    tasks {
+        id
+        name
+        wikiLink
+        minPlayerLevel
+        map { name }
+        trader { name, imageLink }
+        neededKeys {
+            keys { name, shortName, iconLink }
+        }
+        startRewards {
+            items {
+                item { name, iconLink },
+                count
             }
-            trader {
-                name
-                imageLink
-            }
-            neededKeys {
-                keys {
-                    name
-                    shortName
-                    iconLink
-                }
-            }
-            startRewards {
-                items {
-                    item {
-                        name
-                        iconLink
-                    }
-                    count
-                }
-            }
-            objectives {
-                description
-                type
-                ... on TaskObjectiveItem {
-                    item {
-                        name
-                        iconLink
-                    }
-                    count
-                    foundInRaid
-                }
+        }
+        objectives {
+            description
+            type
+            ... on TaskObjectiveItem {
+                item { name, iconLink }
+                count
+                foundInRaid
             }
         }
     }
-    """
+}
+"""
+
+async def fetch_tarkov_data():
+    """Holt Daten von der Tarkov API oder aus dem Cache."""
+    global last_fetch_time, cached_data
+    
+    current_time = time.time()
+    
+    # Prüfen, ob Cache noch gültig ist
+    if cached_data and (current_time - last_fetch_time < CACHE_TTL):
+        print("DEBUG: Lade Quests aus dem Cache (Kein API Call).")
+        return cached_data
+
+    print("DEBUG: Cache abgelaufen oder leer. Frage Tarkov API ab...")
+    headers = {"Content-Type": "application/json"}
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(
+                TARKOV_API_URL, 
+                json={'query': QUESTS_QUERY}, 
+                headers=headers, 
+                timeout=30.0
+            )
+            response.raise_for_status() # Wirft Fehler bei 4xx/5xx
+            
+            data = response.json()
+            
+            if "errors" in data:
+                print(f"API ERROR: {json.dumps(data['errors'], indent=2)}")
+                raise Exception(f"Tarkov API Error: {data['errors'][0]['message']}")
+            
+            # Cache aktualisieren
+            cached_data = data
+            last_fetch_time = current_time
+            return data
+            
+        except httpx.HTTPStatusError as e:
+            raise Exception(f"HTTP Error: {e.response.status_code}")
+        except httpx.RequestError as e:
+            raise Exception(f"Connection Error: {e}")
 
 @app.get("/quests/{map_name}")
-def get_quests(map_name: str):
+async def get_quests(map_name: str):
+    """
+    Lädt Quests für eine spezifische Map.
+    Nutzt 'async', um den Server nicht zu blockieren.
+    """
     try:
-        # 1. Alle Quests holen
-        query = get_all_quests_query()
-        result = run_query(query)
-        
-        if "errors" in result:
-            print(f"API ERROR: {json.dumps(result['errors'], indent=2)}")
-            raise HTTPException(status_code=500, detail=f"Tarkov API Error: {result['errors'][0]['message']}")
+        # 1. Daten holen (Async + Cache)
+        result = await fetch_tarkov_data()
 
         # 2. Ziel-Map bestimmen
         target_map = MAP_MAPPING.get(map_name, map_name)
         
-        filtered_tasks = []
         all_tasks = result.get("data", {}).get("tasks", [])
+        filtered_tasks = []
         
-        print(f"DEBUG: Habe {len(all_tasks)} Quests geladen. Filter nach: '{target_map}'")
-
-        # 3. Filtern in Python
+        # 3. Filtern
         for task in all_tasks:
             # Sicherheitscheck: Hat die Quest eine Map?
             if task.get('map') and task['map'].get('name') == target_map:
                 filtered_tasks.append(task)
         
-        print(f"SUCCESS: {len(filtered_tasks)} Quests für {target_map} gefunden.")
+        print(f"SUCCESS: {len(filtered_tasks)} Quests für {target_map} geliefert.")
         return filtered_tasks
 
     except Exception as e:
