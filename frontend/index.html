@@ -97,7 +97,7 @@
 
 <div class="container pb-5">
     <div class="mb-5">
-        <h1 class="fw-bold text-warning mb-0">Tarkov Raid Planner <span class="badge bg-secondary fs-6 align-middle">v0.9.6 (Fix)</span></h1>
+        <h1 class="fw-bold text-warning mb-0">Tarkov Raid Planner <span class="badge bg-secondary fs-6 align-middle">v1.0 (Complete)</span></h1>
         <p class="text-secondary m-0">Select your active tasks and optimize your route.</p>
     </div>
 
@@ -129,7 +129,7 @@
 
     <div id="loading" class="text-center d-none my-5">
         <div class="spinner-border text-warning" role="status"></div>
-        <p class="mt-2 text-muted">Fetching Intel from Tarkov servers...</p>
+        <p class="mt-2 text-muted">Calculating dependencies...</p>
     </div>
     <div id="error-box" class="alert alert-danger d-none"></div>
 
@@ -394,18 +394,15 @@
                 });
             }
 
-            // NEU: Unlocks via finishRewards
-            if (quest.finishRewards && quest.finishRewards.length > 0) {
-                quest.finishRewards.forEach(reward => {
-                    if (reward.task) {
-                        const nextTask = reward.task;
-                        unlocks.push({
-                            from: quest.name,
-                            nextName: nextTask.name,
-                            nextMap: nextTask.map ? nextTask.map.name : 'Any/Multi',
-                            trader: nextTask.trader ? nextTask.trader.name : '?'
-                        });
-                    }
+            // NEU: Unlocks werden jetzt im Backend berechnet!
+            if (quest.derived_unlocks && quest.derived_unlocks.length > 0) {
+                quest.derived_unlocks.forEach(u => {
+                    unlocks.push({
+                        from: quest.name,
+                        nextName: u.name,
+                        nextMap: u.map,
+                        trader: u.trader
+                    });
                 });
             }
         });
