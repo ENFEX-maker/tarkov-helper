@@ -4,7 +4,7 @@ import httpx
 import json
 import time
 
-app = FastAPI(title="Tarkov Helper API", version="0.9.5")
+app = FastAPI(title="Tarkov Helper API", version="0.9.6")
 
 # CORS Setup
 app.add_middleware(
@@ -32,11 +32,10 @@ MAP_MAPPING = {
     "Streets of Tarkov": "Streets",
     "Ground Zero": "GroundZero",
     "Labs": "Laboratory",
-    "Any": "Any" # NEU: Für globale Quests
+    "Any": "Any"
 }
 
-# Erweiterte Query inkl. Follow-up Quests (unlocksTask)
-# Erweiterte Query: Unlocks sind jetzt Teil von finishRewards
+# QUERY FIX: Wir nutzen jetzt 'finishRewards' um Unlocks zu finden
 QUESTS_QUERY = """
 {
     tasks {
@@ -64,7 +63,6 @@ QUESTS_QUERY = """
                 foundInRaid
             }
         }
-        # --- KORREKTUR: Unlocks via finishRewards ---
         finishRewards {
             ... on TaskRewardTaskUnlock {
                 task {
@@ -125,11 +123,9 @@ async def get_quests(map_name: str):
             
             # Logik für "Any" (Quests ohne Map) vs spezifische Map
             if target_map == "Any":
-                # Nimm Quests, die KEINE Map haben (Global)
                 if task_map is None:
                     filtered_tasks.append(task)
             else:
-                # Nimm Quests, die exakt zur Map passen
                 if task_map and task_map.get('name') == target_map:
                     filtered_tasks.append(task)
         

@@ -9,7 +9,7 @@
 
     <style>
         body { background-color: #0f0f0f; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .container { max-width: 1200px; margin-top: 40px; } /* Etwas breiter für die 2 Spalten */
+        .container { max-width: 1200px; margin-top: 40px; }
         
         .quest-item {
             background-color: #1a1a1a;
@@ -36,7 +36,6 @@
         .item-badge { background-color: #222; border: 1px solid #444; padding: 5px 10px; border-radius: 6px; display: inline-flex; align-items: center; margin: 5px; }
         .item-badge.special { border-color: #d35400; background-color: #2e1e1e; }
         
-        /* Map Container */
         .map-container {
             width: 100%;
             height: 600px;
@@ -98,7 +97,7 @@
 
 <div class="container pb-5">
     <div class="mb-5">
-        <h1 class="fw-bold text-warning mb-0">Tarkov Raid Planner <span class="badge bg-secondary fs-6 align-middle">v0.9.5 (Global & Unlocks)</span></h1>
+        <h1 class="fw-bold text-warning mb-0">Tarkov Raid Planner <span class="badge bg-secondary fs-6 align-middle">v0.9.6 (Fix)</span></h1>
         <p class="text-secondary m-0">Select your active tasks and optimize your route.</p>
     </div>
 
@@ -208,10 +207,8 @@
         "Streets of Tarkov": { file: "streets.jpg",    url: "https://tarkov.dev/map/streets-2d" },
         "Ground Zero":       { file: "groundzero.jpg", url: "https://tarkov.dev/map/ground-zero-2d" },
         "Labs":              { file: "labs.jpg",       url: "https://tarkov.dev/map/the-lab-2d" }
-        // "Any" hat keinen Eintrag, wird separat behandelt
     };
 
-    // --- Helper Functions ---
     function getSavedQuests() {
         const saved = localStorage.getItem(STORAGE_KEY);
         return saved ? new Set(JSON.parse(saved)) : new Set();
@@ -234,14 +231,12 @@
     }
 
     function handleMapError() {
-        // Fallback wenn Bild nicht geladen werden kann
         document.getElementById('map-display').style.display = 'none';
         document.getElementById('map-controls').style.display = 'none';
         document.getElementById('map-fallback-link').style.display = 'block';
         if(panzoomInstance) panzoomInstance.pause();
     }
 
-    // --- Core Logic ---
     async function loadQuests() {
         const mapSelect = document.getElementById('mapSelect');
         const map = mapSelect.value;
@@ -327,28 +322,24 @@
         const mapName = document.getElementById('mapSelect').value;
 
         // 1. Map Handling
-        // Erstmal alles resetten
         mapDisplay.style.display = 'block';
         mapFallback.style.display = 'none';
         mapControls.style.display = 'flex';
         
         if (mapName === "Any") {
-            // Spezialfall "Any Location"
             mapDisplay.style.display = 'none';
             mapControls.style.display = 'none';
             mapFallback.style.display = 'block';
             mapFallbackText.textContent = "Global tasks apply to any location.";
-            mapLink.style.display = 'none'; // Kein Link für "Any"
+            mapLink.style.display = 'none'; 
             if(panzoomInstance) panzoomInstance.pause();
 
         } else if (MAP_CONFIG[mapName]) {
-            // Normale Map
             mapDisplay.src = `maps/${MAP_CONFIG[mapName].file}`;
             mapLink.href = MAP_CONFIG[mapName].url;
             mapLink.style.display = 'inline-block';
             mapFallbackText.textContent = "Local map file not found.";
             
-            // Panzoom Setup
             if (panzoomInstance) panzoomInstance.dispose(); 
             const elem = document.getElementById('map-display');
             panzoomInstance = Panzoom(elem, {
@@ -376,19 +367,17 @@
         const neededKeys = new Map(); 
         const neededItems = [];
         const objectives = [];
-        const unlocks = []; // Follow-ups
+        const unlocks = [];
 
         selectedIndices.forEach(index => {
             const quest = loadedQuests[index];
             
-            // Keys
             if (quest.neededKeys) {
                 quest.neededKeys.forEach(kGroup => {
                     if(kGroup.keys && kGroup.keys.length > 0) neededKeys.set(kGroup.keys[0].name, kGroup.keys[0]);
                 });
             }
 
-            // Items & Objectives
             if (quest.startRewards && quest.startRewards.items) {
                 quest.startRewards.items.forEach(reward => {
                     if (reward.item && !neededKeys.has(reward.item.name)) {
@@ -405,10 +394,9 @@
                 });
             }
 
-// NEU: Unlocks via finishRewards verarbeiten
+            // NEU: Unlocks via finishRewards
             if (quest.finishRewards && quest.finishRewards.length > 0) {
                 quest.finishRewards.forEach(reward => {
-                    // Prüfen, ob dieser Reward eine Task freischaltet
                     if (reward.task) {
                         const nextTask = reward.task;
                         unlocks.push({
@@ -420,6 +408,7 @@
                     }
                 });
             }
+        });
 
         // 3. Rendering
         document.getElementById('required-keys').innerHTML = neededKeys.size > 0 
@@ -443,7 +432,6 @@
                 <span class="text-warning fw-bold">${obj.quest}:</span> ${obj.desc}
             </li>`).join('');
 
-        // Rendering Progression
         const progressContainer = document.getElementById('progression-list');
         if (unlocks.length > 0) {
             progressContainer.innerHTML = unlocks.map(u => `
