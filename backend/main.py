@@ -4,7 +4,7 @@ import httpx
 import json
 import time
 
-app = FastAPI(title="Tarkov Helper API", version="0.9.6")
+app = FastAPI(title="Tarkov Helper API", version="0.9.7")
 
 # CORS Setup
 app.add_middleware(
@@ -20,7 +20,6 @@ CACHE_TTL = 300  # 5 Minuten Cache
 last_fetch_time = 0
 cached_data = None
 
-# Mapping: Frontend-Name -> API-Name
 MAP_MAPPING = {
     "Customs": "Customs",
     "Factory": "Factory",
@@ -35,7 +34,8 @@ MAP_MAPPING = {
     "Any": "Any"
 }
 
-# QUERY FIX: Wir nutzen jetzt 'finishRewards' um Unlocks zu finden
+# --- QUERY FIX ---
+# Der korrekte Typ heißt "TaskRewardTask", nicht "TaskRewardTaskUnlock"
 QUESTS_QUERY = """
 {
     tasks {
@@ -64,7 +64,7 @@ QUESTS_QUERY = """
             }
         }
         finishRewards {
-            ... on TaskRewardTaskUnlock {
+            ... on TaskRewardTask {
                 task {
                     id
                     name
@@ -82,6 +82,7 @@ async def fetch_tarkov_data():
     global last_fetch_time, cached_data
     current_time = time.time()
     
+    # Cache Check
     if cached_data and (current_time - last_fetch_time < CACHE_TTL):
         return cached_data
 
@@ -100,13 +101,15 @@ async def fetch_tarkov_data():
             data = response.json()
             
             if "errors" in data:
+                # Logge den genauen Fehler für Debugging
+                print(f"API ERROR DETAIL: {json.dumps(data['errors'])}")
                 raise Exception(f"Tarkov API Error: {data['errors'][0]['message']}")
             
             cached_data = data
             last_fetch_time = current_time
             return data
         except Exception as e:
-            print(f"API ERROR: {e}")
+            print(f"API EXCEPTION: {e}")
             raise e
 
 @app.get("/quests/{map_name}")
@@ -121,7 +124,6 @@ async def get_quests(map_name: str):
         for task in all_tasks:
             task_map = task.get('map')
             
-            # Logik für "Any" (Quests ohne Map) vs spezifische Map
             if target_map == "Any":
                 if task_map is None:
                     filtered_tasks.append(task)
