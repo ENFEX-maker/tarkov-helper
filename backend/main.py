@@ -1,11 +1,12 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-import requests
+import httpx
 import json
+import time
 
-app = FastAPI(title="Tarkov Helper API", version="0.9.0")
+# MAJOR RELEASE: V1.0
+app = FastAPI(title="Tarkov Raid Planner", version="1.0.0-GLOBAL")
 
-# CORS Setup
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], 
@@ -15,107 +16,154 @@ app.add_middleware(
 )
 
 TARKOV_API_URL = "https://api.tarkov.dev/graphql"
+CACHE_TTL = 300
+last_fetch_time = 0
+cached_data = None
 
-# Mapping: Frontend-Name -> API-Name
+# Mapping bleibt für spezifische Filterung, "ALL" wird im Code behandelt
 MAP_MAPPING = {
-    "Customs": "Customs",
-    "Factory": "Factory",
+    "Customs": "Customs", 
+    "Factory": "Factory", 
     "Woods": "Woods",
-    "Interchange": "Interchange",
-    "Shoreline": "Shoreline",
+    "Interchange": "Interchange", 
+    "Shoreline": "Shoreline", 
     "Reserve": "Reserve",
-    "Lighthouse": "Lighthouse",
-    "Streets of Tarkov": "Streets",
-    "Ground Zero": "GroundZero",
-    "Labs": "Laboratory"
+    "Lighthouse": "Lighthouse", 
+    "Streets of Tarkov": "Streets of Tarkov",
+    "Ground Zero": "Ground Zero",
+    "Labs": "The Lab",
+    "Any": "Any"
 }
 
-def run_query(query: str):
-    headers = {"Content-Type": "application/json"}
-    # Timeout 30s
-    response = requests.post(TARKOV_API_URL, json={'query': query}, headers=headers, timeout=30)
-    if response.status_code == 200:
-        return response.json()
-    else:
-        raise Exception(f"API Request failed with code {response.status_code}")
-
-def get_all_quests_query():
-    # 'questItems' entfernt (gab es nicht). 
-    # Dafür 'startRewards' hinzugefügt für Initial-Items (Marker, Poster etc.)
-    return """
-    {
-        tasks {
-            id
-            name
-            wikiLink
-            minPlayerLevel
-            map {
+QUESTS_QUERY = """
+{
+    tasks {
+        id
+        name
+        minPlayerLevel
+        map { name }
+        trader { name, imageLink }
+        neededKeys {
+            keys { name, shortName, iconLink }
+        }
+        startRewards {
+            items {
+                item { id, name, iconLink },
+                count
+            }
+        }
+        objectives {
+            description
+            type
+            ... on TaskObjectiveItem {
+                item { id, name, iconLink }
+                count
+                foundInRaid
+            }
+            ... on TaskObjectiveMark {
+                markerItem { id, name, iconLink }
+            }
+        }
+        taskRequirements {
+            task {
+                id
                 name
-            }
-            trader {
-                name
-                imageLink
-            }
-            neededKeys {
-                keys {
-                    name
-                    shortName
-                    iconLink
-                }
-            }
-            startRewards {
-                items {
-                    item {
-                        name
-                        iconLink
-                    }
-                    count
-                }
-            }
-            objectives {
-                description
-                type
-                ... on TaskObjectiveItem {
-                    item {
-                        name
-                        iconLink
-                    }
-                    count
-                    foundInRaid
-                }
             }
         }
     }
-    """
+}
+"""
+
+async def fetch_tarkov_data():
+    global last_fetch_time, cached_data
+    current_time = time.time()
+    
+    if cached_data and (current_time - last_fetch_time < CACHE_TTL):
+        return cached_data
+
+    headers = {
+        "Content-Type": "application/json",
+        "Accept-Encoding": "gzip, deflate", 
+        "User-Agent": "TarkovRaidPlanner/1.0"
+    }
+
+    timeout_config = httpx.Timeout(60.0, connect=20.0, read=60.0)
+
+    async with httpx.AsyncClient(http2=False, timeout=timeout_config) as client:
+        try:
+            print("DEBUG: Fetching data from Tarkov API...")
+            response = await client.post(TARKOV_API_URL, json={'query': QUESTS_QUERY}, headers=headers)
+            response.raise_for_status()
+            data = response.json()
+            
+            if "errors" in data:
+                raise Exception(data['errors'][0]['message'])
+            
+            data_content = data.get("data") or {}
+            all_tasks = data_content.get("tasks") or []
+            
+            unlocks_map = {}
+
+            for child_task in all_tasks:
+                reqs = child_task.get("taskRequirements") or []
+                for req in reqs:
+                    if not req: continue
+                    parent = req.get("task")
+                    if parent:
+                        p_id = parent["id"]
+                        if p_id not in unlocks_map: unlocks_map[p_id] = []
+                        
+                        c_map = child_task.get("map")
+                        c_trader = child_task.get("trader")
+                        
+                        unlocks_map[p_id].append({
+                            "name": child_task.get("name", "Unknown"),
+                            "map": c_map["name"] if c_map else "Global",
+                            "trader": c_trader["name"] if c_trader else "?"
+                        })
+            
+            for task in all_tasks:
+                task_id = task.get("id")
+                task["derived_unlocks"] = unlocks_map.get(task_id, [])
+
+            cached_data = data
+            last_fetch_time = current_time
+            return data
+
+        except Exception as e:
+            print(f"FETCH EXCEPTION: {e}")
+            raise e
 
 @app.get("/quests/{map_name}")
-def get_quests(map_name: str):
+async def get_quests(map_name: str):
     try:
-        # 1. Alle Quests holen
-        query = get_all_quests_query()
-        result = run_query(query)
+        result = await fetch_tarkov_data()
         
-        if "errors" in result:
-            print(f"API ERROR: {json.dumps(result['errors'], indent=2)}")
-            raise HTTPException(status_code=500, detail=f"Tarkov API Error: {result['errors'][0]['message']}")
-
-        # 2. Ziel-Map bestimmen
+        # Mapping prüfen
         target_map = MAP_MAPPING.get(map_name, map_name)
         
-        filtered_tasks = []
-        all_tasks = result.get("data", {}).get("tasks", [])
+        data_content = result.get("data") or {}
+        all_tasks = data_content.get("tasks") or []
         
-        print(f"DEBUG: Habe {len(all_tasks)} Quests geladen. Filter nach: '{target_map}'")
+        # WICHTIG: Wenn "ALL" angefragt wird, geben wir ALLES zurück.
+        # Das Frontend filtert dann.
+        if map_name == "ALL":
+            all_tasks.sort(key=lambda x: x.get('name', ''))
+            return all_tasks
 
-        # 3. Filtern in Python
+        # Fallback für alte Logik (Server-Side Filtering)
+        filtered = []
         for task in all_tasks:
-            # Sicherheitscheck: Hat die Quest eine Map?
-            if task.get('map') and task['map'].get('name') == target_map:
-                filtered_tasks.append(task)
+            t_map = task.get('map')
+            if target_map == "Any":
+                if t_map is None: filtered.append(task)
+            else:
+                if t_map and t_map.get('name') == target_map: 
+                    filtered.append(task)
         
-        print(f"SUCCESS: {len(filtered_tasks)} Quests für {target_map} gefunden.")
-        return filtered_tasks
+        filtered.sort(key=lambda x: x.get('name', ''))
+        return filtered
 
     except Exception as e:
-        print(f"CRITICAL SERVER ERROR: {e}")
+        print(f"SERVER ERROR: {e}")
         raise HTTPException(status_code=500, detail=str(e))
