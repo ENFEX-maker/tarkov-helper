@@ -9,7 +9,7 @@
 
     <style>
         body { background-color: #0f0f0f; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .container { max-width: 1000px; margin-top: 40px; }
+        .container { max-width: 1200px; margin-top: 40px; } /* Etwas breiter für die 2 Spalten */
         
         .quest-item {
             background-color: #1a1a1a;
@@ -36,17 +36,16 @@
         .item-badge { background-color: #222; border: 1px solid #444; padding: 5px 10px; border-radius: 6px; display: inline-flex; align-items: center; margin: 5px; }
         .item-badge.special { border-color: #d35400; background-color: #2e1e1e; }
         
-        /* --- NEU: Map Styles & Controls --- */
+        /* Map Container */
         .map-container {
             width: 100%;
             height: 600px;
             background-color: #050505;
             border-radius: 8px;
-            overflow: hidden; /* Wichtig, damit das Bild nicht rausragt */
+            overflow: hidden;
             position: relative;
             margin-bottom: 20px;
             border: 1px solid #333;
-            /* Flexbox entfernen, da Panzoom absolute positioning besser handhabt oder zentriert */
             display: flex; 
             align-items: center;
             justify-content: center;
@@ -56,12 +55,11 @@
             max-height: 100%;
             object-fit: contain; 
             display: block;
-            cursor: grab; /* Zeigt an, dass man ziehen kann */
-            transition: none; /* Wichtig für flüssiges Draggen */
+            cursor: grab;
+            transition: none;
         }
-        .map-image:active {
-            cursor: grabbing;
-        }
+        .map-image:active { cursor: grabbing; }
+        
         .map-link-fallback {
             margin-top: 10px;
             display: none;
@@ -69,7 +67,6 @@
             z-index: 10;
         }
         
-        /* Schwebende Zoom Controls */
         .map-controls {
             position: absolute;
             bottom: 20px;
@@ -101,7 +98,7 @@
 
 <div class="container pb-5">
     <div class="mb-5">
-        <h1 class="fw-bold text-warning mb-0">Tarkov Raid Planner <span class="badge bg-secondary fs-6 align-middle">v0.9.4 (Zoom)</span></h1>
+        <h1 class="fw-bold text-warning mb-0">Tarkov Raid Planner <span class="badge bg-secondary fs-6 align-middle">v0.9.5 (Global & Unlocks)</span></h1>
         <p class="text-secondary m-0">Select your active tasks and optimize your route.</p>
     </div>
 
@@ -121,6 +118,7 @@
                         <option value="Streets of Tarkov">Streets of Tarkov</option>
                         <option value="Ground Zero">Ground Zero</option>
                         <option value="Labs">The Lab</option>
+                        <option value="Any">Any Location / Global</option>
                     </select>
                 </div>
                 <div class="col-md-3 d-flex align-items-end">
@@ -134,7 +132,6 @@
         <div class="spinner-border text-warning" role="status"></div>
         <p class="mt-2 text-muted">Fetching Intel from Tarkov servers...</p>
     </div>
-    
     <div id="error-box" class="alert alert-danger d-none"></div>
 
     <div id="quest-selection-area" class="d-none">
@@ -155,19 +152,15 @@
         <div class="map-container" id="map-container-div">
             <img id="map-display" src="" class="map-image" alt="Map Preview" onerror="handleMapError()">
             
-            <div class="map-controls">
+            <div class="map-controls" id="map-controls">
                 <button class="map-btn" id="zoom-in" title="Zoom In">+</button>
                 <button class="map-btn" id="zoom-out" title="Zoom Out">-</button>
                 <button class="map-btn" id="zoom-reset" title="Reset View">↺</button>
             </div>
 
             <div id="map-fallback-link" class="map-link-fallback text-center">
-                <p class="text-muted">Local map file not found.</p>
+                <p class="text-muted" id="map-fallback-text">Local map file not found.</p>
                 <a id="ext-map-link" href="#" target="_blank" class="btn btn-outline-warning btn-sm">Open Interactive Map ↗️</a>
-            </div>
-
-            <div class="position-absolute bottom-0 start-0 p-2 text-secondary small" style="pointer-events: none;">
-                Scroll to Zoom • Drag to Pan
             </div>
         </div>
 
@@ -183,8 +176,17 @@
             </div>
         </div>
 
-        <h5 class="text-light border-bottom border-secondary pb-2 mb-3 mt-4">📝 Mission Objectives</h5>
-        <ul id="mission-steps" class="list-group list-group-flush"></ul>
+        <div class="row mt-4">
+            <div class="col-md-7">
+                <h5 class="text-light border-bottom border-secondary pb-2 mb-3">📝 Mission Objectives</h5>
+                <ul id="mission-steps" class="list-group list-group-flush"></ul>
+            </div>
+
+            <div class="col-md-5">
+                <h5 class="text-purple border-bottom border-secondary pb-2 mb-3" style="color: #a29bfe;">🔮 Future Unlocks</h5>
+                <div id="progression-list" class="small"></div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -192,8 +194,9 @@
     const API_URL = "/api";
     const STORAGE_KEY = "tarkov_planner_selected_quests"; 
     let loadedQuests = [];
-    let panzoomInstance = null; // Speichert die aktuelle Zoom-Instanz
+    let panzoomInstance = null; 
 
+    // Konfiguration
     const MAP_CONFIG = {
         "Customs":           { file: "customs.jpg",    url: "https://tarkov.dev/map/customs-2d" },
         "Factory":           { file: "factory.jpg",    url: "https://tarkov.dev/map/factory-3d" },
@@ -205,8 +208,10 @@
         "Streets of Tarkov": { file: "streets.jpg",    url: "https://tarkov.dev/map/streets-2d" },
         "Ground Zero":       { file: "groundzero.jpg", url: "https://tarkov.dev/map/ground-zero-2d" },
         "Labs":              { file: "labs.jpg",       url: "https://tarkov.dev/map/the-lab-2d" }
+        // "Any" hat keinen Eintrag, wird separat behandelt
     };
 
+    // --- Helper Functions ---
     function getSavedQuests() {
         const saved = localStorage.getItem(STORAGE_KEY);
         return saved ? new Set(JSON.parse(saved)) : new Set();
@@ -228,14 +233,15 @@
         }
     }
 
-    // --- NEU: Fehlerbehandlung für fehlende Bilder ---
     function handleMapError() {
+        // Fallback wenn Bild nicht geladen werden kann
         document.getElementById('map-display').style.display = 'none';
+        document.getElementById('map-controls').style.display = 'none';
         document.getElementById('map-fallback-link').style.display = 'block';
-        // Zoom deaktivieren, wenn kein Bild da ist
         if(panzoomInstance) panzoomInstance.pause();
     }
 
+    // --- Core Logic ---
     async function loadQuests() {
         const mapSelect = document.getElementById('mapSelect');
         const map = mapSelect.value;
@@ -260,7 +266,7 @@
             const savedSet = getSavedQuests();
 
             if (quests.length === 0) {
-                listContainer.innerHTML = '<div class="text-center text-muted p-4">No active quests found for this map.</div>';
+                listContainer.innerHTML = '<div class="text-center text-muted p-4">No active quests found.</div>';
             } else {
                 quests.forEach((quest, index) => {
                     const isChecked = savedSet.has(quest.id);
@@ -316,45 +322,47 @@
         const mapDisplay = document.getElementById('map-display');
         const mapLink = document.getElementById('ext-map-link');
         const mapFallback = document.getElementById('map-fallback-link');
+        const mapFallbackText = document.getElementById('map-fallback-text');
+        const mapControls = document.getElementById('map-controls');
         const mapName = document.getElementById('mapSelect').value;
 
-        // 1. Map Handling & Zoom Reset
+        // 1. Map Handling
+        // Erstmal alles resetten
         mapDisplay.style.display = 'block';
         mapFallback.style.display = 'none';
+        mapControls.style.display = 'flex';
+        
+        if (mapName === "Any") {
+            // Spezialfall "Any Location"
+            mapDisplay.style.display = 'none';
+            mapControls.style.display = 'none';
+            mapFallback.style.display = 'block';
+            mapFallbackText.textContent = "Global tasks apply to any location.";
+            mapLink.style.display = 'none'; // Kein Link für "Any"
+            if(panzoomInstance) panzoomInstance.pause();
 
-        if (MAP_CONFIG[mapName]) {
+        } else if (MAP_CONFIG[mapName]) {
+            // Normale Map
             mapDisplay.src = `maps/${MAP_CONFIG[mapName].file}`;
             mapLink.href = MAP_CONFIG[mapName].url;
+            mapLink.style.display = 'inline-block';
+            mapFallbackText.textContent = "Local map file not found.";
             
-            // --- NEU: Zoom Initialisierung ---
-            // Wenn schon eine Instanz läuft, zerstören wir sie zuerst
-            if (panzoomInstance) {
-                panzoomInstance.dispose(); 
-            }
-            
-            // Panzoom auf dem BILD Element initialisieren
+            // Panzoom Setup
+            if (panzoomInstance) panzoomInstance.dispose(); 
             const elem = document.getElementById('map-display');
             panzoomInstance = Panzoom(elem, {
-                maxScale: 5, // Maximale Vergrößerung
-                minScale: 0.5,
-                contain: 'outside', // Verhindert, dass man das Bild komplett aus dem Sichtfeld schiebt
-                startScale: 1
+                maxScale: 5, minScale: 0.5, contain: 'outside', startScale: 1
             });
-
-            // Mausrad aktivieren
             elem.parentElement.addEventListener('wheel', panzoomInstance.zoomWithWheel);
-
-            // Buttons verknüpfen
             document.getElementById('zoom-in').onclick = panzoomInstance.zoomIn;
             document.getElementById('zoom-out').onclick = panzoomInstance.zoomOut;
             document.getElementById('zoom-reset').onclick = panzoomInstance.reset;
-            // ---------------------------------
-
         } else {
             handleMapError();
         }
 
-        // 2. Data Gathering (gleich wie vorher)
+        // 2. Data Gathering
         const selectedIndices = [];
         loadedQuests.forEach((_, index) => {
             if (document.getElementById(`q-${index}`).checked) selectedIndices.push(index);
@@ -365,22 +373,22 @@
             return;
         }
 
-        // Logic (Items & Keys)
         const neededKeys = new Map(); 
         const neededItems = [];
         const objectives = [];
+        const unlocks = []; // Follow-ups
 
         selectedIndices.forEach(index => {
             const quest = loadedQuests[index];
+            
+            // Keys
             if (quest.neededKeys) {
                 quest.neededKeys.forEach(kGroup => {
                     if(kGroup.keys && kGroup.keys.length > 0) neededKeys.set(kGroup.keys[0].name, kGroup.keys[0]);
                 });
             }
-        });
 
-        selectedIndices.forEach(index => {
-            const quest = loadedQuests[index];
+            // Items & Objectives
             if (quest.startRewards && quest.startRewards.items) {
                 quest.startRewards.items.forEach(reward => {
                     if (reward.item && !neededKeys.has(reward.item.name)) {
@@ -396,9 +404,21 @@
                     }
                 });
             }
+
+            // Unlocks
+            if (quest.unlocksTask && quest.unlocksTask.length > 0) {
+                quest.unlocksTask.forEach(nextTask => {
+                    unlocks.push({
+                        from: quest.name,
+                        nextName: nextTask.name,
+                        nextMap: nextTask.map ? nextTask.map.name : 'Any/Multi',
+                        trader: nextTask.trader ? nextTask.trader.name : '?'
+                    });
+                });
+            }
         });
 
-        // Render functions
+        // 3. Rendering
         document.getElementById('required-keys').innerHTML = neededKeys.size > 0 
             ? Array.from(neededKeys.values()).map(k => `
                 <div class="item-badge" title="${k.name}">
@@ -419,6 +439,25 @@
             <li class="list-group-item bg-transparent text-light border-secondary">
                 <span class="text-warning fw-bold">${obj.quest}:</span> ${obj.desc}
             </li>`).join('');
+
+        // Rendering Progression
+        const progressContainer = document.getElementById('progression-list');
+        if (unlocks.length > 0) {
+            progressContainer.innerHTML = unlocks.map(u => `
+                <div class="mb-2 p-2 border border-secondary rounded bg-dark bg-opacity-50">
+                    <div class="text-muted" style="font-size: 0.85em;">Completing <em class="text-light">${u.from}</em> unlocks:</div>
+                    <div class="d-flex align-items-center mt-1">
+                        <span class="fw-bold" style="color: #a29bfe;">➥ ${u.nextName}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mt-1" style="font-size: 0.85em;">
+                        <span class="text-secondary">🗺️ ${u.nextMap}</span>
+                        <span class="text-secondary">👤 ${u.trader}</span>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            progressContainer.innerHTML = '<div class="text-muted p-2 fst-italic">No direct follow-up quests found.</div>';
+        }
 
         resultBox.style.display = 'block';
         resultBox.scrollIntoView({ behavior: 'smooth' });
