@@ -16,11 +16,9 @@
             --bg-element: #1f1f1f;    
             --border-color: #333;
             --text-main: #e0e0e0;
-            --text-bright: #ffffff;   /* Neuer High-Contrast Wert */
-            --text-sub: #cccccc;      /* Helleres Grau für Subtexte */
+            --text-sub: #cccccc;      
             --eft-beige: #d2c4a6;     
             --eft-gold: #9e8f6b;      
-            --eft-green: #4f6b4f;     
             --eft-red: #8c3b3b;       
         }
 
@@ -49,14 +47,20 @@
             border-radius: 0;
         }
 
-        /* Inputs & Buttons */
-        .form-select {
+        /* Form Elements */
+        .form-control, .form-select {
             background-color: #000;
             color: var(--eft-beige);
             border: 1px solid var(--eft-gold);
             border-radius: 0;
         }
-        .form-select:focus { box-shadow: none; border-color: #fff; }
+        .form-control:focus, .form-select:focus { 
+            background-color: #111;
+            color: #fff;
+            box-shadow: none; 
+            border-color: #fff; 
+        }
+        .form-control::placeholder { color: #555; font-style: italic; }
 
         .btn-tarkov {
             background-color: var(--bg-element);
@@ -67,10 +71,8 @@
             font-weight: bold;
             transition: all 0.2s;
         }
-        .btn-tarkov:hover {
-            background-color: var(--eft-gold);
-            color: #000;
-        }
+        .btn-tarkov:hover { background-color: var(--eft-gold); color: #000; }
+        
         .btn-reset {
             color: var(--eft-red);
             border-color: var(--eft-red);
@@ -88,7 +90,6 @@
             border-left: 3px solid transparent;
         }
         .quest-item:hover { background-color: #2a2a2a; }
-        
         .quest-item.selected {
             background-color: #252525;
             border-left: 3px solid var(--eft-beige);
@@ -104,12 +105,8 @@
             border-color: var(--eft-beige);
         }
 
-        /* Accordion (Groups) */
-        .accordion-item { 
-            background: transparent; 
-            border: none; 
-            margin-bottom: 5px;
-        }
+        /* Accordion */
+        .accordion-item { background: transparent; border: none; margin-bottom: 5px; }
         .accordion-button {
             background-color: #111;
             color: var(--eft-beige);
@@ -131,8 +128,6 @@
             border-top: none; 
             padding: 10px; 
         }
-
-        /* Active Group Indicator */
         .accordion-button.has-selection {
             background-color: #2a2a2a;
             border-left: 4px solid var(--eft-beige);
@@ -141,7 +136,7 @@
         /* Badges */
         .badge-tarkov {
             background-color: #333;
-            color: #ccc; /* Hellerer Text */
+            color: #ccc;
             border: 1px solid #444;
             border-radius: 2px;
             font-weight: normal;
@@ -152,7 +147,7 @@
             font-weight: bold;
         }
 
-        /* Planning Result */
+        /* Results & Map */
         #planning-result {
             display: none;
             background: var(--bg-panel);
@@ -179,7 +174,6 @@
             color: var(--eft-beige);
         }
 
-        /* Items */
         .item-box {
             background: #181818;
             border: 1px solid #333;
@@ -202,7 +196,7 @@
 <div class="container pb-5">
     <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-secondary pb-3">
         <div>
-            <h1 class="mb-0">RAID PLANNER <span style="font-size: 0.5em; vertical-align: middle; color: #888;">v0.9.1</span></h1>
+            <h1 class="mb-0">RAID PLANNER <span style="font-size: 0.5em; vertical-align: middle; color: #888;">v0.9.3</span></h1>
         </div>
     </div>
 
@@ -237,6 +231,11 @@
     <div id="error-box" class="alert alert-danger d-none rounded-0 border-danger"></div>
 
     <div id="quest-selection-area" class="d-none">
+        
+        <div class="mb-3">
+            <input type="text" id="questSearch" class="form-control" placeholder="Search tasks (e.g. 'Gunsmith', 'Shooter')...">
+        </div>
+
         <div class="d-flex justify-content-between align-items-end mb-3">
             <h5 class="m-0 text-beige">Select Active Tasks</h5>
             <div>
@@ -244,6 +243,7 @@
                 <button onclick="planRaid()" class="btn btn-tarkov px-4">Initialize Plan</button>
             </div>
         </div>
+        
         <div id="quest-list" class="accordion" id="questAccordion"></div>
     </div>
 
@@ -268,7 +268,6 @@
                 <div class="section-header">Required Keys</div>
                 <div id="required-keys" class="d-flex flex-wrap"></div>
             </div>
-            
             <div class="col-md-6">
                 <div class="section-header">Required Items</div>
                 <p class="small text-sub mb-2">Items to place, mark, or handover.</p>
@@ -295,6 +294,7 @@
     let loadedQuests = [];
     let panzoomInstance = null; 
 
+    // MUSS EXAKT ZUM BACKEND PASSEN:
     const MAP_CONFIG = {
         "Customs": { file: "customs.jpg", url: "https://tarkov.dev/map/customs-2d" },
         "Factory": { file: "factory.jpg", url: "https://tarkov.dev/map/factory-3d" },
@@ -319,28 +319,41 @@
         localStorage.setItem(STORAGE_KEY, JSON.stringify([...savedSet]));
     }
 
+    // SEARCH LOGIC
+    document.getElementById('questSearch').addEventListener('input', function(e) {
+        const term = e.target.value.toLowerCase();
+        const filtered = loadedQuests.filter(q => q.name.toLowerCase().includes(term));
+        renderQuestList(filtered);
+    });
+
+    // MAP RESET LOGIC
+    document.getElementById('zoom-reset').addEventListener('click', function() {
+        if(panzoomInstance) panzoomInstance.reset();
+    });
+
+    // SELECTION RESET LOGIC
     function clearSelection() {
         if(confirm("Reset mission parameters?")) {
             localStorage.removeItem(STORAGE_KEY);
             document.querySelectorAll('.quest-checkbox').forEach(cb => cb.checked = false);
             document.querySelectorAll('.quest-item').forEach(div => div.classList.remove('selected'));
             
+            // Panzoom aufräumen
             if (panzoomInstance) {
                 panzoomInstance.dispose();
                 panzoomInstance = null;
             }
             
+            // Map-Bild verstecken
+            const mapImg = document.getElementById('map-display');
+            mapImg.src = ""; 
+            mapImg.style.display = 'none';
+
             document.getElementById('planning-result').style.display = 'none';
+            document.getElementById('questSearch').value = '';
             
-            // Reset Badges
-            document.querySelectorAll('.accordion-button').forEach(btn => {
-                btn.classList.remove('has-selection');
-                const badge = btn.querySelector('.badge-indicator');
-                if(badge) {
-                    badge.innerHTML = btn.dataset.total + " Tasks";
-                    badge.className = 'badge-indicator badge-tarkov ms-2 px-2';
-                }
-            });
+            // Liste neu laden
+            renderQuestList(loadedQuests);
         }
     }
 
@@ -349,38 +362,39 @@
         document.getElementById('map-fallback-link').style.display = 'block';
     }
 
-    // --- RENDER LOGIC ---
-    function renderQuestList(quests) {
+    // RENDER LOGIC
+    function renderQuestList(questsToRender) {
         const listContainer = document.getElementById('quest-list');
         listContainer.innerHTML = '';
         const savedSet = getSavedQuests();
+        const isFiltering = document.getElementById('questSearch').value.length > 0;
 
         const groups = {};
         const standalone = [];
 
-        quests.forEach((quest, index) => {
+        questsToRender.forEach(quest => {
             const match = quest.name.match(/^(.*?) - Part \d+$/);
             if (match) {
                 const groupName = match[1];
                 if (!groups[groupName]) groups[groupName] = [];
-                groups[groupName].push({ ...quest, originalIndex: index });
+                groups[groupName].push(quest);
             } else {
-                standalone.push({ ...quest, originalIndex: index });
+                standalone.push(quest);
             }
         });
 
-        // Groups
         for (const [groupName, groupQuests] of Object.entries(groups)) {
             const groupId = groupName.replace(/[^a-zA-Z0-9]/g, '');
             const activeCount = groupQuests.filter(q => savedSet.has(q.id)).length;
             const hasActive = activeCount > 0;
-            
+            const shouldExpand = isFiltering || hasActive;
+
             const accordItem = document.createElement('div');
             accordItem.className = 'accordion-item';
             
             let groupHtml = `
                 <h2 class="accordion-header" id="heading-${groupId}">
-                    <button class="accordion-button collapsed ${hasActive ? 'has-selection' : ''}" 
+                    <button class="accordion-button ${shouldExpand ? '' : 'collapsed'} ${hasActive ? 'has-selection' : ''}" 
                             type="button" 
                             id="btn-${groupId}"
                             data-bs-toggle="collapse" 
@@ -393,12 +407,12 @@
                         </span>
                     </button>
                 </h2>
-                <div id="collapse-${groupId}" class="accordion-collapse collapse" data-bs-parent="#questAccordion">
+                <div id="collapse-${groupId}" class="accordion-collapse collapse ${shouldExpand ? 'show' : ''}" data-bs-parent="#questAccordion">
                     <div class="accordion-body">
             `;
             
             groupQuests.forEach(q => {
-                groupHtml += createQuestItemHtml(q, q.originalIndex, savedSet, groupId);
+                groupHtml += createQuestItemHtml(q, savedSet, groupId);
             });
             
             groupHtml += `</div></div>`;
@@ -406,31 +420,30 @@
             listContainer.appendChild(accordItem);
         }
 
-        // Standalone
         if (standalone.length > 0) {
             const standaloneContainer = document.createElement('div');
             standaloneContainer.className = 'mt-3';
             standalone.forEach(q => {
-                standaloneContainer.innerHTML += createQuestItemHtml(q, q.originalIndex, savedSet, null);
+                standaloneContainer.innerHTML += createQuestItemHtml(q, savedSet, null);
             });
             listContainer.appendChild(standaloneContainer);
         }
     }
 
-    function createQuestItemHtml(quest, index, savedSet, groupId) {
+    function createQuestItemHtml(quest, savedSet, groupId) {
         const isChecked = savedSet.has(quest.id);
         const groupAttr = groupId ? `data-parent-group="${groupId}"` : '';
         
         return `
             <div class="quest-item d-flex align-items-center ${isChecked ? 'selected' : ''}" 
-                 onclick="toggleSelection(${index}, this, event)">
+                 onclick="toggleSelection('${quest.id}', this, event)">
                 <input class="form-check-input quest-checkbox" 
                        type="checkbox" 
-                       id="q-${index}" 
+                       id="cb-${quest.id}" 
                        value="${quest.id}"
                        ${isChecked ? 'checked' : ''}
                        ${groupAttr}
-                       onchange="event.stopPropagation(); toggleSelection(${index}, this.parentElement, event)">
+                       onchange="event.stopPropagation(); toggleSelection('${quest.id}', this.parentElement, event)">
                 <div class="ms-3 flex-grow-1">
                     <div class="d-flex align-items-center">
                         <span class="fw-bold" style="color:#e0e0e0;">${quest.name}</span>
@@ -454,6 +467,7 @@
         document.getElementById('planning-result').style.display = 'none';
         loader.classList.remove('d-none');
         document.getElementById('error-box').classList.add('d-none');
+        document.getElementById('questSearch').value = '';
 
         try {
             const response = await fetch(`${API_URL}/quests/${map}`);
@@ -475,15 +489,15 @@
         }
     }
 
-    function toggleSelection(index, divElement, event) {
-        const checkbox = document.getElementById(`q-${index}`);
+    function toggleSelection(questId, divElement, event) {
+        const checkbox = document.getElementById(`cb-${questId}`);
         if (event.target !== checkbox && event.target.tagName !== 'A') {
             checkbox.checked = !checkbox.checked;
         }
         if (checkbox.checked) divElement.classList.add('selected');
         else divElement.classList.remove('selected');
         
-        saveQuestState(loadedQuests[index].id, checkbox.checked);
+        saveQuestState(questId, checkbox.checked);
         
         const groupId = checkbox.getAttribute('data-parent-group');
         if (groupId) {
@@ -517,13 +531,12 @@
         const mapLink = document.getElementById('ext-map-link');
 
         // Logic
-        const selectedIndices = [];
-        loadedQuests.forEach((_, index) => {
-            const cb = document.getElementById(`q-${index}`);
-            if (cb && cb.checked) selectedIndices.push(index);
-        });
+        const selectedIds = new Set();
+        document.querySelectorAll('.quest-checkbox:checked').forEach(cb => selectedIds.add(cb.value));
+        
+        const selectedQuests = loadedQuests.filter(q => selectedIds.has(q.id));
 
-        if (selectedIndices.length === 0) { alert("No operations selected."); return; }
+        if (selectedQuests.length === 0) { alert("No operations selected."); return; }
 
         // Map Setup
         if (mapName === "Any") {
@@ -541,9 +554,9 @@
             const elem = document.getElementById('map-display');
             panzoomInstance = Panzoom(elem, { maxScale: 5, minScale: 0.5, contain: 'outside', startScale: 1 });
             elem.parentElement.addEventListener('wheel', panzoomInstance.zoomWithWheel);
+            
             document.getElementById('zoom-in').onclick = panzoomInstance.zoomIn;
             document.getElementById('zoom-out').onclick = panzoomInstance.zoomOut;
-            document.getElementById('zoom-reset').onclick = panzoomInstance.reset;
         } else {
             handleMapError();
         }
@@ -553,9 +566,7 @@
         const objectives = [];
         const unlocks = [];
 
-        selectedIndices.forEach(index => {
-            const quest = loadedQuests[index];
-            
+        selectedQuests.forEach(quest => {
             // 1. Provided Items
             const providedItemIds = new Set();
             if (quest.startRewards && quest.startRewards.items) {
@@ -571,7 +582,7 @@
                 });
             }
 
-            // 3. Objectives & Items
+            // 3. Objectives
             if (quest.objectives) {
                 quest.objectives.forEach(obj => {
                     objectives.push({ quest: quest.name, desc: obj.description });

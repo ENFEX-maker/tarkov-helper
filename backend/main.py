@@ -4,7 +4,7 @@ import httpx
 import json
 import time
 
-app = FastAPI(title="Tarkov Raid Planner", version="0.9.1 (Alpha - Wiki Style)")
+app = FastAPI(title="Tarkov Raid Planner", version="0.9.3-MAPFIX")
 
 app.add_middleware(
     CORSMiddleware,
@@ -19,11 +19,19 @@ CACHE_TTL = 300
 last_fetch_time = 0
 cached_data = None
 
+# FIX: Korrekte API-Namen für die Maps
 MAP_MAPPING = {
-    "Customs": "Customs", "Factory": "Factory", "Woods": "Woods",
-    "Interchange": "Interchange", "Shoreline": "Shoreline", "Reserve": "Reserve",
-    "Lighthouse": "Lighthouse", "Streets of Tarkov": "Streets",
-    "Ground Zero": "GroundZero", "Labs": "Laboratory", "Any": "Any"
+    "Customs": "Customs", 
+    "Factory": "Factory", 
+    "Woods": "Woods",
+    "Interchange": "Interchange", 
+    "Shoreline": "Shoreline", 
+    "Reserve": "Reserve",
+    "Lighthouse": "Lighthouse", 
+    "Streets of Tarkov": "Streets of Tarkov",  # War vorher "Streets"
+    "Ground Zero": "Ground Zero",             # War vorher "GroundZero"
+    "Labs": "The Lab",                        # War vorher "Laboratory"
+    "Any": "Any"
 }
 
 QUESTS_QUERY = """
@@ -76,10 +84,9 @@ async def fetch_tarkov_data():
     headers = {
         "Content-Type": "application/json",
         "Accept-Encoding": "gzip, deflate", 
-        "User-Agent": "TarkovRaidPlanner/0.9"
+        "User-Agent": "TarkovRaidPlanner/0.9.3"
     }
 
-    # Timeout hoch, HTTP/1.1 erzwingen für Stabilität
     timeout_config = httpx.Timeout(60.0, connect=20.0, read=60.0)
 
     async with httpx.AsyncClient(http2=False, timeout=timeout_config) as client:
@@ -97,7 +104,6 @@ async def fetch_tarkov_data():
             
             unlocks_map = {}
 
-            # Unlocks berechnen
             for child_task in all_tasks:
                 reqs = child_task.get("taskRequirements") or []
                 for req in reqs:
@@ -143,7 +149,9 @@ async def get_quests(map_name: str):
             if target_map == "Any":
                 if t_map is None: filtered.append(task)
             else:
-                if t_map and t_map.get('name') == target_map: filtered.append(task)
+                # Robuster Vergleich: Check ob Name enthalten ist oder exakt matcht
+                if t_map and t_map.get('name') == target_map: 
+                    filtered.append(task)
         
         filtered.sort(key=lambda x: x.get('name', ''))
         return filtered
