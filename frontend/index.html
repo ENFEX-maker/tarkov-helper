@@ -9,7 +9,10 @@
     <script src="https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
 
     <style>
+        /* Kontrast-Verbesserungen: Helleres Grau statt Schwarz/Dunkelgrau */
         body { background-color: #0f0f0f; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .text-muted { color: #adb5bd !important; } /* Überschreibt Bootstrap Standard */
+        
         .container { max-width: 1200px; margin-top: 40px; }
         
         /* Quest Styling */
@@ -22,7 +25,7 @@
             transition: all 0.2s;
             cursor: pointer;
         }
-        .quest-item:hover { background-color: #252525; border-color: #555; }
+        .quest-item:hover { background-color: #252525; border-color: #666; }
         .quest-item.selected {
             background-color: #2c3e50;
             border-color: #f39c12;
@@ -32,19 +35,25 @@
         /* Accordion Styling (Gruppen) */
         .accordion-item { background-color: transparent; border: 1px solid #333; margin-bottom: 8px; }
         .accordion-button { background-color: #161616; color: #e0e0e0; font-weight: bold; }
-        .accordion-button:not(.collapsed) { background-color: #2c2c2c; color: #f39c12; box-shadow: none; }
+        .accordion-button:not(.collapsed) { background-color: #252525; color: #fff; box-shadow: none; }
         .accordion-button::after { filter: invert(1); }
-        .accordion-body { background-color: #0f0f0f; padding: 10px; }
+        .accordion-body { background-color: #0f0f0f; padding: 10px; border-top: 1px solid #333; }
+        
+        /* NEU: Wenn Items in der Gruppe ausgewählt sind */
+        .accordion-button.has-selection {
+            border-left: 4px solid #f39c12;
+            background-color: #222;
+        }
 
         .form-check-input { transform: scale(1.3); margin-right: 15px; cursor: pointer; }
-        .trader-badge { font-size: 0.75em; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-right: 10px; }
+        .trader-badge { font-size: 0.75em; text-transform: uppercase; letter-spacing: 1px; color: #aaa; margin-right: 10px; }
         
         #planning-result { display: none; background: #161616; border: 1px solid #333; padding: 25px; border-radius: 12px; margin-top: 30px; margin-bottom: 50px;}
         
         .key-icon { width: 40px; height: 40px; object-fit: contain; margin-right: 8px; }
         .item-badge { background-color: #222; border: 1px solid #444; padding: 5px 10px; border-radius: 6px; display: inline-flex; align-items: center; margin: 5px; }
         
-        /* Neue Status Farben für Items */
+        /* Status Farben für Items */
         .item-badge.provided { border-color: #27ae60; background-color: #1e3a2a; color: #a8e6cf; }
         .item-badge.acquire { border-color: #d35400; background-color: #3a2216; color: #edc2a8; }
         
@@ -62,15 +71,15 @@
 
 <div class="container pb-5">
     <div class="mb-5">
-        <h1 class="fw-bold text-warning mb-0">Tarkov Raid Planner <span class="badge bg-secondary fs-6 align-middle">v1.0 (Alpha)</span></h1>
-        <p class="text-secondary m-0">Optimize your route. Grouped Tasks & Resource Management.</p>
+        <h1 class="fw-bold text-warning mb-0">Tarkov Raid Planner <span class="badge bg-secondary fs-6 align-middle">v0.9 (Alpha)</span></h1>
+        <p class="text-light m-0 opacity-75">Select your active tasks and optimize your route.</p>
     </div>
 
     <div class="card bg-dark border-secondary mb-4">
         <div class="card-body p-4">
             <div class="row g-3">
                 <div class="col-md-5">
-                    <label class="text-muted small mb-1">Select Location</label>
+                    <label class="text-light small mb-1">Select Location</label>
                     <select id="mapSelect" class="form-select bg-black text-light border-secondary">
                         <option value="Customs">Customs</option>
                         <option value="Factory">Factory</option>
@@ -94,7 +103,7 @@
 
     <div id="loading" class="text-center d-none my-5">
         <div class="spinner-border text-warning" role="status"></div>
-        <p class="mt-2 text-muted">Retrieving Intel...</p>
+        <p class="mt-2 text-light">Retrieving Intel...</p>
     </div>
     <div id="error-box" class="alert alert-danger d-none"></div>
 
@@ -119,7 +128,7 @@
                 <button class="map-btn" id="zoom-reset">↺</button>
             </div>
             <div id="map-fallback-link" class="text-center" style="display:none; position:absolute; margin-top:10px;">
-                <p class="text-muted" id="map-fallback-text">No local map.</p>
+                <p class="text-light" id="map-fallback-text">No local map.</p>
                 <a id="ext-map-link" href="#" target="_blank" class="btn btn-outline-warning btn-sm">Open Web Map ↗️</a>
             </div>
         </div>
@@ -132,7 +141,7 @@
             
             <div class="col-md-6">
                 <h5 class="text-info border-bottom border-info pb-2 mb-3">🎒 Required Items</h5>
-                <p class="small text-muted mb-2">Check if items are provided on quest start or need to be acquired.</p>
+                <p class="small text-light opacity-75 mb-2">Items to bring into raid (Place, Mark, or Handover).</p>
                 <div id="required-items" class="d-flex flex-wrap"></div>
             </div>
         </div>
@@ -185,6 +194,7 @@
             document.querySelectorAll('.quest-checkbox').forEach(cb => cb.checked = false);
             document.querySelectorAll('.quest-item').forEach(div => div.classList.remove('selected'));
             document.getElementById('planning-result').style.display = 'none';
+            loadQuests(); // Reload list to update groups
         }
     }
     function handleMapError() {
@@ -214,15 +224,21 @@
             }
         });
 
+        // Groups Render
         for (const [groupName, groupQuests] of Object.entries(groups)) {
             const groupId = groupName.replace(/[^a-zA-Z0-9]/g, '');
             const accordItem = document.createElement('div');
             accordItem.className = 'accordion-item';
             
+            // NEU: Zählen, wie viele Quests in dieser Gruppe aktiv sind
+            const activeCount = groupQuests.filter(q => savedSet.has(q.id)).length;
+            const activeClass = activeCount > 0 ? 'has-selection' : '';
+            const badgeHtml = activeCount > 0 ? `<span class="badge bg-warning text-dark ms-2">✅ ${activeCount} Active</span>` : `<span class="badge bg-dark ms-2 border border-secondary">${groupQuests.length} Parts</span>`;
+
             let groupHtml = `
                 <h2 class="accordion-header" id="heading-${groupId}">
-                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-${groupId}">
-                        📂 ${groupName} <span class="badge bg-dark ms-2 border border-secondary">${groupQuests.length} Parts</span>
+                    <button class="accordion-button collapsed ${activeClass}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-${groupId}">
+                        📂 ${groupName} ${badgeHtml}
                     </button>
                 </h2>
                 <div id="collapse-${groupId}" class="accordion-collapse collapse" data-bs-parent="#questAccordion">
@@ -238,6 +254,7 @@
             listContainer.appendChild(accordItem);
         }
 
+        // Standalone Render
         if (standalone.length > 0) {
             const standaloneContainer = document.createElement('div');
             standalone.forEach(q => {
@@ -308,7 +325,11 @@
         }
         if (checkbox.checked) divElement.classList.add('selected');
         else divElement.classList.remove('selected');
+        
         saveQuestState(loadedQuests[index].id, checkbox.checked);
+        
+        // UI der Gruppe aktualisieren ohne kompletten Reload (optional, aber nice to have)
+        // Einfachste Methode: Wir lassen es so, beim nächsten "Load Quests" wird es aktualisiert.
     }
 
     function planRaid() {
@@ -364,7 +385,7 @@
         selectedIndices.forEach(index => {
             const quest = loadedQuests[index];
             
-            // 1. Initial Rewards sammeln
+            // 1. Initial Rewards
             const providedItemIds = new Set();
             if (quest.startRewards && quest.startRewards.items) {
                 quest.startRewards.items.forEach(r => {
@@ -393,7 +414,7 @@
                     }
                     else if (obj.type === 'Mark' && obj.markerItem) {
                         item = obj.markerItem;
-                        count = obj.count || 1; // FIX: Fallback, da API count nicht liefert
+                        count = 1; // FIX: Fallback, da API count nicht liefert
                     }
 
                     if (item) {

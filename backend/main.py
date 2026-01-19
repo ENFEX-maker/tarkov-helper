@@ -4,7 +4,8 @@ import httpx
 import json
 import time
 
-app = FastAPI(title="Tarkov Helper API", version="1.1.1-HOTFIX")
+# VERSION FESTGELEGT AUF 0.9 (Alpha)
+app = FastAPI(title="Tarkov Helper API", version="0.9 (Alpha)")
 
 app.add_middleware(
     CORSMiddleware,
@@ -26,7 +27,7 @@ MAP_MAPPING = {
     "Ground Zero": "GroundZero", "Labs": "Laboratory", "Any": "Any"
 }
 
-# FIX: "count" bei TaskObjectiveMark entfernt
+# QUERY: Ohne "count" bei TaskObjectiveMark (da API dies nicht unterstützt)
 QUESTS_QUERY = """
 {
     tasks {
@@ -55,7 +56,6 @@ QUESTS_QUERY = """
             }
             ... on TaskObjectiveMark {
                 markerItem { id, name, iconLink }
-                # Count entfernt, da API das hier nicht unterstützt
             }
         }
         taskRequirements {
@@ -131,7 +131,6 @@ async def get_quests(map_name: str):
             else:
                 if t_map and t_map.get('name') == target_map: filtered.append(task)
         
-        # Sortieren
         filtered.sort(key=lambda x: x['name'])
         return filtered
 
