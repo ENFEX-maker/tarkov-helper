@@ -4,8 +4,13 @@ import httpx
 import json
 import time
 
+<<<<<<< HEAD
 # MAJOR RELEASE: V1.0
 app = FastAPI(title="Tarkov Raid Planner", version="1.0.0-GLOBAL")
+=======
+# Version Rollback auf stabile Basis (ohne WikiLink im Backend, da dies Crash verursachte)
+app = FastAPI(title="Tarkov Raid Planner", version="0.9.6-STABLE")
+>>>>>>> 0d92e42c001d424da33a768a4b33937eb4faae9e
 
 app.add_middleware(
     CORSMiddleware,
@@ -20,7 +25,11 @@ CACHE_TTL = 300
 last_fetch_time = 0
 cached_data = None
 
+<<<<<<< HEAD
 # Mapping bleibt für spezifische Filterung, "ALL" wird im Code behandelt
+=======
+# WICHTIG: Die korrigierten Map-Namen bleiben erhalten!
+>>>>>>> 0d92e42c001d424da33a768a4b33937eb4faae9e
 MAP_MAPPING = {
     "Customs": "Customs", 
     "Factory": "Factory", 
@@ -35,6 +44,10 @@ MAP_MAPPING = {
     "Any": "Any"
 }
 
+<<<<<<< HEAD
+=======
+# Query ohne 'wikiLink', um Absturzrisiko zu minimieren
+>>>>>>> 0d92e42c001d424da33a768a4b33937eb4faae9e
 QUESTS_QUERY = """
 {
     tasks {
@@ -84,7 +97,11 @@ async def fetch_tarkov_data():
     headers = {
         "Content-Type": "application/json",
         "Accept-Encoding": "gzip, deflate", 
+<<<<<<< HEAD
         "User-Agent": "TarkovRaidPlanner/1.0"
+=======
+        "User-Agent": "TarkovRaidPlanner/0.9.6"
+>>>>>>> 0d92e42c001d424da33a768a4b33937eb4faae9e
     }
 
     timeout_config = httpx.Timeout(60.0, connect=20.0, read=60.0)
@@ -118,6 +135,10 @@ async def fetch_tarkov_data():
                         
                         unlocks_map[p_id].append({
                             "name": child_task.get("name", "Unknown"),
+<<<<<<< HEAD
+=======
+                            # WikiLink entfernt, da potenzieller Crash-Verursacher
+>>>>>>> 0d92e42c001d424da33a768a4b33937eb4faae9e
                             "map": c_map["name"] if c_map else "Global",
                             "trader": c_trader["name"] if c_trader else "?"
                         })
@@ -138,13 +159,17 @@ async def fetch_tarkov_data():
 async def get_quests(map_name: str):
     try:
         result = await fetch_tarkov_data()
+<<<<<<< HEAD
         
         # Mapping prüfen
+=======
+>>>>>>> 0d92e42c001d424da33a768a4b33937eb4faae9e
         target_map = MAP_MAPPING.get(map_name, map_name)
         
         data_content = result.get("data") or {}
         all_tasks = data_content.get("tasks") or []
         
+<<<<<<< HEAD
         # WICHTIG: Wenn "ALL" angefragt wird, geben wir ALLES zurück.
         # Das Frontend filtert dann.
         if map_name == "ALL":
@@ -152,6 +177,8 @@ async def get_quests(map_name: str):
             return all_tasks
 
         # Fallback für alte Logik (Server-Side Filtering)
+=======
+>>>>>>> 0d92e42c001d424da33a768a4b33937eb4faae9e
         filtered = []
         for task in all_tasks:
             t_map = task.get('map')

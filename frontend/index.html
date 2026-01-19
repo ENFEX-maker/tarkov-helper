@@ -213,7 +213,11 @@
 <div class="container pb-5">
     <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-secondary pb-3">
         <div>
+<<<<<<< HEAD
             <h1 class="mb-0">RAID PLANNER <span style="font-size: 0.5em; vertical-align: middle; color: #888;">v1.0.0</span></h1>
+=======
+            <h1 class="mb-0">RAID PLANNER <span style="font-size: 0.5em; vertical-align: middle; color: #888;">v0.9.5</span></h1>
+>>>>>>> 0d92e42c001d424da33a768a4b33937eb4faae9e
         </div>
     </div>
 
@@ -221,7 +225,11 @@
         <div class="row g-3">
             <div class="col-md-5">
                 <label class="text-beige small mb-1 fw-bold text-uppercase">Operational Area</label>
+<<<<<<< HEAD
                 <select id="mapSelect" class="form-select" onchange="applyFilters()">
+=======
+                <select id="mapSelect" class="form-select">
+>>>>>>> 0d92e42c001d424da33a768a4b33937eb4faae9e
                     <option value="Customs">Customs</option>
                     <option value="Factory">Factory</option>
                     <option value="Woods">Woods</option>
@@ -236,21 +244,33 @@
                 </select>
             </div>
             <div class="col-md-3 d-flex align-items-end">
+<<<<<<< HEAD
                 <button onclick="loadAllQuests()" id="btn-load" class="btn btn-tarkov w-100">Load Operations</button>
+=======
+                <button onclick="loadQuests()" class="btn btn-tarkov w-100">Load Operations</button>
+>>>>>>> 0d92e42c001d424da33a768a4b33937eb4faae9e
             </div>
         </div>
     </div>
 
     <div id="loading" class="text-center d-none my-5">
         <div class="spinner-border text-secondary" role="status"></div>
+<<<<<<< HEAD
         <p class="mt-2 text-beige">Retrieving Global Intelligence...</p>
+=======
+        <p class="mt-2 text-beige">Retrieving Intelligence...</p>
+>>>>>>> 0d92e42c001d424da33a768a4b33937eb4faae9e
     </div>
     <div id="error-box" class="alert alert-danger d-none rounded-0 border-danger"></div>
 
     <div id="quest-selection-area" class="d-none">
         
         <div class="mb-3">
+<<<<<<< HEAD
             <input type="text" id="questSearch" class="form-control" placeholder="Global Search (e.g. 'Gunsmith', 'Shooter')...">
+=======
+            <input type="text" id="questSearch" class="form-control" placeholder="Search tasks (e.g. 'Gunsmith', 'Shooter')...">
+>>>>>>> 0d92e42c001d424da33a768a4b33937eb4faae9e
         </div>
 
         <div class="d-flex justify-content-between align-items-end mb-3">
@@ -308,9 +328,13 @@
 <script>
     const API_URL = "/api";
     const STORAGE_KEY = "tarkov_planner_selected_quests"; 
+<<<<<<< HEAD
     
     // NEW: We store ALL quests in memory
     let allQuestsGlobal = []; 
+=======
+    let loadedQuests = [];
+>>>>>>> 0d92e42c001d424da33a768a4b33937eb4faae9e
     let panzoomInstance = null; 
 
     const MAP_CONFIG = {
@@ -338,15 +362,23 @@
         updatePlanButton();
     }
 
+<<<<<<< HEAD
     // SEARCH & FILTER LOGIC
     document.getElementById('questSearch').addEventListener('input', function() {
         applyFilters();
+=======
+    document.getElementById('questSearch').addEventListener('input', function(e) {
+        const term = e.target.value.toLowerCase();
+        const filtered = loadedQuests.filter(q => q.name.toLowerCase().includes(term));
+        renderQuestList(filtered);
+>>>>>>> 0d92e42c001d424da33a768a4b33937eb4faae9e
     });
 
     document.getElementById('zoom-reset').addEventListener('click', function() {
         if(panzoomInstance) panzoomInstance.reset();
     });
 
+<<<<<<< HEAD
     // NEW: Central Filter Logic
     function applyFilters() {
         const term = document.getElementById('questSearch').value.toLowerCase();
@@ -401,6 +433,36 @@
             document.getElementById('questSearch').value = '';
             
             applyFilters(); // Re-render filtered list
+=======
+    function updatePlanButton() {
+        const savedSet = getSavedQuests();
+        const count = savedSet.size;
+        const btn = document.getElementById('btn-initialize');
+        if(btn) {
+            btn.innerHTML = count > 0 ? `Initialize Plan (${count})` : "Initialize Plan";
+        }
+    }
+
+    function clearSelection() {
+        if(confirm("Reset mission parameters?")) {
+            localStorage.removeItem(STORAGE_KEY);
+            document.querySelectorAll('.quest-checkbox').forEach(cb => cb.checked = false);
+            document.querySelectorAll('.quest-item').forEach(div => div.classList.remove('selected'));
+            
+            if (panzoomInstance) {
+                panzoomInstance.dispose();
+                panzoomInstance = null;
+            }
+            
+            const mapImg = document.getElementById('map-display');
+            mapImg.src = ""; 
+            mapImg.style.display = 'none';
+
+            document.getElementById('planning-result').style.display = 'none';
+            document.getElementById('questSearch').value = '';
+            
+            renderQuestList(loadedQuests);
+>>>>>>> 0d92e42c001d424da33a768a4b33937eb4faae9e
             updatePlanButton();
         }
     }
@@ -436,7 +498,10 @@
             const groupId = groupName.replace(/[^a-zA-Z0-9]/g, '');
             const activeCount = groupQuests.filter(q => savedSet.has(q.id)).length;
             const hasActive = activeCount > 0;
+<<<<<<< HEAD
             // Expand automatically if searching OR if group has active quests
+=======
+>>>>>>> 0d92e42c001d424da33a768a4b33937eb4faae9e
             const shouldExpand = isFiltering || hasActive;
 
             const accordItem = document.createElement('div');
@@ -502,18 +567,28 @@
                     <div class="mt-1 d-flex justify-content-between" style="font-size:0.8em; color:#bbb;">
                         <span>${quest.trader.name}</span>
                         <span>Lvl ${quest.minPlayerLevel}</span>
+<<<<<<< HEAD
                         <span style="color:#888;">${quest.map ? quest.map.name : 'Global'}</span>
+=======
+>>>>>>> 0d92e42c001d424da33a768a4b33937eb4faae9e
                     </div>
                 </div>
             </div>
         `;
     }
 
+<<<<<<< HEAD
     // NEW: Load everything once
     async function loadAllQuests() {
         const loader = document.getElementById('loading');
         const selectionArea = document.getElementById('quest-selection-area');
         const btnLoad = document.getElementById('btn-load');
+=======
+    async function loadQuests() {
+        const map = document.getElementById('mapSelect').value;
+        const loader = document.getElementById('loading');
+        const selectionArea = document.getElementById('quest-selection-area');
+>>>>>>> 0d92e42c001d424da33a768a4b33937eb4faae9e
         
         selectionArea.classList.add('d-none');
         document.getElementById('planning-result').style.display = 'none';
@@ -522,6 +597,7 @@
         document.getElementById('questSearch').value = '';
 
         try {
+<<<<<<< HEAD
             // Fetch ALL quests
             const response = await fetch(`${API_URL}/quests/ALL`);
             if (!response.ok) throw new Error(`Comm Error: ${response.status}`);
@@ -539,6 +615,18 @@
             btnLoad.classList.remove('btn-tarkov');
             btnLoad.classList.add('btn-secondary');
 
+=======
+            const response = await fetch(`${API_URL}/quests/${map}`);
+            if (!response.ok) throw new Error(`Comm Error: ${response.status}`);
+            loadedQuests = await response.json();
+
+            if (loadedQuests.length === 0) {
+                document.getElementById('quest-list').innerHTML = '<div class="text-center text-sub p-4">No operations found.</div>';
+            } else {
+                renderQuestList(loadedQuests);
+            }
+            selectionArea.classList.remove('d-none');
+>>>>>>> 0d92e42c001d424da33a768a4b33937eb4faae9e
         } catch (error) {
             const err = document.getElementById('error-box');
             err.textContent = "Error: " + error.message;
@@ -589,12 +677,21 @@
         const mapFallback = document.getElementById('map-fallback-link');
         const mapLink = document.getElementById('ext-map-link');
 
+<<<<<<< HEAD
         // Logic: Find checked IDs from STORAGE (Cross-Location Support!)
         const savedSet = getSavedQuests();
         if (savedSet.size === 0) { alert("No operations selected."); return; }
 
         // Filter Global List by Saved IDs
         const selectedQuests = allQuestsGlobal.filter(q => savedSet.has(q.id));
+=======
+        // Logic
+        const selectedIds = new Set();
+        document.querySelectorAll('.quest-checkbox:checked').forEach(cb => selectedIds.add(cb.value));
+        const selectedQuests = loadedQuests.filter(q => selectedIds.has(q.id));
+
+        if (selectedQuests.length === 0) { alert("No operations selected."); return; }
+>>>>>>> 0d92e42c001d424da33a768a4b33937eb4faae9e
 
         // Map Setup
         if (mapName === "Any") {
@@ -628,7 +725,12 @@
         }
 
         const neededKeys = new Map();
+<<<<<<< HEAD
         const itemsMap = new Map();
+=======
+        // --- NEW: Aggregation Map ---
+        const itemsMap = new Map(); // Key: ItemID, Value: {data, count, status}
+>>>>>>> 0d92e42c001d424da33a768a4b33937eb4faae9e
         
         const objectives = [];
         const unlocks = [];
@@ -665,16 +767,30 @@
                     }
 
                     if (item) {
+<<<<<<< HEAD
+=======
+                        // AGGREGATION LOGIC
+>>>>>>> 0d92e42c001d424da33a768a4b33937eb4faae9e
                         if (!itemsMap.has(item.id)) {
                             itemsMap.set(item.id, {
                                 name: item.name,
                                 icon: item.iconLink,
                                 count: 0,
+<<<<<<< HEAD
                                 provided: providedItemIds.has(item.id)
                             });
                         }
                         const entry = itemsMap.get(item.id);
                         entry.count += count;
+=======
+                                provided: providedItemIds.has(item.id) // Status base check
+                            });
+                        }
+                        
+                        const entry = itemsMap.get(item.id);
+                        entry.count += count;
+                        // If one quest provides it, we treat it as provided for now (simplified)
+>>>>>>> 0d92e42c001d424da33a768a4b33937eb4faae9e
                         if (providedItemIds.has(item.id)) entry.provided = true; 
                     }
                 });
@@ -691,6 +807,10 @@
             }
         });
 
+<<<<<<< HEAD
+=======
+        // Convert Maps to Arrays for Rendering
+>>>>>>> 0d92e42c001d424da33a768a4b33937eb4faae9e
         const neededItems = Array.from(itemsMap.values()).map(i => ({
             name: i.name,
             count: i.count,
