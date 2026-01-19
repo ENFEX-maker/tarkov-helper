@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tarkov Quest Helper</title>
+    <title>Tarkov Raid Planner</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
@@ -49,15 +49,7 @@
         .item-badge.acquire { border-color: #d35400; background-color: #3a2216; color: #edc2a8; }
         
         .map-container {
-            width: 100%;
-            height: 600px;
-            background-color: #050505;
-            border-radius: 8px;
-            overflow: hidden;
-            position: relative;
-            margin-bottom: 20px;
-            border: 1px solid #333;
-            display: flex; align-items: center; justify-content: center;
+            width: 100%; height: 600px; background-color: #050505; border-radius: 8px; overflow: hidden; position: relative; margin-bottom: 20px; border: 1px solid #333; display: flex; align-items: center; justify-content: center;
         }
         .map-image { max-width: 100%; max-height: 100%; object-fit: contain; display: block; cursor: grab; transition: none; }
         .map-image:active { cursor: grabbing; }
@@ -70,7 +62,7 @@
 
 <div class="container pb-5">
     <div class="mb-5">
-        <h1 class="fw-bold text-warning mb-0">Tarkov Quest Helper <span class="badge bg-secondary fs-6 align-middle">v1.0 (Alpha)</span></h1>
+        <h1 class="fw-bold text-warning mb-0">Tarkov Raid Planner <span class="badge bg-secondary fs-6 align-middle">v1.0 (Alpha)</span></h1>
         <p class="text-secondary m-0">Optimize your route. Grouped Tasks & Resource Management.</p>
     </div>
 
@@ -208,12 +200,10 @@
         listContainer.innerHTML = '';
         const savedSet = getSavedQuests();
 
-        // 1. Grouping Logik
         const groups = {};
         const standalone = [];
 
         quests.forEach((quest, index) => {
-            // Regex: Suche nach "Name - Part X"
             const match = quest.name.match(/^(.*?) - Part \d+$/);
             if (match) {
                 const groupName = match[1];
@@ -224,13 +214,10 @@
             }
         });
 
-        // 2. Render Groups
         for (const [groupName, groupQuests] of Object.entries(groups)) {
             const groupId = groupName.replace(/[^a-zA-Z0-9]/g, '');
             const accordItem = document.createElement('div');
             accordItem.className = 'accordion-item';
-            
-            // Check if any in group is selected to maybe keep open? (Optional, kept closed for tidy view)
             
             let groupHtml = `
                 <h2 class="accordion-header" id="heading-${groupId}">
@@ -251,7 +238,6 @@
             listContainer.appendChild(accordItem);
         }
 
-        // 3. Render Standalone
         if (standalone.length > 0) {
             const standaloneContainer = document.createElement('div');
             standalone.forEach(q => {
@@ -378,7 +364,7 @@
         selectedIndices.forEach(index => {
             const quest = loadedQuests[index];
             
-            // 1. Initial Rewards sammeln (für den Vergleich)
+            // 1. Initial Rewards sammeln
             const providedItemIds = new Set();
             if (quest.startRewards && quest.startRewards.items) {
                 quest.startRewards.items.forEach(r => {
@@ -393,7 +379,7 @@
                 });
             }
 
-            // 3. Objectives & Items processing
+            // 3. Objectives & Items
             if (quest.objectives) {
                 quest.objectives.forEach(obj => {
                     objectives.push({ quest: quest.name, desc: obj.description });
@@ -401,19 +387,16 @@
                     let item = null;
                     let count = 0;
 
-                    // Typ 1: Item abgeben
                     if (obj.type === 'GiveItem' && obj.item) {
                         item = obj.item;
                         count = obj.count;
                     }
-                    // Typ 2: Marker platzieren (NEU!)
                     else if (obj.type === 'Mark' && obj.markerItem) {
                         item = obj.markerItem;
-                        count = obj.count;
+                        count = obj.count || 1; // FIX: Fallback, da API count nicht liefert
                     }
 
                     if (item) {
-                        // VETERAN CHECK: Krieg ich das Item geschenkt oder muss ich es besorgen?
                         const isProvided = providedItemIds.has(item.id);
                         neededItems.push({
                             name: item.name,
