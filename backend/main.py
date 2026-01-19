@@ -4,7 +4,8 @@ import httpx
 import json
 import time
 
-app = FastAPI(title="Tarkov Raid Planner", version="0.9.4-MAPFIX")
+# Version Rollback auf stabile Basis (ohne WikiLink im Backend, da dies Crash verursachte)
+app = FastAPI(title="Tarkov Raid Planner", version="0.9.6-STABLE")
 
 app.add_middleware(
     CORSMiddleware,
@@ -19,6 +20,7 @@ CACHE_TTL = 300
 last_fetch_time = 0
 cached_data = None
 
+# WICHTIG: Die korrigierten Map-Namen bleiben erhalten!
 MAP_MAPPING = {
     "Customs": "Customs", 
     "Factory": "Factory", 
@@ -33,12 +35,12 @@ MAP_MAPPING = {
     "Any": "Any"
 }
 
+# Query ohne 'wikiLink', um Absturzrisiko zu minimieren
 QUESTS_QUERY = """
 {
     tasks {
         id
         name
-        wikiLink
         minPlayerLevel
         map { name }
         trader { name, imageLink }
@@ -83,7 +85,7 @@ async def fetch_tarkov_data():
     headers = {
         "Content-Type": "application/json",
         "Accept-Encoding": "gzip, deflate", 
-        "User-Agent": "TarkovRaidPlanner/0.9.4"
+        "User-Agent": "TarkovRaidPlanner/0.9.6"
     }
 
     timeout_config = httpx.Timeout(60.0, connect=20.0, read=60.0)
@@ -115,10 +117,9 @@ async def fetch_tarkov_data():
                         c_map = child_task.get("map")
                         c_trader = child_task.get("trader")
                         
-                        # UPDATE: WikiLink hinzugefügt
                         unlocks_map[p_id].append({
                             "name": child_task.get("name", "Unknown"),
-                            "wikiLink": child_task.get("wikiLink"), 
+                            # WikiLink entfernt, da potenzieller Crash-Verursacher
                             "map": c_map["name"] if c_map else "Global",
                             "trader": c_trader["name"] if c_trader else "?"
                         })
