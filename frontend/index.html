@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tarkov Raid Planner - Leaflet PoC</title>
+    <title>Tarkov Raid Planner - Leaflet PoC v2</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
@@ -142,6 +142,20 @@
             background-color: #0a0a0a;
             border: 2px solid var(--eft-gold);
             position: relative;
+        }
+        
+        /* Map Loading/Error States */
+        .map-status {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+            text-align: center;
+            color: var(--eft-beige);
+        }
+        .map-status.error {
+            color: var(--eft-red);
         }
         
         /* Custom Marker Labels */
@@ -319,6 +333,36 @@
         .legend-extract { background: var(--eft-green); border-color: var(--eft-green); }
         .legend-loot { background: var(--eft-blue); border-color: var(--eft-blue); }
 
+        /* Unlock Links */
+        .unlock-item {
+            margin-bottom: 8px;
+            padding: 10px 12px;
+            border: 1px solid #333;
+            background: #111;
+            transition: all 0.15s;
+        }
+        .unlock-item:hover {
+            border-color: var(--eft-gold);
+            background: #1a1a1a;
+        }
+        .unlock-item a {
+            color: var(--eft-beige);
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .unlock-item a:hover {
+            color: #fff;
+            text-decoration: underline;
+        }
+        .unlock-item .wiki-link {
+            color: #6a9fd4;
+            font-size: 11px;
+            margin-left: 8px;
+        }
+        .unlock-item .wiki-link:hover {
+            color: #8bb8e8;
+        }
+
     </style>
 </head>
 <body>
@@ -326,7 +370,7 @@
 <div class="container pb-5">
     <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-secondary pb-3">
         <div>
-            <h1 class="mb-0">RAID PLANNER <span style="font-size: 0.5em; vertical-align: middle; color: #888;">v1.2 Leaflet PoC</span></h1>
+            <h1 class="mb-0">RAID PLANNER <span style="font-size: 0.5em; vertical-align: middle; color: #888;">v1.3 Leaflet PoC</span></h1>
             <small class="text-sub">Interactive Map System - Proof of Concept</small>
         </div>
     </div>
@@ -435,6 +479,7 @@
     
     let API_PREFIX = "/api"; 
     const STORAGE_KEY = "tarkov_planner_selected_quests"; 
+    const WIKI_BASE_URL = "https://escapefromtarkov.fandom.com/wiki/";
     
     let allQuestsGlobal = []; 
     let mapInstance = null;
@@ -445,47 +490,48 @@
     let lootMarkersLayer = L.layerGroup();
 
     // ============================================================
-    // MAP CONFIGURATION - Pixel-basiertes Koordinatensystem
+    // MAP CONFIGURATION - Mehrere Fallback-URLs
     // ============================================================
     
-    // Customs Map von tarkov.dev
-    // Die Karte hat bestimmte Pixel-Dimensionen
     const MAP_CONFIG = {
         "Customs": { 
-            url: "https://assets.tarkov.dev/maps/customs-2d.jpg",
-            // Tatsächliche Bildgröße - wichtig für CRS.Simple
-            width: 5765,  
-            height: 2803,
-            // Default View Einstellungen
+            // Mehrere URLs als Fallback
+            urls: [
+                "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/5/5a/Customs_Map_-_Tutorial_Labels.png",
+                "https://i.imgur.com/QXqXQXq.jpg", // Fallback placeholder
+            ],
+            // Geschätzte Bildgröße für die Wiki-Map
+            width: 4096,  
+            height: 2289,
             defaultZoom: -1,
-            minZoom: -3,
+            minZoom: -2,
             maxZoom: 2
         }
     };
 
     // ============================================================
     // QUEST KOORDINATEN DATABASE (Manuell gepflegt)
-    // Format: questName -> Array von Punkten mit Typ
     // Koordinaten: [y, x] in Pixel (Leaflet Standard für CRS.Simple)
+    // HINWEIS: Diese müssen nach dem Map-Test angepasst werden!
     // ============================================================
     
     const QUEST_MARKERS = {
         // === CHECKING (Bronze Pocket Watch) ===
         "Checking": {
             questId: "596b36c586f77450d903a9d7",
+            wikiLink: "Checking",
             markers: [
                 {
                     id: "checking-truck",
-                    coords: [1650, 4200],  // [y, x] - Position des LKW
+                    coords: [1200, 2800],  // Angepasst für Wiki-Map
                     name: "Truck with Pocket Watch",
                     type: "objective",
                     description: "The truck cabin contains the bronze pocket watch. Look on the dashboard.",
-                    hint: "The truck is in the construction area near the bridge. Key 205 opens the cabin door.",
-                    screenshot: null // Platzhalter für zukünftige Screenshots
+                    hint: "The truck is in the construction area near the bridge. Key 205 opens the cabin door."
                 },
                 {
                     id: "checking-key-spawn",
-                    coords: [1200, 1800],  // [y, x] - Ein möglicher Key Spawn
+                    coords: [900, 1200],
                     name: "Key 205 Spawn (Dorm 114)",
                     type: "key-location",
                     description: "Possible spawn location for the Dorm Room 205 Key.",
@@ -497,10 +543,11 @@
         // === DELIVERY FROM THE PAST ===
         "Delivery from the past": {
             questId: "5967530a86f77462ba22226b",
+            wikiLink: "Delivery_from_the_past",
             markers: [
                 {
                     id: "delivery-document",
-                    coords: [1580, 2100],
+                    coords: [950, 1400],
                     name: "Document Case",
                     type: "objective",
                     description: "Retrieve the secure case with documents from the dorms.",
@@ -512,56 +559,53 @@
         // === BP DEPOT ===
         "BP Depot": {
             questId: "5969f9e986f7741dde183a50",
+            wikiLink: "BP_Depot",
             markers: [
                 {
                     id: "bp-tanker-1",
-                    coords: [800, 3800],
+                    coords: [600, 2600],
                     name: "Fuel Tanker #1",
                     type: "objective",
-                    description: "Place marker on first fuel tanker.",
-                    hint: "Near the railroad crossing."
+                    description: "Place marker on first fuel tanker."
                 },
                 {
                     id: "bp-tanker-2", 
-                    coords: [1100, 4100],
+                    coords: [800, 2900],
                     name: "Fuel Tanker #2",
                     type: "objective",
-                    description: "Place marker on second fuel tanker.",
-                    hint: "Construction area, next to the buildings."
+                    description: "Place marker on second fuel tanker."
                 },
                 {
                     id: "bp-tanker-3",
-                    coords: [1400, 4500],
+                    coords: [1000, 3200],
                     name: "Fuel Tanker #3",
                     type: "objective",
-                    description: "Place marker on third fuel tanker.",
-                    hint: "Storage area near Crossroads extract."
+                    description: "Place marker on third fuel tanker."
                 },
                 {
                     id: "bp-tanker-4",
-                    coords: [2000, 4800],
+                    coords: [1400, 3500],
                     name: "Fuel Tanker #4",
                     type: "objective", 
-                    description: "Place marker on fourth fuel tanker.",
-                    hint: "Gas station area."
+                    description: "Place marker on fourth fuel tanker."
                 }
             ]
         }
     };
 
     // ============================================================
-    // EXTRACT POINTS (Statische POIs)
+    // EXTRACT POINTS (Statische POIs für Customs)
     // ============================================================
     
     const EXTRACT_MARKERS = {
         "Customs": [
-            { coords: [400, 800], name: "Crossroads", type: "extract-pmc", hint: "PMC spawn side exit" },
-            { coords: [2500, 5400], name: "ZB-1011", type: "extract-pmc", hint: "Underground bunker exit" },
-            { coords: [2200, 5200], name: "Trailer Park", type: "extract-pmc", hint: "Near the worker shacks" },
-            { coords: [500, 5500], name: "RUAF Roadblock", type: "extract-conditional", hint: "Green smoke when active" },
-            { coords: [1500, 2900], name: "Smuggler's Boat", type: "extract-conditional", hint: "Check for boat at the river" },
-            { coords: [300, 1200], name: "Old Road Gate", type: "extract-pmc", hint: "Main road exit" },
-            { coords: [2600, 4800], name: "ZB-1012", type: "extract-pmc", hint: "Requires key" }
+            { coords: [300, 600], name: "Crossroads", type: "extract-pmc" },
+            { coords: [1800, 3800], name: "ZB-1011", type: "extract-pmc" },
+            { coords: [1600, 3600], name: "Trailer Park", type: "extract-pmc" },
+            { coords: [400, 3900], name: "RUAF Roadblock", type: "extract-conditional", hint: "Green smoke when active" },
+            { coords: [1100, 2000], name: "Smuggler's Boat", type: "extract-conditional", hint: "Check for boat" },
+            { coords: [200, 900], name: "Old Road Gate", type: "extract-pmc" },
+            { coords: [1900, 3400], name: "ZB-1012", type: "extract-pmc", hint: "Requires key" }
         ]
     };
 
@@ -580,15 +624,23 @@
         localStorage.setItem(STORAGE_KEY, JSON.stringify([...savedSet]));
         updatePlanButton();
     }
+    
+    // Wiki-Link Generator
+    function generateWikiLink(questName) {
+        // Quest-Name zu Wiki-URL konvertieren
+        const wikiSlug = questName.replace(/ /g, '_').replace(/['"]/g, '');
+        return WIKI_BASE_URL + encodeURIComponent(wikiSlug);
+    }
 
     // ============================================================
-    // LEAFLET MAP INITIALIZATION
+    // LEAFLET MAP INITIALIZATION MIT ERROR HANDLING
     // ============================================================
     
     function initMap(mapName) {
         const config = MAP_CONFIG[mapName];
         if (!config) {
             console.warn(`No map config for: ${mapName}`);
+            showMapError("Map configuration not found for: " + mapName);
             return;
         }
         
@@ -598,6 +650,9 @@
             mapInstance = null;
         }
 
+        // Map Container leeren und Status entfernen
+        const mapContainer = document.getElementById('map');
+        
         // Leaflet Map mit CRS.Simple (Pixel-Koordinaten)
         mapInstance = L.map('map', {
             crs: L.CRS.Simple,
@@ -606,19 +661,14 @@
             zoomSnap: 0.25,
             zoomDelta: 0.5,
             attributionControl: false,
-            // Smooth Zoom
             wheelPxPerZoomLevel: 120
         });
 
         // Bounds basierend auf Bildgröße [y, x]
         const bounds = [[0, 0], [config.height, config.width]];
         
-        // Map Image als Overlay
-        L.imageOverlay(config.url, bounds).addTo(mapInstance);
-        
-        // Fit to bounds und initiales Zoom
-        mapInstance.fitBounds(bounds);
-        mapInstance.setZoom(config.defaultZoom);
+        // Map Image laden mit Error Handling
+        loadMapImage(config.urls, bounds, config);
         
         // Layer Groups hinzufügen
         questMarkersLayer.addTo(mapInstance);
@@ -649,22 +699,93 @@
         mapInstance.on('click', function(e) {
             const coords = `[${Math.round(e.latlng.lat)}, ${Math.round(e.latlng.lng)}]`;
             console.log('Clicked coords:', coords);
-            navigator.clipboard.writeText(coords).then(() => {
-                console.log('Coords copied to clipboard!');
-            });
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(coords).then(() => {
+                    console.log('Coords copied to clipboard!');
+                });
+            }
         });
 
-        // Map Size nach kurzer Verzögerung korrigieren
         setTimeout(() => mapInstance.invalidateSize(), 100);
+    }
+    
+    // Map Image mit Fallbacks laden
+    function loadMapImage(urls, bounds, config) {
+        let currentIndex = 0;
+        
+        function tryLoadImage() {
+            if (currentIndex >= urls.length) {
+                showMapError("All map sources failed to load. Using placeholder.");
+                // Placeholder anzeigen
+                createPlaceholderMap(bounds, config);
+                return;
+            }
+            
+            const url = urls[currentIndex];
+            console.log(`Trying to load map from: ${url}`);
+            
+            // Test ob Bild ladbar ist
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            
+            img.onload = function() {
+                console.log(`Map loaded successfully from: ${url}`);
+                console.log(`Image dimensions: ${img.width}x${img.height}`);
+                
+                // Tatsächliche Bildgröße verwenden
+                const actualBounds = [[0, 0], [img.height, img.width]];
+                
+                L.imageOverlay(url, actualBounds).addTo(mapInstance);
+                mapInstance.fitBounds(actualBounds);
+                mapInstance.setZoom(config.defaultZoom);
+                
+                // Config aktualisieren für Marker
+                config.width = img.width;
+                config.height = img.height;
+            };
+            
+            img.onerror = function() {
+                console.warn(`Failed to load map from: ${url}`);
+                currentIndex++;
+                tryLoadImage();
+            };
+            
+            img.src = url;
+        }
+        
+        tryLoadImage();
+    }
+    
+    // Placeholder Map wenn alle URLs fehlschlagen
+    function createPlaceholderMap(bounds, config) {
+        // Einfaches Grid als Placeholder
+        mapInstance.fitBounds(bounds);
+        mapInstance.setZoom(config.defaultZoom);
+        
+        // Grid-Linien als visuelle Hilfe
+        for (let i = 0; i <= config.height; i += 500) {
+            L.polyline([[i, 0], [i, config.width]], {color: '#333', weight: 1}).addTo(mapInstance);
+        }
+        for (let j = 0; j <= config.width; j += 500) {
+            L.polyline([[0, j], [config.height, j]], {color: '#333', weight: 1}).addTo(mapInstance);
+        }
+        
+        // Hinweis
+        L.marker([config.height/2, config.width/2]).addTo(mapInstance)
+            .bindPopup('<b>Map Loading Failed</b><br>Markers are still functional.')
+            .openPopup();
+    }
+    
+    function showMapError(message) {
+        console.error(message);
     }
 
     // ============================================================
     // MARKER DRAWING
     // ============================================================
     
-    function createQuestMarker(point, questName) {
-        // Farbe je nach Typ
-        let color = '#d2c4a6'; // Default: Quest Beige
+    function createQuestMarker(point, questName, questWikiLink) {
+        let color = '#d2c4a6';
         let fillColor = '#000';
         
         if (point.type === 'key-location') {
@@ -680,13 +801,17 @@
             weight: 3
         });
 
-        // Popup Content
+        const wikiUrl = questWikiLink ? WIKI_BASE_URL + questWikiLink : generateWikiLink(questName);
+        
         const popupContent = `
-            <div class="popup-quest-name">${questName}</div>
+            <div class="popup-quest-name">
+                <a href="${wikiUrl}" target="_blank" style="color: #9e8f6b; text-decoration: none;">
+                    ${questName} 🔗
+                </a>
+            </div>
             <div class="popup-title">${point.name}</div>
             <div class="popup-desc">${point.description}</div>
             ${point.hint ? `<div class="popup-hint">💡 ${point.hint}</div>` : ''}
-            ${point.screenshot ? `<img src="${point.screenshot}" class="popup-screenshot" alt="Location Screenshot">` : ''}
         `;
         
         marker.bindPopup(popupContent, {
@@ -694,7 +819,6 @@
             className: 'custom-popup'
         });
 
-        // Tooltip (immer sichtbar)
         marker.bindTooltip(point.name, {
             permanent: true,
             direction: 'top',
@@ -706,10 +830,10 @@
     }
 
     function createExtractMarker(point) {
-        let color = '#5a8c5a'; // Green für Extracts
+        let color = '#5a8c5a';
         
         if (point.type === 'extract-conditional') {
-            color = '#8c8c5a'; // Gelb für bedingte Extracts
+            color = '#8c8c5a';
         }
         
         const marker = L.circleMarker(point.coords, {
@@ -736,7 +860,6 @@
     }
 
     function drawMarkersForQuests(selectedQuests, mapName) {
-        // Layer leeren
         questMarkersLayer.clearLayers();
         extractMarkersLayer.clearLayers();
         lootMarkersLayer.clearLayers();
@@ -746,13 +869,13 @@
             const questData = QUEST_MARKERS[quest.name];
             if (questData && questData.markers) {
                 questData.markers.forEach(point => {
-                    const marker = createQuestMarker(point, quest.name);
+                    const marker = createQuestMarker(point, quest.name, questData.wikiLink);
                     questMarkersLayer.addLayer(marker);
                 });
             }
         });
 
-        // Extract Markers (immer anzeigen)
+        // Extract Markers
         const extracts = EXTRACT_MARKERS[mapName];
         if (extracts) {
             extracts.forEach(point => {
@@ -761,7 +884,6 @@
             });
         }
 
-        // Statistik loggen
         console.log(`Drawn ${questMarkersLayer.getLayers().length} quest markers`);
         console.log(`Drawn ${extractMarkersLayer.getLayers().length} extract markers`);
     }
@@ -925,7 +1047,6 @@
         const isChecked = savedSet.has(quest.id);
         const groupAttr = groupId ? `data-parent-group="${groupId}"` : '';
         
-        // Prüfen ob Quest Koordinaten hat
         const hasCoords = QUEST_MARKERS[quest.name] !== undefined;
         const coordsIcon = hasCoords ? '<span style="color:#dca448; margin-right:5px;" title="Map markers available">📍</span>' : '';
 
@@ -986,14 +1107,10 @@
 
         const selectedQuests = allQuestsGlobal.filter(q => savedSet.has(q.id));
 
-        // Result Box anzeigen
         resultBox.style.display = 'block';
         resultBox.scrollIntoView({ behavior: 'smooth' });
 
-        // Map initialisieren
         initMap(mapName);
-        
-        // Marker zeichnen
         drawMarkersForQuests(selectedQuests, mapName);
 
         // Items & Keys aggregieren
@@ -1028,7 +1145,8 @@
                         from: quest.name, 
                         nextName: u.name, 
                         nextMap: u.map, 
-                        trader: u.trader 
+                        trader: u.trader,
+                        wikiLink: u.wikiLink || generateWikiLink(u.name)
                     });
                 });
             }
@@ -1054,14 +1172,20 @@
             </li>`
         ).join('');
 
+        // UNLOCKS MIT WIKI-LINKS
         document.getElementById('progression-list').innerHTML = unlocks.length > 0 
-            ? unlocks.map(u => 
-                `<div class="mb-2 p-2 border border-secondary" style="background:#111;">
+            ? unlocks.map(u => {
+                const wikiUrl = generateWikiLink(u.nextName);
+                return `
+                <div class="unlock-item">
                     <div style="font-size: 0.85em; color:#777;">From ${u.from}:</div>
-                    <div class="fw-bold text-light">➔ ${u.nextName}</div>
+                    <div class="d-flex align-items-center">
+                        <a href="${wikiUrl}" target="_blank" title="Open Wiki">➔ ${u.nextName}</a>
+                        <a href="${wikiUrl}" target="_blank" class="wiki-link" title="EFT Wiki">[Wiki]</a>
+                    </div>
                     <div class="small text-muted">${u.nextMap} | ${u.trader}</div>
-                </div>`
-              ).join('')
+                </div>`;
+              }).join('')
             : '<div class="text-sub p-2 fst-italic">No immediate unlocks.</div>';
     }
 
@@ -1069,7 +1193,6 @@
     // INIT
     // ============================================================
     
-    // Beim Laden: Button-Status aktualisieren
     document.addEventListener('DOMContentLoaded', () => {
         updatePlanButton();
     });
