@@ -388,7 +388,17 @@
         let allQuestsGlobal = [];
         let mapInstance = null;
         let currentMapLayer = null;
-        let markersLayer = L.layerGroup();
+
+        // Layer Groups
+        const layers = {
+            markers: L.layerGroup(), // Quests
+            extracts: L.layerGroup(),
+            spawns: L.layerGroup(),
+            bosses: L.layerGroup(),
+            loot: L.layerGroup()
+        };
+
+        let currentMapData = null;
 
         // MAP CONFIG - Extended with all maps from v2.1
         // Updated bounds or specific logic might be needed for full 1:1, but starting with basic Images

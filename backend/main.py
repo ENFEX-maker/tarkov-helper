@@ -233,10 +233,6 @@ async def get_map_data(map_name: str):
         # but the API usually expects specific names. 
         # The frontend sends the value from the select box.
         
-        # Handle "The Lab" edge case for URL/Name matching if necessary, 
-        # but the API usually expects specific names. 
-        # The frontend sends the value from the select box.
-        
         # Use the mapping to get the correct API name (e.g. "factory" -> "Factory", "the lab" -> "The Lab")
         api_map_name = MAP_MAPPING.get(map_name, map_name) # Fallback to original if not found
         
