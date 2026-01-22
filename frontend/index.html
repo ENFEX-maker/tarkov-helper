@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tarkov Raid Planner</title>
+    <title>Tarkov Raid Planner - Leaflet PoC</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
     <style>
-        /* --- EFT WIKI THEME (Restored) --- */
+        /* --- EFT WIKI THEME --- */
         :root {
             --bg-dark: #0e0e0e;       
             --bg-panel: #141414;      
@@ -18,7 +18,9 @@
             --text-sub: #cccccc;      
             --eft-beige: #d2c4a6;     
             --eft-gold: #9e8f6b;      
-            --eft-red: #8c3b3b;       
+            --eft-red: #8c3b3b;
+            --eft-green: #5a8c5a;
+            --eft-blue: #5a7a9e;
         }
 
         body { 
@@ -82,6 +84,7 @@
             padding: 10px 15px;
             cursor: pointer;
             border-left: 3px solid transparent;
+            transition: all 0.15s;
         }
         .quest-item:hover { background-color: #2a2a2a; }
         .quest-item.selected {
@@ -132,23 +135,133 @@
             margin-top: 30px;
         }
 
-        /* LEAFLET MAP CONTAINER */
+        /* ========== LEAFLET MAP CONTAINER ========== */
         #map {
             width: 100%; 
-            height: 650px; /* Fixe Höhe wichtig für Leaflet */
-            background-color: #000;
-            border: 1px solid var(--eft-gold);
+            height: 700px;
+            background-color: #0a0a0a;
+            border: 2px solid var(--eft-gold);
             position: relative;
         }
         
+        /* Custom Marker Labels */
         .marker-label {
-            background: rgba(0, 0, 0, 0.8);
-            border: 1px solid #dca448;
-            color: #dca448;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 12px;
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid var(--eft-gold);
+            color: var(--eft-gold);
+            padding: 3px 8px;
+            font-size: 11px;
+            font-weight: bold;
             white-space: nowrap;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .marker-label-quest {
+            border-color: var(--eft-beige);
+            color: var(--eft-beige);
+        }
+        
+        .marker-label-extract {
+            border-color: var(--eft-green);
+            color: var(--eft-green);
+        }
+        
+        .marker-label-loot {
+            border-color: var(--eft-blue);
+            color: var(--eft-blue);
+        }
+
+        /* Custom Popup Styling */
+        .leaflet-popup-content-wrapper {
+            background: rgba(20, 20, 20, 0.98);
+            border: 1px solid var(--eft-gold);
+            border-radius: 0;
+            color: var(--text-main);
+        }
+        .leaflet-popup-tip {
+            background: rgba(20, 20, 20, 0.98);
+            border: 1px solid var(--eft-gold);
+        }
+        .leaflet-popup-content {
+            margin: 12px 15px;
+            font-size: 13px;
+        }
+        .popup-title {
+            color: var(--eft-beige);
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 6px;
+        }
+        .popup-quest-name {
+            color: var(--eft-gold);
+            font-size: 11px;
+            margin-bottom: 5px;
+        }
+        .popup-desc {
+            color: #bbb;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        .popup-screenshot {
+            width: 100%;
+            max-width: 280px;
+            margin-top: 10px;
+            border: 1px solid var(--border-color);
+        }
+        .popup-hint {
+            background: #1a1a1a;
+            padding: 8px;
+            margin-top: 8px;
+            font-size: 11px;
+            color: #999;
+            border-left: 2px solid var(--eft-gold);
+        }
+
+        /* Layer Control Styling */
+        .leaflet-control-layers {
+            background: rgba(20, 20, 20, 0.95);
+            border: 1px solid var(--eft-gold);
+            border-radius: 0;
+            color: var(--text-main);
+        }
+        .leaflet-control-layers-expanded {
+            padding: 10px 15px;
+        }
+        .leaflet-control-layers label {
+            color: var(--text-main);
+        }
+        .leaflet-control-layers-selector {
+            margin-right: 8px;
+        }
+
+        /* Zoom Control */
+        .leaflet-control-zoom a {
+            background: var(--bg-element);
+            color: var(--eft-beige);
+            border: 1px solid var(--eft-gold);
+            border-radius: 0;
+        }
+        .leaflet-control-zoom a:hover {
+            background: var(--eft-gold);
+            color: #000;
+        }
+
+        /* Coordinates Display */
+        #coords-display {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.85);
+            color: var(--eft-gold);
+            padding: 5px 12px;
+            font-family: monospace;
+            font-size: 12px;
+            z-index: 1000;
+            border: 1px solid var(--border-color);
         }
 
         /* Other Styles */
@@ -180,6 +293,32 @@
         .badge-tarkov { background-color: #333; color: #ccc; border: 1px solid #444; }
         .badge-active { background-color: var(--eft-beige); color: #000; font-weight: bold; }
 
+        /* Layer Legend */
+        .layer-legend {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+            padding: 10px 15px;
+            background: #0a0a0a;
+            border: 1px solid var(--border-color);
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid;
+        }
+        .legend-quest { background: var(--eft-beige); border-color: var(--eft-beige); }
+        .legend-extract { background: var(--eft-green); border-color: var(--eft-green); }
+        .legend-loot { background: var(--eft-blue); border-color: var(--eft-blue); }
+
     </style>
 </head>
 <body>
@@ -187,7 +326,8 @@
 <div class="container pb-5">
     <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-secondary pb-3">
         <div>
-            <h1 class="mb-0">RAID PLANNER <span style="font-size: 0.5em; vertical-align: middle; color: #888;">v1.2 (Leaflet)</span></h1>
+            <h1 class="mb-0">RAID PLANNER <span style="font-size: 0.5em; vertical-align: middle; color: #888;">v1.2 Leaflet PoC</span></h1>
+            <small class="text-sub">Interactive Map System - Proof of Concept</small>
         </div>
     </div>
 
@@ -196,17 +336,16 @@
             <div class="col-md-5">
                 <label class="text-beige small mb-1 fw-bold text-uppercase">Operational Area</label>
                 <select id="mapSelect" class="form-select" onchange="applyFilters()">
-                    <option value="Customs">Customs (PoC)</option>
-                    <option value="Factory">Factory</option>
-                    <option value="Woods">Woods</option>
-                    <option value="Interchange">Interchange</option>
-                    <option value="Shoreline">Shoreline</option>
-                    <option value="Reserve">Reserve</option>
-                    <option value="Lighthouse">Lighthouse</option>
-                    <option value="Streets of Tarkov">Streets of Tarkov</option>
-                    <option value="Ground Zero">Ground Zero</option>
-                    <option value="Labs">The Lab</option>
-                    <option value="Any">Global / Any</option>
+                    <option value="Customs" selected>Customs (PoC Map)</option>
+                    <option value="Factory" disabled>Factory (Coming Soon)</option>
+                    <option value="Woods" disabled>Woods (Coming Soon)</option>
+                    <option value="Interchange" disabled>Interchange (Coming Soon)</option>
+                    <option value="Shoreline" disabled>Shoreline (Coming Soon)</option>
+                    <option value="Reserve" disabled>Reserve (Coming Soon)</option>
+                    <option value="Lighthouse" disabled>Lighthouse (Coming Soon)</option>
+                    <option value="Streets of Tarkov" disabled>Streets of Tarkov (Coming Soon)</option>
+                    <option value="Ground Zero" disabled>Ground Zero (Coming Soon)</option>
+                    <option value="Labs" disabled>The Lab (Coming Soon)</option>
                 </select>
             </div>
             <div class="col-md-3 d-flex align-items-end">
@@ -223,7 +362,7 @@
 
     <div id="quest-selection-area" class="d-none">
         <div class="mb-3">
-            <input type="text" id="questSearch" class="form-control" placeholder="Global Search (e.g. 'Gunsmith', 'Shooter')...">
+            <input type="text" id="questSearch" class="form-control" placeholder="Search quests (e.g. 'Checking', 'Delivery')...">
         </div>
 
         <div class="d-flex justify-content-between align-items-end mb-3">
@@ -240,7 +379,27 @@
     <div id="planning-result">
         <h4 class="mb-3">Tactical Overview</h4>
         
-        <div id="map"></div>
+        <!-- Layer Legend -->
+        <div class="layer-legend">
+            <div class="legend-item">
+                <div class="legend-dot legend-quest"></div>
+                <span style="color: var(--eft-beige);">Quest Objectives</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot legend-extract"></div>
+                <span style="color: var(--eft-green);">Extraction Points</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot legend-loot"></div>
+                <span style="color: var(--eft-blue);">Loot Locations</span>
+            </div>
+        </div>
+        
+        <!-- Leaflet Map Container -->
+        <div style="position: relative;">
+            <div id="map"></div>
+            <div id="coords-display">X: 0 | Y: 0</div>
+        </div>
 
         <div class="row mt-5">
             <div class="col-md-6">
@@ -270,29 +429,146 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
-    // --- INTELLIGENTE KONFIGURATION ---
-    // Wir probieren Standard-Pfade. Wenn Nginx /apiproxied, nutzen wir das.
-    // Falls Nginx direkt /quests proxied, nutzen wir das.
-    let API_PREFIX = "/api"; 
+    // ============================================================
+    // CONFIGURATION
+    // ============================================================
     
+    let API_PREFIX = "/api"; 
     const STORAGE_KEY = "tarkov_planner_selected_quests"; 
     
     let allQuestsGlobal = []; 
-    let mapInstance = null; 
-    let currentMapLayer = null;
-    let markersLayer = L.layerGroup();
+    let mapInstance = null;
+    
+    // Layer Groups für verschiedene Marker-Typen
+    let questMarkersLayer = L.layerGroup();
+    let extractMarkersLayer = L.layerGroup();
+    let lootMarkersLayer = L.layerGroup();
 
-    // MAP CONFIG - PoC External
+    // ============================================================
+    // MAP CONFIGURATION - Pixel-basiertes Koordinatensystem
+    // ============================================================
+    
+    // Customs Map von tarkov.dev
+    // Die Karte hat bestimmte Pixel-Dimensionen
     const MAP_CONFIG = {
-        "Customs": { url: "https://assets.tarkov.dev/maps/customs-2d.jpg", width: 1920, height: 1080 },
-        "Woods": { url: "https://assets.tarkov.dev/maps/woods-2d.jpg", width: 1920, height: 1080 }
+        "Customs": { 
+            url: "https://assets.tarkov.dev/maps/customs-2d.jpg",
+            // Tatsächliche Bildgröße - wichtig für CRS.Simple
+            width: 5765,  
+            height: 2803,
+            // Default View Einstellungen
+            defaultZoom: -1,
+            minZoom: -3,
+            maxZoom: 2
+        }
     };
 
-    const QUEST_COORDS = {
-        "Checking": [ { y: 480, x: 1050, name: "Bronze Pocket Watch" }, { y: 560, x: 340, name: "Key Spawn (205)" } ]
+    // ============================================================
+    // QUEST KOORDINATEN DATABASE (Manuell gepflegt)
+    // Format: questName -> Array von Punkten mit Typ
+    // Koordinaten: [y, x] in Pixel (Leaflet Standard für CRS.Simple)
+    // ============================================================
+    
+    const QUEST_MARKERS = {
+        // === CHECKING (Bronze Pocket Watch) ===
+        "Checking": {
+            questId: "596b36c586f77450d903a9d7",
+            markers: [
+                {
+                    id: "checking-truck",
+                    coords: [1650, 4200],  // [y, x] - Position des LKW
+                    name: "Truck with Pocket Watch",
+                    type: "objective",
+                    description: "The truck cabin contains the bronze pocket watch. Look on the dashboard.",
+                    hint: "The truck is in the construction area near the bridge. Key 205 opens the cabin door.",
+                    screenshot: null // Platzhalter für zukünftige Screenshots
+                },
+                {
+                    id: "checking-key-spawn",
+                    coords: [1200, 1800],  // [y, x] - Ein möglicher Key Spawn
+                    name: "Key 205 Spawn (Dorm 114)",
+                    type: "key-location",
+                    description: "Possible spawn location for the Dorm Room 205 Key.",
+                    hint: "Check jackets and file cabinets in the dorms."
+                }
+            ]
+        },
+        
+        // === DELIVERY FROM THE PAST ===
+        "Delivery from the past": {
+            questId: "5967530a86f77462ba22226b",
+            markers: [
+                {
+                    id: "delivery-document",
+                    coords: [1580, 2100],
+                    name: "Document Case",
+                    type: "objective",
+                    description: "Retrieve the secure case with documents from the dorms.",
+                    hint: "Located in Room 206 on the second floor of 2-story dorms."
+                }
+            ]
+        },
+        
+        // === BP DEPOT ===
+        "BP Depot": {
+            questId: "5969f9e986f7741dde183a50",
+            markers: [
+                {
+                    id: "bp-tanker-1",
+                    coords: [800, 3800],
+                    name: "Fuel Tanker #1",
+                    type: "objective",
+                    description: "Place marker on first fuel tanker.",
+                    hint: "Near the railroad crossing."
+                },
+                {
+                    id: "bp-tanker-2", 
+                    coords: [1100, 4100],
+                    name: "Fuel Tanker #2",
+                    type: "objective",
+                    description: "Place marker on second fuel tanker.",
+                    hint: "Construction area, next to the buildings."
+                },
+                {
+                    id: "bp-tanker-3",
+                    coords: [1400, 4500],
+                    name: "Fuel Tanker #3",
+                    type: "objective",
+                    description: "Place marker on third fuel tanker.",
+                    hint: "Storage area near Crossroads extract."
+                },
+                {
+                    id: "bp-tanker-4",
+                    coords: [2000, 4800],
+                    name: "Fuel Tanker #4",
+                    type: "objective", 
+                    description: "Place marker on fourth fuel tanker.",
+                    hint: "Gas station area."
+                }
+            ]
+        }
     };
 
-    // --- HELPER ---
+    // ============================================================
+    // EXTRACT POINTS (Statische POIs)
+    // ============================================================
+    
+    const EXTRACT_MARKERS = {
+        "Customs": [
+            { coords: [400, 800], name: "Crossroads", type: "extract-pmc", hint: "PMC spawn side exit" },
+            { coords: [2500, 5400], name: "ZB-1011", type: "extract-pmc", hint: "Underground bunker exit" },
+            { coords: [2200, 5200], name: "Trailer Park", type: "extract-pmc", hint: "Near the worker shacks" },
+            { coords: [500, 5500], name: "RUAF Roadblock", type: "extract-conditional", hint: "Green smoke when active" },
+            { coords: [1500, 2900], name: "Smuggler's Boat", type: "extract-conditional", hint: "Check for boat at the river" },
+            { coords: [300, 1200], name: "Old Road Gate", type: "extract-pmc", hint: "Main road exit" },
+            { coords: [2600, 4800], name: "ZB-1012", type: "extract-pmc", hint: "Requires key" }
+        ]
+    };
+
+    // ============================================================
+    // HELPER FUNCTIONS
+    // ============================================================
+    
     function getSavedQuests() {
         const saved = localStorage.getItem(STORAGE_KEY);
         return saved ? new Set(JSON.parse(saved)) : new Set();
@@ -305,7 +581,195 @@
         updatePlanButton();
     }
 
-    // --- LOGIC ---
+    // ============================================================
+    // LEAFLET MAP INITIALIZATION
+    // ============================================================
+    
+    function initMap(mapName) {
+        const config = MAP_CONFIG[mapName];
+        if (!config) {
+            console.warn(`No map config for: ${mapName}`);
+            return;
+        }
+        
+        // Alte Map-Instanz entfernen
+        if (mapInstance) {
+            mapInstance.remove();
+            mapInstance = null;
+        }
+
+        // Leaflet Map mit CRS.Simple (Pixel-Koordinaten)
+        mapInstance = L.map('map', {
+            crs: L.CRS.Simple,
+            minZoom: config.minZoom,
+            maxZoom: config.maxZoom,
+            zoomSnap: 0.25,
+            zoomDelta: 0.5,
+            attributionControl: false,
+            // Smooth Zoom
+            wheelPxPerZoomLevel: 120
+        });
+
+        // Bounds basierend auf Bildgröße [y, x]
+        const bounds = [[0, 0], [config.height, config.width]];
+        
+        // Map Image als Overlay
+        L.imageOverlay(config.url, bounds).addTo(mapInstance);
+        
+        // Fit to bounds und initiales Zoom
+        mapInstance.fitBounds(bounds);
+        mapInstance.setZoom(config.defaultZoom);
+        
+        // Layer Groups hinzufügen
+        questMarkersLayer.addTo(mapInstance);
+        extractMarkersLayer.addTo(mapInstance);
+        lootMarkersLayer.addTo(mapInstance);
+        
+        // Layer Control
+        const overlays = {
+            "📍 Quest Objectives": questMarkersLayer,
+            "🚪 Extraction Points": extractMarkersLayer,
+            "💰 Loot Locations": lootMarkersLayer
+        };
+        
+        L.control.layers(null, overlays, { 
+            collapsed: false,
+            position: 'topright'
+        }).addTo(mapInstance);
+
+        // Koordinaten-Anzeige bei Mausbewegung (Dev-Tool)
+        mapInstance.on('mousemove', function(e) {
+            const coordsDisplay = document.getElementById('coords-display');
+            if (coordsDisplay) {
+                coordsDisplay.innerHTML = `X: ${Math.round(e.latlng.lng)} | Y: ${Math.round(e.latlng.lat)}`;
+            }
+        });
+
+        // Klick für Koordinaten-Kopie (Dev-Tool)
+        mapInstance.on('click', function(e) {
+            const coords = `[${Math.round(e.latlng.lat)}, ${Math.round(e.latlng.lng)}]`;
+            console.log('Clicked coords:', coords);
+            navigator.clipboard.writeText(coords).then(() => {
+                console.log('Coords copied to clipboard!');
+            });
+        });
+
+        // Map Size nach kurzer Verzögerung korrigieren
+        setTimeout(() => mapInstance.invalidateSize(), 100);
+    }
+
+    // ============================================================
+    // MARKER DRAWING
+    // ============================================================
+    
+    function createQuestMarker(point, questName) {
+        // Farbe je nach Typ
+        let color = '#d2c4a6'; // Default: Quest Beige
+        let fillColor = '#000';
+        
+        if (point.type === 'key-location') {
+            color = '#9e8f6b';
+            fillColor = '#1a1a00';
+        }
+        
+        const marker = L.circleMarker(point.coords, {
+            radius: 10,
+            color: color,
+            fillColor: fillColor,
+            fillOpacity: 0.9,
+            weight: 3
+        });
+
+        // Popup Content
+        const popupContent = `
+            <div class="popup-quest-name">${questName}</div>
+            <div class="popup-title">${point.name}</div>
+            <div class="popup-desc">${point.description}</div>
+            ${point.hint ? `<div class="popup-hint">💡 ${point.hint}</div>` : ''}
+            ${point.screenshot ? `<img src="${point.screenshot}" class="popup-screenshot" alt="Location Screenshot">` : ''}
+        `;
+        
+        marker.bindPopup(popupContent, {
+            maxWidth: 320,
+            className: 'custom-popup'
+        });
+
+        // Tooltip (immer sichtbar)
+        marker.bindTooltip(point.name, {
+            permanent: true,
+            direction: 'top',
+            offset: [0, -12],
+            className: 'marker-label marker-label-quest'
+        });
+
+        return marker;
+    }
+
+    function createExtractMarker(point) {
+        let color = '#5a8c5a'; // Green für Extracts
+        
+        if (point.type === 'extract-conditional') {
+            color = '#8c8c5a'; // Gelb für bedingte Extracts
+        }
+        
+        const marker = L.circleMarker(point.coords, {
+            radius: 8,
+            color: color,
+            fillColor: '#000',
+            fillOpacity: 0.9,
+            weight: 2
+        });
+
+        marker.bindPopup(`
+            <div class="popup-title" style="color: ${color};">${point.name}</div>
+            <div class="popup-desc">${point.hint || 'Extraction point'}</div>
+        `);
+
+        marker.bindTooltip(point.name, {
+            permanent: false,
+            direction: 'top',
+            offset: [0, -10],
+            className: 'marker-label marker-label-extract'
+        });
+
+        return marker;
+    }
+
+    function drawMarkersForQuests(selectedQuests, mapName) {
+        // Layer leeren
+        questMarkersLayer.clearLayers();
+        extractMarkersLayer.clearLayers();
+        lootMarkersLayer.clearLayers();
+
+        // Quest Markers
+        selectedQuests.forEach(quest => {
+            const questData = QUEST_MARKERS[quest.name];
+            if (questData && questData.markers) {
+                questData.markers.forEach(point => {
+                    const marker = createQuestMarker(point, quest.name);
+                    questMarkersLayer.addLayer(marker);
+                });
+            }
+        });
+
+        // Extract Markers (immer anzeigen)
+        const extracts = EXTRACT_MARKERS[mapName];
+        if (extracts) {
+            extracts.forEach(point => {
+                const marker = createExtractMarker(point);
+                extractMarkersLayer.addLayer(marker);
+            });
+        }
+
+        // Statistik loggen
+        console.log(`Drawn ${questMarkersLayer.getLayers().length} quest markers`);
+        console.log(`Drawn ${extractMarkersLayer.getLayers().length} extract markers`);
+    }
+
+    // ============================================================
+    // FILTER & UI LOGIC
+    // ============================================================
+    
     document.getElementById('questSearch').addEventListener('input', applyFilters);
 
     function applyFilters() {
@@ -342,60 +806,26 @@
         }
     }
 
-    // --- MAP LOGIC ---
-    function initMap(mapName) {
-        const config = MAP_CONFIG[mapName];
-        if (!config) return;
-        if (mapInstance) mapInstance.remove();
-
-        mapInstance = L.map('map', { crs: L.CRS.Simple, minZoom: -2, maxZoom: 2, zoomSnap: 0.5, attributionControl: false });
-        const bounds = [[0, 0], [config.height, config.width]];
-        currentMapLayer = L.imageOverlay(config.url, bounds).addTo(mapInstance);
-        mapInstance.fitBounds(bounds);
-        markersLayer.addTo(mapInstance);
-        setTimeout(() => { mapInstance.invalidateSize(); }, 200);
-    }
-
-    function drawQuestMarkers(selectedQuests) {
-        markersLayer.clearLayers();
-        selectedQuests.forEach(quest => {
-            const points = QUEST_COORDS[quest.name];
-            if (points) {
-                points.forEach(p => {
-                    const marker = L.circleMarker([p.y, p.x], { color: '#dca448', fillColor: '#000', fillOpacity: 0.8, radius: 8 }).addTo(markersLayer);
-                    marker.bindPopup(`<b>${quest.name}</b><br>${p.name}`);
-                    marker.bindTooltip(p.name, { permanent: true, direction: 'top', className: 'marker-label' });
-                });
-            }
-        });
-    }
-
-    // --- API & LOADING LOGIC ---
+    // ============================================================
+    // API LOADING
+    // ============================================================
     
-    // Versuch, die URL dynamisch zu finden, um 502 zu umgehen
     async function tryFetchQuests() {
-        // Liste der möglichen Pfade, die wir testen
-        const pathsToTest = [
-            "/api/quests/ALL",  // Standard Nginx Setup
-            "/quests/ALL"       // Falls Nginx direkt weiterleitet ohne /api prefix
-        ];
+        const pathsToTest = ["/api/quests/ALL", "/quests/ALL"];
 
         for (const path of pathsToTest) {
-            console.log(`Versuche Verbindung zu: ${path}`);
+            console.log(`Trying: ${path}`);
             try {
                 const response = await fetch(path);
                 if (response.ok) {
                     API_PREFIX = path.includes("/api") ? "/api" : "";
                     return await response.json();
                 }
-                if (response.status === 502) {
-                    console.warn(`502 bei ${path} - Nginx erreicht Backend nicht.`);
-                }
             } catch (e) {
-                console.warn(`Netzwerkfehler bei ${path}:`, e);
+                console.warn(`Network error at ${path}:`, e);
             }
         }
-        throw new Error("Verbindung zum Backend fehlgeschlagen (502 Bad Gateway). Bitte Container Logs prüfen.");
+        throw new Error("Backend connection failed. Check Docker containers.");
     }
 
     async function loadAllQuests() {
@@ -410,11 +840,10 @@
         errBox.classList.add('d-none');
 
         try {
-            // Wir nutzen die neue smarte Fetch-Funktion
             allQuestsGlobal = await tryFetchQuests();
 
             if (allQuestsGlobal.length === 0) {
-                document.getElementById('quest-list').innerHTML = '<div class="text-center text-sub p-4">Keine Quests erhalten (Leere Liste).</div>';
+                document.getElementById('quest-list').innerHTML = '<div class="text-center text-sub p-4">No quests received.</div>';
             } else {
                 applyFilters();
                 selectionArea.classList.remove('d-none');
@@ -422,15 +851,18 @@
                 btnLoad.classList.remove('btn-tarkov');
                 btnLoad.classList.add('btn-secondary');
             }
-
         } catch (error) {
-            errBox.innerHTML = `<strong>CRITICAL ERROR:</strong> ${error.message}<br><small>Tipp: Prüfe Docker Logs 'backend'. Läuft der Container?</small>`;
+            errBox.innerHTML = `<strong>ERROR:</strong> ${error.message}`;
             errBox.classList.remove('d-none');
         } finally {
             loader.classList.add('d-none');
         }
     }
 
+    // ============================================================
+    // QUEST LIST RENDERING
+    // ============================================================
+    
     function renderQuestList(questsToRender) {
         const listContainer = document.getElementById('quest-list');
         listContainer.innerHTML = '';
@@ -440,6 +872,7 @@
 
         const groups = {};
         const standalone = [];
+        
         questsToRender.forEach(quest => {
             const match = quest.name.match(/^(.*?) - Part \d+$/);
             if (match) {
@@ -462,7 +895,7 @@
             
             let groupHtml = `
                 <h2 class="accordion-header" id="heading-${groupId}">
-                    <button class="accordion-button ${shouldExpand ? '' : 'collapsed'} ${hasActive ? 'has-selection' : ''}" 
+                    <button class="accordion-button ${shouldExpand ? '' : 'collapsed'}" 
                             type="button" data-bs-toggle="collapse" data-bs-target="#collapse-${groupId}"
                             id="btn-${groupId}" data-total="${groupQuests.length}">
                         ${groupName} 
@@ -491,7 +924,10 @@
     function createQuestItemHtml(quest, savedSet, groupId) {
         const isChecked = savedSet.has(quest.id);
         const groupAttr = groupId ? `data-parent-group="${groupId}"` : '';
-        const hasCoords = QUEST_COORDS[quest.name] ? '<span style="color:#dca448; margin-right:5px;">📍</span>' : '';
+        
+        // Prüfen ob Quest Koordinaten hat
+        const hasCoords = QUEST_MARKERS[quest.name] !== undefined;
+        const coordsIcon = hasCoords ? '<span style="color:#dca448; margin-right:5px;" title="Map markers available">📍</span>' : '';
 
         return `
             <div class="quest-item d-flex align-items-center ${isChecked ? 'selected' : ''}" 
@@ -501,7 +937,7 @@
                        onchange="event.stopPropagation(); toggleSelection('${quest.id}', this.parentElement, event)">
                 <div class="ms-3 flex-grow-1">
                     <div class="d-flex align-items-center">
-                        ${hasCoords}
+                        ${coordsIcon}
                         <span class="fw-bold" style="color:#e0e0e0;">${quest.name}</span>
                         ${quest.wikiLink ? `<a href="${quest.wikiLink}" target="_blank" class="ms-2 text-sub small" style="text-decoration:none;" onclick="event.stopPropagation()">[Wiki]</a>` : ''}
                     </div>
@@ -534,21 +970,33 @@
         }
     }
 
+    // ============================================================
+    // PLAN RAID - Hauptfunktion
+    // ============================================================
+    
     function planRaid() {
         const resultBox = document.getElementById('planning-result');
         const mapName = document.getElementById('mapSelect').value;
         const savedSet = getSavedQuests();
 
-        if (savedSet.size === 0) { alert("No operations selected."); return; }
+        if (savedSet.size === 0) { 
+            alert("No operations selected."); 
+            return; 
+        }
 
         const selectedQuests = allQuestsGlobal.filter(q => savedSet.has(q.id));
 
+        // Result Box anzeigen
         resultBox.style.display = 'block';
         resultBox.scrollIntoView({ behavior: 'smooth' });
 
+        // Map initialisieren
         initMap(mapName);
-        drawQuestMarkers(selectedQuests);
+        
+        // Marker zeichnen
+        drawMarkersForQuests(selectedQuests, mapName);
 
+        // Items & Keys aggregieren
         const neededKeys = new Map();
         const itemsMap = new Map();
         const objectives = [];
@@ -557,7 +1005,9 @@
         selectedQuests.forEach(quest => {
             if (quest.neededKeys) {
                 quest.neededKeys.forEach(g => {
-                    if(g.keys && g.keys.length > 0) neededKeys.set(g.keys[0].name, g.keys[0]);
+                    if(g.keys && g.keys.length > 0) {
+                        neededKeys.set(g.keys[0].name, g.keys[0]);
+                    }
                 });
             }
             if (quest.objectives) {
@@ -565,30 +1015,64 @@
                     objectives.push({ quest: quest.name, desc: obj.description });
                     let item = obj.item || obj.markerItem;
                     if (item) {
-                        if (!itemsMap.has(item.id)) itemsMap.set(item.id, { name: item.name, icon: item.iconLink, count: 0 });
+                        if (!itemsMap.has(item.id)) {
+                            itemsMap.set(item.id, { name: item.name, icon: item.iconLink, count: 0 });
+                        }
                         itemsMap.get(item.id).count += (obj.count || 1);
                     }
                 });
             }
             if (quest.derived_unlocks) {
-                quest.derived_unlocks.forEach(u => unlocks.push({ from: quest.name, nextName: u.name, nextMap: u.map, trader: u.trader, wikiLink: u.wikiLink }));
+                quest.derived_unlocks.forEach(u => {
+                    unlocks.push({ 
+                        from: quest.name, 
+                        nextName: u.name, 
+                        nextMap: u.map, 
+                        trader: u.trader 
+                    });
+                });
             }
         });
 
+        // UI Updates
         document.getElementById('required-keys').innerHTML = neededKeys.size > 0 
-            ? Array.from(neededKeys.values()).map(k => `<div class="item-box">${k.iconLink ? `<img src="${k.iconLink}">` : ''}<span>${k.shortName || k.name}</span></div>`).join('') 
+            ? Array.from(neededKeys.values()).map(k => 
+                `<div class="item-box">${k.iconLink ? `<img src="${k.iconLink}">` : ''}<span>${k.shortName || k.name}</span></div>`
+              ).join('') 
             : '<span class="text-sub p-2">None required.</span>';
 
         document.getElementById('required-items').innerHTML = itemsMap.size > 0 
-            ? Array.from(itemsMap.values()).map(i => `<div class="item-box status-acquire">${i.icon ? `<img src="${i.icon}">` : ''}<div>${i.count}x ${i.name}</div></div>`).join('') 
+            ? Array.from(itemsMap.values()).map(i => 
+                `<div class="item-box status-acquire">${i.icon ? `<img src="${i.icon}">` : ''}<div>${i.count}x ${i.name}</div></div>`
+              ).join('') 
             : '<span class="text-sub p-2">None required.</span>';
 
-        document.getElementById('mission-steps').innerHTML = objectives.map(obj => `<li class="list-group-item bg-transparent text-light border-0 ps-0"><span class="text-beige fw-bold">${obj.quest}:</span> <span style="color:#bbb;">${obj.desc}</span></li>`).join('');
+        document.getElementById('mission-steps').innerHTML = objectives.map(obj => 
+            `<li class="list-group-item bg-transparent text-light border-0 ps-0">
+                <span class="text-beige fw-bold">${obj.quest}:</span> 
+                <span style="color:#bbb;">${obj.desc}</span>
+            </li>`
+        ).join('');
 
         document.getElementById('progression-list').innerHTML = unlocks.length > 0 
-            ? unlocks.map(u => `<div class="mb-2 p-2 border border-secondary" style="background:#111;"><div style="font-size: 0.85em; color:#777;">From ${u.from}:</div><div class="fw-bold text-light">➔ ${u.nextName}</div><div class="small text-muted">${u.nextMap} | ${u.trader}</div></div>`).join('')
+            ? unlocks.map(u => 
+                `<div class="mb-2 p-2 border border-secondary" style="background:#111;">
+                    <div style="font-size: 0.85em; color:#777;">From ${u.from}:</div>
+                    <div class="fw-bold text-light">➔ ${u.nextName}</div>
+                    <div class="small text-muted">${u.nextMap} | ${u.trader}</div>
+                </div>`
+              ).join('')
             : '<div class="text-sub p-2 fst-italic">No immediate unlocks.</div>';
     }
+
+    // ============================================================
+    // INIT
+    // ============================================================
+    
+    // Beim Laden: Button-Status aktualisieren
+    document.addEventListener('DOMContentLoaded', () => {
+        updatePlanButton();
+    });
 </script>
 </body>
 </html>
