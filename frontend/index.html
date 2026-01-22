@@ -752,7 +752,7 @@
                 document.getElementById('loading').querySelector('.loading-text').textContent = 'Loading map image...';
 
                 const img = new Image();
-                img.crossOrigin = "anonymous";
+                // img.crossOrigin = "anonymous"; // REMOVED: Causes issues if server doesn't send CORS headers
 
                 img.onload = function () {
                     imgWidth = img.naturalWidth || img.width;
@@ -772,7 +772,7 @@
                     // Try fallback
                     if (RE3MR_FALLBACK[mapKey]) {
                         const fallbackImg = new Image();
-                        fallbackImg.crossOrigin = "anonymous";
+                        // fallbackImg.crossOrigin = "anonymous"; // REMOVED
                         fallbackImg.onload = function () {
                             imgWidth = fallbackImg.naturalWidth || 4000;
                             imgHeight = fallbackImg.naturalHeight || 4000;
