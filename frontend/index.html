@@ -577,47 +577,65 @@
             }
         }
 
-        function drawMapLayers(mapData, config) {
+        function drawMapLayers(data, config) {
             // Clear old layers
             layers.extracts.clearLayers();
             layers.spawns.clearLayers();
             layers.bosses.clearLayers();
             layers.loot.clearLayers();
 
-            if (!mapData) return;
+            if (!data) return;
 
-            // Helper for coordinate conversion (Game -> Pixel)
-            // v2.1 logic: bounds = [[minX, minZ], [maxX, maxZ]]
-            // But here we set bounds simply [0,0] to [4000,4000].
-            // To be precise we need the map's Game Bounds.
-            // For now, we will approximate or assumes mapData structure.
-            // Wait, v1.2 MAP_CONFIG lacks bounds! We need to add them or default.
+            // Extracts
+            if (data.extracts) {
+                data.extracts.forEach(ex => {
+                    const [y, x] = gameToPixel(ex.position.x, ex.position.z, config.width, config.height, config.bounds, config.rotation);
+                    const color = ex.faction === 'Scav' ? '#eebb55' : '#4a9e4a'; // Scav Gold, PMC Green
+                    L.circleMarker([y, x], { radius: 6, color: color, fillColor: color, fillOpacity: 0.7 })
+                        .bindTooltip(ex.name, { direction: 'top', className: 'marker-label' })
+                        .addTo(layers.extracts);
+                });
+            }
 
-            // If we don't have calibration, we can't plot accurately. 
-            // I will use a simple scaler if missing, but ideally we merge the MAP_CONFIGS fully.
+            // Spawns
+            if (data.spawns) {
+                data.spawns.forEach(sp => {
+                    const [y, x] = gameToPixel(sp.position.x, sp.position.z, config.width, config.height, config.bounds, config.rotation);
+                    L.circleMarker([y, x], { radius: 5, color: '#4a7a9e', fillColor: '#4a7a9e', fillOpacity: 0.7 }) // PMC Blue
+                        .bindTooltip(`Spawn ${sp.zoneName || ''}`, { direction: 'top', className: 'marker-label' })
+                        .addTo(layers.spawns);
+                });
+            }
 
-            // CHECK: Did I include full MAP_CONFIG bounds in previous steps?
-            // No, I only updated URLs.
-            // I MUST update MAP_CONFIG to include bounds from v2.1 for this to work.
-            // Since I can't do that effectively inside this function, I will rely on 'gameToPixel' later.
+            // Bosses
+            if (data.bosses) {
+                data.bosses.forEach(boss => {
+                    boss.spawnLocations.forEach(loc => {
+                        const [y, x] = gameToPixel(loc.position.x, loc.position.z, config.width, config.height, config.bounds, config.rotation);
+                        L.circleMarker([y, x], { radius: 8, color: '#9e4a4a', fillColor: '#9e4a4a', fillOpacity: 0.8 }) // Boss Red
+                            .bindTooltip(`Boss: ${boss.name} (${loc.chance}%)`, { direction: 'top', className: 'marker-label' })
+                            .addTo(layers.bosses);
+                    });
+                });
+            }
         }
 
-        // We need Coordinate Transformation Logic from v2.1
-        function gameToPixel(gameX, gameZ, width, height, bounds) {
-            // simplified version if bounds missing: center map? No, won't work.
-            // We need the bounds from v2.1
-            if (!bounds) return [height / 2, width / 2];
-
+        // IMPROVED Coordinate Transformation (with Rotation support)
+        function gameToPixel(gameX, gameZ, width, height, bounds, rotation = 0) {
             const [[minX, minZ], [maxX, maxZ]] = bounds;
             let normX = (gameX - minX) / (maxX - minX);
             let normZ = (gameZ - minZ) / (maxZ - minZ);
 
-            // Invert Z for leaflet (Y is up/down? Leaflet Y goes down usually)
-            // Simple ImageOverlay: [0,0] bottom-left to [H, W] top-right usually
-            // Standard Leaflet CRS.Simple: [0,0] is top-left? NO.
-            // LatLng: [0,0] is valid.
+            // Handle Rotation (from v2.1)
+            if (rotation === 180) {
+                normX = 1 - normX;
+                normZ = 1 - normZ;
+            } else if (rotation === 90) {
+                [normX, normZ] = [1 - normZ, normX];
+            } else if (rotation === 270 || rotation === -90) {
+                [normX, normZ] = [normZ, 1 - normX];
+            }
 
-            // Let's assume standard Leaflet ImageOverlay behavior we used in v2.1
             const pixelY = (1 - normZ) * height;
             const pixelX = normX * width;
             return [pixelY, pixelX];
