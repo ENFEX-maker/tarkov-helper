@@ -4,7 +4,7 @@ import httpx
 import json
 import time
 
-# MAJOR RELEASE: V1.0
+# MAJOR RELEASE: V1.0.1
 app = FastAPI(title="Tarkov Raid Planner", version="1.0.0-GLOBAL")
 
 app.add_middleware(
