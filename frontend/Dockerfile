@@ -7,6 +7,9 @@ RUN rm -rf /usr/share/nginx/html/*
 # Damit werden index.html UND der maps-Ordner kopiert.
 COPY . /usr/share/nginx/html
 
+# Custom Nginx Config kopieren
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
 # Port freigeben
 EXPOSE 80
 
