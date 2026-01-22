@@ -74,6 +74,50 @@ QUESTS_QUERY = """
 }
 """
 
+MAP_QUERY = """
+query GetMapData($name: [String!]) {
+    maps(name: $name) {
+        id
+        name
+        normalizedName
+        coordinateRotation
+        players
+        enemies
+        raidDuration
+        extracts {
+            id
+            name
+            faction
+            position { x y z }
+        }
+        spawns {
+            zoneName
+            position { x y z }
+            sides
+            categories
+        }
+        bosses {
+            name
+            spawnChance
+            spawnLocations {
+                name
+                chance
+                position { x y z }
+            }
+        }
+        lootContainers {
+            position { x y z }
+            lootContainer { name normalizedName }
+        }
+        hazards {
+            name
+            hazardType
+            position { x y z }
+        }
+    }
+}
+"""
+
 async def fetch_tarkov_data():
     global last_fetch_time, cached_data
     current_time = time.time()
@@ -167,3 +211,64 @@ async def get_quests(map_name: str):
     except Exception as e:
         print(f"SERVER ERROR: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/map-data/{map_name}")
+async def get_map_data(map_name: str):
+    """
+    Proxy request to Tarkov API to get map data.
+    Resolves CORS issues by making the request server-side.
+    """
+    try:
+        headers = {
+            "Content-Type": "application/json",
+            "Accept-Encoding": "gzip, deflate", 
+            "User-Agent": "TarkovRaidPlanner/2.1"
+        }
+
+        # Handle "The Lab" edge case for URL/Name matching if necessary, 
+        # but the API usually expects specific names. 
+        # The frontend sends the value from the select box.
+        
+        query_vars = {"name": [map_name]}
+        
+        timeout_config = httpx.Timeout(30.0, connect=10.0, read=30.0)
+
+        async with httpx.AsyncClient(http2=False, timeout=timeout_config) as client:
+            print(f"DEBUG: Fetching MAP data for {map_name}...")
+            response = await client.post(
+                TARKOV_API_URL, 
+                json={'query': MAP_QUERY, 'variables': query_vars}, 
+                headers=headers
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            if "errors" in data:
+                raise Exception(data['errors'][0]['message'])
+            
+            # Extract just the map data part
+            maps_data = data.get("data", {}).get("maps", [])
+            if not maps_data:
+                # Return empty structure if not found/error-ish
+                return {
+                    "name": map_name,
+                    "extracts": [],
+                    "spawns": [],
+                    "bosses": [],
+                    "lootContainers": [],
+                    "hazards": []
+                }
+            
+            return maps_data[0]
+
+    except Exception as e:
+        print(f"MAP DATA ERROR: {e}")
+        # Return empty structure on error to prevent frontend crash
+        return {
+            "name": map_name,
+            "extracts": [],
+            "spawns": [],
+            "bosses": [],
+            "lootContainers": [],
+            "hazards": []
+        }

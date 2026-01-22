@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -24,12 +25,15 @@
             --eft-orange: #9e7a4a;
         }
 
-        * { box-sizing: border-box; }
-        body { 
-            background-color: var(--bg-dark); 
-            color: var(--text-main); 
-            font-family: 'Segoe UI', sans-serif; 
-            font-size: 13px; 
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Segoe UI', sans-serif;
+            font-size: 13px;
             margin: 0;
             padding: 0;
         }
@@ -169,8 +173,13 @@
             font-size: 11px;
         }
 
-        .stat-row .label { color: var(--text-sub); }
-        .stat-row .value { color: var(--eft-beige); }
+        .stat-row .label {
+            color: var(--text-sub);
+        }
+
+        .stat-row .value {
+            color: var(--eft-beige);
+        }
 
         /* Main Content */
         .main-content {
@@ -230,7 +239,7 @@
             position: absolute;
             bottom: 10px;
             left: 10px;
-            background: rgba(0,0,0,0.9);
+            background: rgba(0, 0, 0, 0.9);
             color: var(--eft-gold);
             padding: 6px 12px;
             font-family: 'Consolas', monospace;
@@ -244,13 +253,17 @@
             position: absolute;
             bottom: 10px;
             right: 10px;
-            background: rgba(0,0,0,0.7);
+            background: rgba(0, 0, 0, 0.7);
             color: #555;
             padding: 4px 8px;
             font-size: 9px;
             z-index: 1000;
         }
-        #credit a { color: var(--eft-gold); text-decoration: none; }
+
+        #credit a {
+            color: var(--eft-gold);
+            text-decoration: none;
+        }
 
         /* Loading */
         .loading-overlay {
@@ -259,7 +272,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0,0,0,0.9);
+            background: rgba(0, 0, 0, 0.9);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -267,7 +280,9 @@
             z-index: 2000;
         }
 
-        .loading-overlay.hidden { display: none; }
+        .loading-overlay.hidden {
+            display: none;
+        }
 
         .spinner {
             width: 40px;
@@ -279,7 +294,9 @@
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         .loading-text {
@@ -294,6 +311,7 @@
             color: var(--eft-beige) !important;
             border: 1px solid var(--border-color) !important;
         }
+
         .leaflet-control-zoom a:hover {
             background: var(--eft-gold) !important;
             color: #000 !important;
@@ -306,27 +324,43 @@
             border-radius: 2px;
             color: var(--text-main);
         }
-        .leaflet-popup-tip { background: #0f0f0f; }
-        .leaflet-popup-content { margin: 10px 12px; font-size: 11px; }
-        .popup-title { 
-            color: var(--eft-beige); 
-            font-weight: bold; 
-            font-size: 12px; 
+
+        .leaflet-popup-tip {
+            background: #0f0f0f;
+        }
+
+        .leaflet-popup-content {
+            margin: 10px 12px;
+            font-size: 11px;
+        }
+
+        .popup-title {
+            color: var(--eft-beige);
+            font-weight: bold;
+            font-size: 12px;
             margin-bottom: 6px;
             padding-bottom: 5px;
             border-bottom: 1px solid var(--border-color);
         }
-        .popup-row { 
-            display: flex; 
-            justify-content: space-between; 
+
+        .popup-row {
+            display: flex;
+            justify-content: space-between;
             padding: 2px 0;
         }
-        .popup-label { color: var(--text-sub); }
-        .popup-value { color: var(--text-main); }
-        .popup-coords { 
-            color: #555; 
-            font-size: 10px; 
-            font-family: monospace; 
+
+        .popup-label {
+            color: var(--text-sub);
+        }
+
+        .popup-value {
+            color: var(--text-main);
+        }
+
+        .popup-coords {
+            color: #555;
+            font-size: 10px;
+            font-family: monospace;
             margin-top: 8px;
             padding-top: 6px;
             border-top: 1px solid var(--border-color);
@@ -343,583 +377,525 @@
             border-radius: 0 !important;
             box-shadow: none !important;
         }
-        .marker-tooltip::before { display: none !important; }
+
+        .marker-tooltip::before {
+            display: none !important;
+        }
     </style>
 </head>
+
 <body>
 
-<div class="app-container">
-    <!-- Sidebar -->
-    <div class="sidebar">
-        <div class="sidebar-header">
-            <h1>Raid Planner</h1>
-            <small>v2.1 • tarkov.dev API</small>
-        </div>
-
-        <div class="sidebar-content">
-            <!-- Map Selection -->
-            <div class="map-select-group">
-                <label>Select Map</label>
-                <select id="mapSelect" class="map-select" onchange="loadMap()">
-                    <option value="customs">Customs</option>
-                    <option value="woods">Woods</option>
-                    <option value="factory">Factory</option>
-                    <option value="interchange">Interchange</option>
-                    <option value="shoreline">Shoreline</option>
-                    <option value="reserve">Reserve</option>
-                    <option value="lighthouse">Lighthouse</option>
-                    <option value="streets of tarkov">Streets of Tarkov</option>
-                    <option value="ground zero">Ground Zero</option>
-                    <option value="the lab">The Lab</option>
-                </select>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h1>Raid Planner</h1>
+                <small>v2.1 • tarkov.dev API</small>
             </div>
 
-            <!-- Layers -->
-            <div class="layer-section">
-                <div class="layer-section-title">Map Layers</div>
+            <div class="sidebar-content">
+                <!-- Map Selection -->
+                <div class="map-select-group">
+                    <label>Select Map</label>
+                    <select id="mapSelect" class="map-select" onchange="loadMap()">
+                        <option value="customs">Customs</option>
+                        <option value="woods">Woods</option>
+                        <option value="factory">Factory</option>
+                        <option value="interchange">Interchange</option>
+                        <option value="shoreline">Shoreline</option>
+                        <option value="reserve">Reserve</option>
+                        <option value="lighthouse">Lighthouse</option>
+                        <option value="streets of tarkov">Streets of Tarkov</option>
+                        <option value="ground zero">Ground Zero</option>
+                        <option value="the lab">The Lab</option>
+                    </select>
+                </div>
 
-                <label class="layer-toggle">
-                    <input type="checkbox" id="layer-extracts" checked onchange="toggleLayer('extracts')">
-                    <span class="dot" style="background: var(--eft-green);"></span>
-                    <span class="name">Extracts</span>
-                    <span class="count" id="count-extracts">0</span>
-                </label>
+                <!-- Layers -->
+                <div class="layer-section">
+                    <div class="layer-section-title">Map Layers</div>
 
-                <label class="layer-toggle">
-                    <input type="checkbox" id="layer-spawns" onchange="toggleLayer('spawns')">
-                    <span class="dot" style="background: var(--eft-blue);"></span>
-                    <span class="name">PMC Spawns</span>
-                    <span class="count" id="count-spawns">0</span>
-                </label>
+                    <label class="layer-toggle">
+                        <input type="checkbox" id="layer-extracts" checked onchange="toggleLayer('extracts')">
+                        <span class="dot" style="background: var(--eft-green);"></span>
+                        <span class="name">Extracts</span>
+                        <span class="count" id="count-extracts">0</span>
+                    </label>
 
-                <label class="layer-toggle">
-                    <input type="checkbox" id="layer-bosses" checked onchange="toggleLayer('bosses')">
-                    <span class="dot" style="background: var(--eft-red);"></span>
-                    <span class="name">Boss Spawns</span>
-                    <span class="count" id="count-bosses">0</span>
-                </label>
+                    <label class="layer-toggle">
+                        <input type="checkbox" id="layer-spawns" onchange="toggleLayer('spawns')">
+                        <span class="dot" style="background: var(--eft-blue);"></span>
+                        <span class="name">PMC Spawns</span>
+                        <span class="count" id="count-spawns">0</span>
+                    </label>
 
-                <label class="layer-toggle">
-                    <input type="checkbox" id="layer-stashes" onchange="toggleLayer('stashes')">
-                    <span class="dot" style="background: var(--eft-purple);"></span>
-                    <span class="name">Hidden Stashes</span>
-                    <span class="count" id="count-stashes">0</span>
-                </label>
+                    <label class="layer-toggle">
+                        <input type="checkbox" id="layer-bosses" checked onchange="toggleLayer('bosses')">
+                        <span class="dot" style="background: var(--eft-red);"></span>
+                        <span class="name">Boss Spawns</span>
+                        <span class="count" id="count-bosses">0</span>
+                    </label>
 
-                <label class="layer-toggle">
-                    <input type="checkbox" id="layer-loot" onchange="toggleLayer('loot')">
-                    <span class="dot" style="background: var(--eft-orange);"></span>
-                    <span class="name">Loot Containers</span>
-                    <span class="count" id="count-loot">0</span>
-                </label>
+                    <label class="layer-toggle">
+                        <input type="checkbox" id="layer-stashes" onchange="toggleLayer('stashes')">
+                        <span class="dot" style="background: var(--eft-purple);"></span>
+                        <span class="name">Hidden Stashes</span>
+                        <span class="count" id="count-stashes">0</span>
+                    </label>
 
-                <label class="layer-toggle">
-                    <input type="checkbox" id="layer-hazards" onchange="toggleLayer('hazards')">
-                    <span class="dot" style="background: #ff4444;"></span>
-                    <span class="name">Hazards</span>
-                    <span class="count" id="count-hazards">0</span>
-                </label>
-            </div>
+                    <label class="layer-toggle">
+                        <input type="checkbox" id="layer-loot" onchange="toggleLayer('loot')">
+                        <span class="dot" style="background: var(--eft-orange);"></span>
+                        <span class="name">Loot Containers</span>
+                        <span class="count" id="count-loot">0</span>
+                    </label>
 
-            <!-- Map Stats -->
-            <div class="layer-section">
-                <div class="layer-section-title">Map Info</div>
-                <div class="stats-box">
-                    <div class="stat-row">
-                        <span class="label">Players</span>
-                        <span class="value" id="stat-players">-</span>
+                    <label class="layer-toggle">
+                        <input type="checkbox" id="layer-hazards" onchange="toggleLayer('hazards')">
+                        <span class="dot" style="background: #ff4444;"></span>
+                        <span class="name">Hazards</span>
+                        <span class="count" id="count-hazards">0</span>
+                    </label>
+                </div>
+
+                <!-- Map Stats -->
+                <div class="layer-section">
+                    <div class="layer-section-title">Map Info</div>
+                    <div class="stats-box">
+                        <div class="stat-row">
+                            <span class="label">Players</span>
+                            <span class="value" id="stat-players">-</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="label">Duration</span>
+                            <span class="value" id="stat-duration">-</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="label">Enemies</span>
+                            <span class="value" id="stat-enemies">-</span>
+                        </div>
                     </div>
-                    <div class="stat-row">
-                        <span class="label">Duration</span>
-                        <span class="value" id="stat-duration">-</span>
-                    </div>
-                    <div class="stat-row">
-                        <span class="label">Enemies</span>
-                        <span class="value" id="stat-enemies">-</span>
+                </div>
+
+                <!-- Calibration Info -->
+                <div class="layer-section">
+                    <div class="layer-section-title">Coordinate System</div>
+                    <div class="stats-box">
+                        <div class="stat-row">
+                            <span class="label">Rotation</span>
+                            <span class="value" id="stat-rotation">-</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="label">Status</span>
+                            <span class="value" id="stat-calibration">Uncalibrated</span>
+                        </div>
+                        <small style="display:block; margin-top:8px; color:#555; font-size:10px;">
+                            Click map to copy game coords. Use reference points to calibrate.
+                        </small>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Calibration Info -->
-            <div class="layer-section">
-                <div class="layer-section-title">Coordinate System</div>
-                <div class="stats-box">
-                    <div class="stat-row">
-                        <span class="label">Rotation</span>
-                        <span class="value" id="stat-rotation">-</span>
-                    </div>
-                    <div class="stat-row">
-                        <span class="label">Status</span>
-                        <span class="value" id="stat-calibration">Uncalibrated</span>
-                    </div>
-                    <small style="display:block; margin-top:8px; color:#555; font-size:10px;">
-                        Click map to copy game coords. Use reference points to calibrate.
-                    </small>
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="toolbar">
+                <button class="toolbar-btn" onclick="resetView()">Reset View</button>
+                <button class="toolbar-btn" onclick="hideAllLayers()">Hide All</button>
+                <button class="toolbar-btn" onclick="showAllLayers()">Show All</button>
+                <div class="toolbar-info" id="map-info">Loading...</div>
+            </div>
+
+            <div class="map-wrapper">
+                <div id="map"></div>
+                <div id="coords">Click map for coordinates</div>
+                <div id="credit">Maps: <a href="https://reemr.se" target="_blank">re3mr</a> | Data: <a
+                        href="https://tarkov.dev" target="_blank">tarkov.dev</a></div>
+                <div class="loading-overlay" id="loading">
+                    <div class="spinner"></div>
+                    <div class="loading-text">Loading map data...</div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Main Content -->
-    <div class="main-content">
-        <div class="toolbar">
-            <button class="toolbar-btn" onclick="resetView()">Reset View</button>
-            <button class="toolbar-btn" onclick="hideAllLayers()">Hide All</button>
-            <button class="toolbar-btn" onclick="showAllLayers()">Show All</button>
-            <div class="toolbar-info" id="map-info">Loading...</div>
-        </div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // ============================================================
+        // TARKOV RAID PLANNER v2.1
+        // Clean Maps with tarkov.dev API Integration
+        // ============================================================
 
-        <div class="map-wrapper">
-            <div id="map"></div>
-            <div id="coords">Click map for coordinates</div>
-            <div id="credit">Maps: <a href="https://reemr.se" target="_blank">re3mr</a> | Data: <a href="https://tarkov.dev" target="_blank">tarkov.dev</a></div>
-            <div class="loading-overlay" id="loading">
-                <div class="spinner"></div>
-                <div class="loading-text">Loading map data...</div>
-            </div>
-        </div>
-    </div>
-</div>
+        const TARKOV_API = `${window.location.protocol}//${window.location.hostname}:8000/map-data/`;
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>
-// ============================================================
-// TARKOV RAID PLANNER v2.1
-// Clean Maps with tarkov.dev API Integration
-// ============================================================
+        let map = null;
+        let currentMapData = null;
+        let currentConfig = null;
+        let imgWidth = 4000;  // Default, will be updated
+        let imgHeight = 4000;
 
-const TARKOV_API = "https://api.tarkov.dev/graphql";
+        // Layer Groups
+        const layers = {
+            extracts: L.layerGroup(),
+            spawns: L.layerGroup(),
+            bosses: L.layerGroup(),
+            stashes: L.layerGroup(),
+            loot: L.layerGroup(),
+            hazards: L.layerGroup()
+        };
 
-let map = null;
-let currentMapData = null;
-let currentConfig = null;
-let imgWidth = 4000;  // Default, will be updated
-let imgHeight = 4000;
+        // ============================================================
+        // MAP CONFIGURATIONS
+        // Each map needs: image URL, bounds (game coords), rotation
+        // Bounds: [[minX, minZ], [maxX, maxZ]] in game units
+        // ============================================================
 
-// Layer Groups
-const layers = {
-    extracts: L.layerGroup(),
-    spawns: L.layerGroup(),
-    bosses: L.layerGroup(),
-    stashes: L.layerGroup(),
-    loot: L.layerGroup(),
-    hazards: L.layerGroup()
-};
+        const MAP_CONFIGS = {
+            "customs": {
+                name: "Customs",
+                image: "https://assets.tarkov.dev/maps/customs-2d-monkimonkimonk.jpg",
+                // These bounds need calibration per map
+                // You can adjust these based on known reference points
+                bounds: [[-420, -340], [420, 400]],
+                rotation: 0,
+                calibrated: false
+            },
+            "woods": {
+                name: "Woods",
+                image: "https://assets.tarkov.dev/maps/woods-2d.jpg",
+                bounds: [[-830, -670], [530, 710]],
+                rotation: 0,
+                calibrated: false
+            },
+            "factory": {
+                name: "Factory",
+                image: "https://assets.tarkov.dev/maps/factory-2d.jpg",
+                bounds: [[-65, -125], [65, 10]],
+                rotation: 180,
+                calibrated: false
+            },
+            "interchange": {
+                name: "Interchange",
+                image: "https://assets.tarkov.dev/maps/interchange-2d-monkimonkimonk.jpg",
+                bounds: [[-250, -480], [430, 330]],
+                rotation: 0,
+                calibrated: false
+            },
+            "shoreline": {
+                name: "Shoreline",
+                image: "https://assets.tarkov.dev/maps/shoreline-2d.jpg",
+                bounds: [[-700, -370], [520, 600]],
+                rotation: 0,
+                calibrated: false
+            },
+            "reserve": {
+                name: "Reserve",
+                image: "https://assets.tarkov.dev/maps/reserve-2d.jpg",
+                bounds: [[-450, -450], [350, 350]],
+                rotation: 0,
+                calibrated: false
+            },
+            "lighthouse": {
+                name: "Lighthouse",
+                image: "https://assets.tarkov.dev/maps/lighthouse-2d-monkimonkimonk.jpg",
+                bounds: [[-750, -500], [220, 660]],
+                rotation: 0,
+                calibrated: false
+            },
+            "streets of tarkov": {
+                name: "Streets of Tarkov",
+                image: "https://assets.tarkov.dev/maps/streets-2d-monkimonkimonk.jpg",
+                bounds: [[-350, -600], [450, 300]],
+                rotation: 180,
+                calibrated: false
+            },
+            "ground zero": {
+                name: "Ground Zero",
+                image: "https://assets.tarkov.dev/maps/groundzero-2d-iiamasociopath.jpg",
+                bounds: [[-200, -200], [200, 200]],
+                rotation: 0,
+                calibrated: false
+            },
+            "the lab": {
+                name: "The Lab",
+                image: "https://assets.tarkov.dev/maps/labs-2d.jpg",
+                bounds: [[-200, -300], [200, 100]],
+                rotation: 0,
+                calibrated: false
+            }
+        };
 
-// ============================================================
-// MAP CONFIGURATIONS
-// Each map needs: image URL, bounds (game coords), rotation
-// Bounds: [[minX, minZ], [maxX, maxZ]] in game units
-// ============================================================
+        // Fallback to re3mr if tarkov.dev images fail
+        const RE3MR_FALLBACK = {
+            "customs": "https://maps.reemr.se/Customs/re3mrCustomsCardinalNDay.png",
+            "woods": "https://reemr.se/maps/Woods/WoodsRe3mrClean.jpg",
+            "factory": "https://maps.reemr.se/Factory/re3mrFactory.png",
+            "interchange": "https://maps.reemr.se/Interchange/re3mrInterchange.png",
+            "shoreline": "https://maps.reemr.se/Shoreline/re3mrShoreline.png",
+            "reserve": "https://maps.reemr.se/Reserve/re3mrReserve.png",
+            "lighthouse": "https://maps.reemr.se/Lighthouse/re3mrLighthouse.png",
+            "streets of tarkov": "https://maps.reemr.se/StreetsofTarkov/re3mrStreets.png",
+            "ground zero": "https://maps.reemr.se/GroundZero/re3mrGroundZero.png"
+        };
 
-const MAP_CONFIGS = {
-    "customs": {
-        name: "Customs",
-        image: "https://assets.tarkov.dev/maps/customs-2d-monkimonkimonk.jpg",
-        // These bounds need calibration per map
-        // You can adjust these based on known reference points
-        bounds: [[-420, -340], [420, 400]],
-        rotation: 0,
-        calibrated: false
-    },
-    "woods": {
-        name: "Woods",
-        image: "https://assets.tarkov.dev/maps/woods-2d.jpg",
-        bounds: [[-830, -670], [530, 710]],
-        rotation: 0,
-        calibrated: false
-    },
-    "factory": {
-        name: "Factory",
-        image: "https://assets.tarkov.dev/maps/factory-2d.jpg",
-        bounds: [[-65, -125], [65, 10]],
-        rotation: 180,
-        calibrated: false
-    },
-    "interchange": {
-        name: "Interchange",
-        image: "https://assets.tarkov.dev/maps/interchange-2d-monkimonkimonk.jpg",
-        bounds: [[-250, -480], [430, 330]],
-        rotation: 0,
-        calibrated: false
-    },
-    "shoreline": {
-        name: "Shoreline",
-        image: "https://assets.tarkov.dev/maps/shoreline-2d.jpg",
-        bounds: [[-700, -370], [520, 600]],
-        rotation: 0,
-        calibrated: false
-    },
-    "reserve": {
-        name: "Reserve",
-        image: "https://assets.tarkov.dev/maps/reserve-2d.jpg",
-        bounds: [[-450, -450], [350, 350]],
-        rotation: 0,
-        calibrated: false
-    },
-    "lighthouse": {
-        name: "Lighthouse",
-        image: "https://assets.tarkov.dev/maps/lighthouse-2d-monkimonkimonk.jpg",
-        bounds: [[-750, -500], [220, 660]],
-        rotation: 0,
-        calibrated: false
-    },
-    "streets of tarkov": {
-        name: "Streets of Tarkov",
-        image: "https://assets.tarkov.dev/maps/streets-2d-monkimonkimonk.jpg",
-        bounds: [[-350, -600], [450, 300]],
-        rotation: 180,
-        calibrated: false
-    },
-    "ground zero": {
-        name: "Ground Zero",
-        image: "https://assets.tarkov.dev/maps/groundzero-2d-iiamasociopath.jpg",
-        bounds: [[-200, -200], [200, 200]],
-        rotation: 0,
-        calibrated: false
-    },
-    "the lab": {
-        name: "The Lab",
-        image: "https://assets.tarkov.dev/maps/labs-2d.jpg",
-        bounds: [[-200, -300], [200, 100]],
-        rotation: 0,
-        calibrated: false
-    }
-};
+        // ============================================================
+        // API FETCH
+        // ============================================================
 
-// Fallback to re3mr if tarkov.dev images fail
-const RE3MR_FALLBACK = {
-    "customs": "https://maps.reemr.se/Customs/re3mrCustomsCardinalNDay.png",
-    "woods": "https://reemr.se/maps/Woods/WoodsRe3mrClean.jpg",
-    "factory": "https://maps.reemr.se/Factory/re3mrFactory.png",
-    "interchange": "https://maps.reemr.se/Interchange/re3mrInterchange.png",
-    "shoreline": "https://maps.reemr.se/Shoreline/re3mrShoreline.png",
-    "reserve": "https://maps.reemr.se/Reserve/re3mrReserve.png",
-    "lighthouse": "https://maps.reemr.se/Lighthouse/re3mrLighthouse.png",
-    "streets of tarkov": "https://maps.reemr.se/StreetsofTarkov/re3mrStreets.png",
-    "ground zero": "https://maps.reemr.se/GroundZero/re3mrGroundZero.png"
-};
+        async function fetchMapData(mapName) {
+            try {
+                // Direct call to backend proxy (CORS safe)
+                const response = await fetch(`${TARKOV_API}${mapName}`);
 
-// ============================================================
-// GraphQL Query
-// ============================================================
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
 
-const MAP_QUERY = `
-query GetMapData($name: [String!]) {
-    maps(name: $name) {
-        id
-        name
-        normalizedName
-        coordinateRotation
-        players
-        enemies
-        raidDuration
-        extracts {
-            id
-            name
-            faction
-            position { x y z }
-        }
-        spawns {
-            zoneName
-            position { x y z }
-            sides
-            categories
-        }
-        bosses {
-            name
-            spawnChance
-            spawnLocations {
-                name
-                chance
-                position { x y z }
+                const data = await response.json();
+                return data; // Backend now returns the map object directly
+            } catch (error) {
+                console.error('API Error:', error);
+                // Return empty data structure on error
+                return {
+                    name: mapName,
+                    extracts: [],
+                    spawns: [],
+                    bosses: [],
+                    lootContainers: [],
+                    hazards: []
+                };
             }
         }
-        lootContainers {
-            position { x y z }
-            lootContainer { name normalizedName }
-        }
-        hazards {
-            name
-            hazardType
-            position { x y z }
-        }
-    }
-}
-`;
 
-// ============================================================
-// API FETCH
-// ============================================================
+        // ============================================================
+        // COORDINATE TRANSFORMATION
+        // ============================================================
 
-async function fetchMapData(mapName) {
-    try {
-        const response = await fetch(TARKOV_API, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                query: MAP_QUERY,
-                variables: { name: [mapName] }
-            })
-        });
+        function gameToPixel(gameX, gameZ, config) {
+            const [[minX, minZ], [maxX, maxZ]] = config.bounds;
 
-        const data = await response.json();
+            // Normalize to 0-1
+            let normX = (gameX - minX) / (maxX - minX);
+            let normZ = (gameZ - minZ) / (maxZ - minZ);
 
-        if (data.errors) {
-            throw new Error(data.errors[0].message);
+            // Apply rotation
+            const rot = config.rotation || 0;
+            if (rot === 180) {
+                normX = 1 - normX;
+                normZ = 1 - normZ;
+            } else if (rot === 90) {
+                [normX, normZ] = [1 - normZ, normX];
+            } else if (rot === 270 || rot === -90) {
+                [normX, normZ] = [normZ, 1 - normX];
+            }
+
+            // Convert to Leaflet coords [y, x]
+            const pixelY = (1 - normZ) * imgHeight;
+            const pixelX = normX * imgWidth;
+
+            return [pixelY, pixelX];
         }
 
-        return data.data.maps[0];
-    } catch (error) {
-        console.error('API Error:', error);
-        // Return empty data structure on error
-        return {
-            name: mapName,
-            extracts: [],
-            spawns: [],
-            bosses: [],
-            lootContainers: [],
-            hazards: []
-        };
-    }
-}
+        function pixelToGame(pixelY, pixelX, config) {
+            const [[minX, minZ], [maxX, maxZ]] = config.bounds;
 
-// ============================================================
-// COORDINATE TRANSFORMATION
-// ============================================================
+            let normX = pixelX / imgWidth;
+            let normZ = 1 - (pixelY / imgHeight);
 
-function gameToPixel(gameX, gameZ, config) {
-    const [[minX, minZ], [maxX, maxZ]] = config.bounds;
+            // Reverse rotation
+            const rot = config.rotation || 0;
+            if (rot === 180) {
+                normX = 1 - normX;
+                normZ = 1 - normZ;
+            } else if (rot === 90) {
+                [normX, normZ] = [normZ, 1 - normX];
+            } else if (rot === 270 || rot === -90) {
+                [normX, normZ] = [1 - normZ, normX];
+            }
 
-    // Normalize to 0-1
-    let normX = (gameX - minX) / (maxX - minX);
-    let normZ = (gameZ - minZ) / (maxZ - minZ);
+            const gameX = minX + normX * (maxX - minX);
+            const gameZ = minZ + normZ * (maxZ - minZ);
 
-    // Apply rotation
-    const rot = config.rotation || 0;
-    if (rot === 180) {
-        normX = 1 - normX;
-        normZ = 1 - normZ;
-    } else if (rot === 90) {
-        [normX, normZ] = [1 - normZ, normX];
-    } else if (rot === 270 || rot === -90) {
-        [normX, normZ] = [normZ, 1 - normX];
-    }
-
-    // Convert to Leaflet coords [y, x]
-    const pixelY = (1 - normZ) * imgHeight;
-    const pixelX = normX * imgWidth;
-
-    return [pixelY, pixelX];
-}
-
-function pixelToGame(pixelY, pixelX, config) {
-    const [[minX, minZ], [maxX, maxZ]] = config.bounds;
-
-    let normX = pixelX / imgWidth;
-    let normZ = 1 - (pixelY / imgHeight);
-
-    // Reverse rotation
-    const rot = config.rotation || 0;
-    if (rot === 180) {
-        normX = 1 - normX;
-        normZ = 1 - normZ;
-    } else if (rot === 90) {
-        [normX, normZ] = [normZ, 1 - normX];
-    } else if (rot === 270 || rot === -90) {
-        [normX, normZ] = [1 - normZ, normX];
-    }
-
-    const gameX = minX + normX * (maxX - minX);
-    const gameZ = minZ + normZ * (maxZ - minZ);
-
-    return { x: gameX, z: gameZ };
-}
-
-// ============================================================
-// MAP INITIALIZATION
-// ============================================================
-
-async function loadMap() {
-    const mapKey = document.getElementById('mapSelect').value;
-    const config = MAP_CONFIGS[mapKey];
-    const loading = document.getElementById('loading');
-
-    if (!config) {
-        alert('Map configuration not found');
-        return;
-    }
-
-    currentConfig = config;
-    loading.classList.remove('hidden');
-    document.getElementById('loading').querySelector('.loading-text').textContent = 'Loading map data...';
-
-    try {
-        // 1. Fetch API data
-        console.log(`Fetching data for: ${mapKey}`);
-        currentMapData = await fetchMapData(mapKey);
-
-        // Update rotation from API if available
-        if (currentMapData?.coordinateRotation !== undefined) {
-            config.rotation = currentMapData.coordinateRotation;
+            return { x: gameX, z: gameZ };
         }
 
-        // 2. Load map image
-        document.getElementById('loading').querySelector('.loading-text').textContent = 'Loading map image...';
+        // ============================================================
+        // MAP INITIALIZATION
+        // ============================================================
 
-        const img = new Image();
-        img.crossOrigin = "anonymous";
+        async function loadMap() {
+            const mapKey = document.getElementById('mapSelect').value;
+            const config = MAP_CONFIGS[mapKey];
+            const loading = document.getElementById('loading');
 
-        img.onload = function() {
-            imgWidth = img.naturalWidth || img.width;
-            imgHeight = img.naturalHeight || img.height;
-            console.log(`Image loaded: ${imgWidth}x${imgHeight}`);
+            if (!config) {
+                alert('Map configuration not found');
+                return;
+            }
 
-            initMap(config);
-            drawAllMarkers(currentMapData, config);
-            updateStats(currentMapData);
-            updateUI();
+            currentConfig = config;
+            loading.classList.remove('hidden');
+            document.getElementById('loading').querySelector('.loading-text').textContent = 'Loading map data...';
 
-            loading.classList.add('hidden');
-        };
+            try {
+                // 1. Fetch API data
+                console.log(`Fetching data for: ${mapKey}`);
+                currentMapData = await fetchMapData(mapKey);
 
-        img.onerror = function() {
-            console.warn('Primary image failed, trying fallback...');
-            // Try fallback
-            if (RE3MR_FALLBACK[mapKey]) {
-                const fallbackImg = new Image();
-                fallbackImg.crossOrigin = "anonymous";
-                fallbackImg.onload = function() {
-                    imgWidth = fallbackImg.naturalWidth || 4000;
-                    imgHeight = fallbackImg.naturalHeight || 4000;
-                    config.image = RE3MR_FALLBACK[mapKey];
+                // Update rotation from API if available
+                if (currentMapData?.coordinateRotation !== undefined) {
+                    config.rotation = currentMapData.coordinateRotation;
+                }
+
+                // 2. Load map image
+                document.getElementById('loading').querySelector('.loading-text').textContent = 'Loading map image...';
+
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+
+                img.onload = function () {
+                    imgWidth = img.naturalWidth || img.width;
+                    imgHeight = img.naturalHeight || img.height;
+                    console.log(`Image loaded: ${imgWidth}x${imgHeight}`);
+
                     initMap(config);
                     drawAllMarkers(currentMapData, config);
                     updateStats(currentMapData);
                     updateUI();
+
                     loading.classList.add('hidden');
                 };
-                fallbackImg.onerror = function() {
-                    imgWidth = 4000;
-                    imgHeight = 4000;
-                    initMap(config);
-                    drawAllMarkers(currentMapData, config);
-                    updateStats(currentMapData);
-                    updateUI();
-                    loading.classList.add('hidden');
+
+                img.onerror = function () {
+                    console.warn('Primary image failed, trying fallback...');
+                    // Try fallback
+                    if (RE3MR_FALLBACK[mapKey]) {
+                        const fallbackImg = new Image();
+                        fallbackImg.crossOrigin = "anonymous";
+                        fallbackImg.onload = function () {
+                            imgWidth = fallbackImg.naturalWidth || 4000;
+                            imgHeight = fallbackImg.naturalHeight || 4000;
+                            config.image = RE3MR_FALLBACK[mapKey];
+                            initMap(config);
+                            drawAllMarkers(currentMapData, config);
+                            updateStats(currentMapData);
+                            updateUI();
+                            loading.classList.add('hidden');
+                        };
+                        fallbackImg.onerror = function () {
+                            console.error('Fallback image also failed.');
+                            alert('Failed to load map image (Primary & Fallback).');
+                            loading.classList.add('hidden');
+                        };
+                        fallbackImg.src = RE3MR_FALLBACK[mapKey]; // Trigger load
+                    } else {
+                        console.error('No fallback available.');
+                        loading.classList.add('hidden');
+                        alert('Failed to load map image and no fallback available.');
+                    }
                 };
-                fallbackImg.src = RE3MR_FALLBACK[mapKey];
-            } else {
-                imgWidth = 4000;
-                imgHeight = 4000;
-                initMap(config);
-                drawAllMarkers(currentMapData, config);
-                updateStats(currentMapData);
-                updateUI();
-                loading.classList.add('hidden');
+
+                img.src = config.image;
+
+            } catch (error) {
+                console.error('Error loading map:', error);
+                document.getElementById('loading').querySelector('.loading-text').textContent = `Error: ${error.message}`;
             }
-        };
-
-        img.src = config.image;
-
-    } catch (error) {
-        console.error('Error loading map:', error);
-        document.getElementById('loading').querySelector('.loading-text').textContent = `Error: ${error.message}`;
-    }
-}
-
-function initMap(config) {
-    // Remove old map
-    if (map) {
-        map.remove();
-    }
-
-    // Create new map
-    map = L.map('map', {
-        crs: L.CRS.Simple,
-        minZoom: -3,
-        maxZoom: 3,
-        zoomSnap: 0.25,
-        zoomDelta: 0.5,
-        attributionControl: false
-    });
-
-    // Add image overlay
-    const bounds = [[0, 0], [imgHeight, imgWidth]];
-    L.imageOverlay(config.image, bounds).addTo(map);
-    map.fitBounds(bounds);
-
-    // Add layer groups
-    Object.values(layers).forEach(layer => {
-        layer.clearLayers();
-    });
-
-    // Add checked layers to map
-    ['extracts', 'spawns', 'bosses', 'stashes', 'loot', 'hazards'].forEach(layerName => {
-        const checkbox = document.getElementById(`layer-${layerName}`);
-        if (checkbox && checkbox.checked) {
-            layers[layerName].addTo(map);
         }
-    });
 
-    // Mouse events
-    map.on('mousemove', (e) => {
-        const game = pixelToGame(e.latlng.lat, e.latlng.lng, config);
-        document.getElementById('coords').textContent =
-            `Game: (${game.x.toFixed(1)}, ${game.z.toFixed(1)}) | Pixel: (${Math.round(e.latlng.lng)}, ${Math.round(e.latlng.lat)})`;
-    });
+        function initMap(config) {
+            // Remove old map
+            if (map) {
+                map.remove();
+            }
 
-    map.on('click', (e) => {
-        const game = pixelToGame(e.latlng.lat, e.latlng.lng, config);
-        const str = `${game.x.toFixed(1)}, ${game.z.toFixed(1)}`;
-        navigator.clipboard?.writeText(str);
-        console.log('Copied:', str);
-    });
+            // Create new map
+            map = L.map('map', {
+                crs: L.CRS.Simple,
+                minZoom: -3,
+                maxZoom: 3,
+                zoomSnap: 0.25,
+                zoomDelta: 0.5,
+                attributionControl: false
+            });
 
-    // Update toolbar
-    document.getElementById('map-info').textContent =
-        `${config.name} | ${imgWidth}x${imgHeight}px | Rotation: ${config.rotation}°`;
-}
+            // Add image overlay
+            const bounds = [[0, 0], [imgHeight, imgWidth]];
+            L.imageOverlay(config.image, bounds).addTo(map);
+            map.fitBounds(bounds);
 
-// ============================================================
-// DRAW MARKERS
-// ============================================================
+            // Add layer groups
+            Object.values(layers).forEach(layer => {
+                layer.clearLayers();
+            });
 
-function drawAllMarkers(data, config) {
-    if (!data) return;
+            // Add checked layers to map
+            ['extracts', 'spawns', 'bosses', 'stashes', 'loot', 'hazards'].forEach(layerName => {
+                const checkbox = document.getElementById(`layer-${layerName}`);
+                if (checkbox && checkbox.checked) {
+                    layers[layerName].addTo(map);
+                }
+            });
 
-    // Clear all layers
-    Object.values(layers).forEach(l => l.clearLayers());
+            // Mouse events
+            map.on('mousemove', (e) => {
+                const game = pixelToGame(e.latlng.lat, e.latlng.lng, config);
+                document.getElementById('coords').textContent =
+                    `Game: (${game.x.toFixed(1)}, ${game.z.toFixed(1)}) | Pixel: (${Math.round(e.latlng.lng)}, ${Math.round(e.latlng.lat)})`;
+            });
 
-    // Draw each type
-    drawExtracts(data.extracts, config);
-    drawSpawns(data.spawns, config);
-    drawBosses(data.bosses, config);
-    drawLootContainers(data.lootContainers, config);
-    drawHazards(data.hazards, config);
+            map.on('click', (e) => {
+                const game = pixelToGame(e.latlng.lat, e.latlng.lng, config);
+                const str = `${game.x.toFixed(1)}, ${game.z.toFixed(1)}`;
+                navigator.clipboard?.writeText(str);
+                console.log('Copied:', str);
+            });
 
-    // Update counts
-    updateCounts();
-}
+            // Update toolbar
+            document.getElementById('map-info').textContent =
+                `${config.name} | ${imgWidth}x${imgHeight}px | Rotation: ${config.rotation}°`;
+        }
 
-function drawExtracts(extracts, config) {
-    if (!extracts) return;
+        // ============================================================
+        // DRAW MARKERS
+        // ============================================================
 
-    extracts.forEach(ext => {
-        if (!ext.position) return;
+        function drawAllMarkers(data, config) {
+            if (!data) return;
 
-        const pos = gameToPixel(ext.position.x, ext.position.z, config);
-        const color = ext.faction === 'scav' ? '#7a7a4a' : '#4a9e4a';
+            // Clear all layers
+            Object.values(layers).forEach(l => l.clearLayers());
 
-        const marker = L.circleMarker(pos, {
-            radius: 10,
-            color: color,
-            fillColor: '#000',
-            fillOpacity: 0.85,
-            weight: 3
-        });
+            // Draw each type
+            drawExtracts(data.extracts, config);
+            drawSpawns(data.spawns, config);
+            drawBosses(data.bosses, config);
+            drawLootContainers(data.lootContainers, config);
+            drawHazards(data.hazards, config);
 
-        marker.bindPopup(`
+            // Update counts
+            updateCounts();
+        }
+
+        function drawExtracts(extracts, config) {
+            if (!extracts) return;
+
+            extracts.forEach(ext => {
+                if (!ext.position) return;
+
+                const pos = gameToPixel(ext.position.x, ext.position.z, config);
+                const color = ext.faction === 'scav' ? '#7a7a4a' : '#4a9e4a';
+
+                const marker = L.circleMarker(pos, {
+                    radius: 10,
+                    color: color,
+                    fillColor: '#000',
+                    fillOpacity: 0.85,
+                    weight: 3
+                });
+
+                marker.bindPopup(`
             <div class="popup-title" style="color: ${color};">🚪 ${ext.name}</div>
             <div class="popup-row">
                 <span class="popup-label">Faction</span>
@@ -928,37 +904,37 @@ function drawExtracts(extracts, config) {
             <div class="popup-coords">Game: (${ext.position.x.toFixed(0)}, ${ext.position.z.toFixed(0)})</div>
         `);
 
-        marker.bindTooltip(ext.name, {
-            permanent: false,
-            className: 'marker-tooltip'
-        });
+                marker.bindTooltip(ext.name, {
+                    permanent: false,
+                    className: 'marker-tooltip'
+                });
 
-        layers.extracts.addLayer(marker);
-    });
-}
+                layers.extracts.addLayer(marker);
+            });
+        }
 
-function drawSpawns(spawns, config) {
-    if (!spawns) return;
+        function drawSpawns(spawns, config) {
+            if (!spawns) return;
 
-    // Filter to player spawns only
-    const playerSpawns = spawns.filter(s =>
-        s.categories?.includes('player') || s.categories?.includes('all')
-    );
+            // Filter to player spawns only
+            const playerSpawns = spawns.filter(s =>
+                s.categories?.includes('player') || s.categories?.includes('all')
+            );
 
-    playerSpawns.forEach(spawn => {
-        if (!spawn.position) return;
+            playerSpawns.forEach(spawn => {
+                if (!spawn.position) return;
 
-        const pos = gameToPixel(spawn.position.x, spawn.position.z, config);
+                const pos = gameToPixel(spawn.position.x, spawn.position.z, config);
 
-        const marker = L.circleMarker(pos, {
-            radius: 6,
-            color: '#4a7a9e',
-            fillColor: '#000',
-            fillOpacity: 0.7,
-            weight: 2
-        });
+                const marker = L.circleMarker(pos, {
+                    radius: 6,
+                    color: '#4a7a9e',
+                    fillColor: '#000',
+                    fillOpacity: 0.7,
+                    weight: 2
+                });
 
-        marker.bindPopup(`
+                marker.bindPopup(`
             <div class="popup-title" style="color: var(--eft-blue);">👤 Spawn Point</div>
             <div class="popup-row">
                 <span class="popup-label">Zone</span>
@@ -971,28 +947,28 @@ function drawSpawns(spawns, config) {
             <div class="popup-coords">Game: (${spawn.position.x.toFixed(0)}, ${spawn.position.z.toFixed(0)})</div>
         `);
 
-        layers.spawns.addLayer(marker);
-    });
-}
-
-function drawBosses(bosses, config) {
-    if (!bosses) return;
-
-    bosses.forEach(boss => {
-        boss.spawnLocations?.forEach(loc => {
-            if (!loc.position) return;
-
-            const pos = gameToPixel(loc.position.x, loc.position.z, config);
-
-            const marker = L.circleMarker(pos, {
-                radius: 12,
-                color: '#9e4a4a',
-                fillColor: '#1a0a0a',
-                fillOpacity: 0.9,
-                weight: 3
+                layers.spawns.addLayer(marker);
             });
+        }
 
-            marker.bindPopup(`
+        function drawBosses(bosses, config) {
+            if (!bosses) return;
+
+            bosses.forEach(boss => {
+                boss.spawnLocations?.forEach(loc => {
+                    if (!loc.position) return;
+
+                    const pos = gameToPixel(loc.position.x, loc.position.z, config);
+
+                    const marker = L.circleMarker(pos, {
+                        radius: 12,
+                        color: '#9e4a4a',
+                        fillColor: '#1a0a0a',
+                        fillOpacity: 0.9,
+                        weight: 3
+                    });
+
+                    marker.bindPopup(`
                 <div class="popup-title" style="color: var(--eft-red);">💀 ${boss.name}</div>
                 <div class="popup-row">
                     <span class="popup-label">Location</span>
@@ -1005,79 +981,79 @@ function drawBosses(bosses, config) {
                 <div class="popup-coords">Game: (${loc.position.x.toFixed(0)}, ${loc.position.z.toFixed(0)})</div>
             `);
 
-            marker.bindTooltip(boss.name, {
-                permanent: true,
-                className: 'marker-tooltip',
-                direction: 'top'
+                    marker.bindTooltip(boss.name, {
+                        permanent: true,
+                        className: 'marker-tooltip',
+                        direction: 'top'
+                    });
+
+                    layers.bosses.addLayer(marker);
+                });
             });
+        }
 
-            layers.bosses.addLayer(marker);
-        });
-    });
-}
+        function drawLootContainers(containers, config) {
+            if (!containers) return;
 
-function drawLootContainers(containers, config) {
-    if (!containers) return;
+            containers.forEach(cont => {
+                if (!cont.position) return;
 
-    containers.forEach(cont => {
-        if (!cont.position) return;
+                const name = cont.lootContainer?.normalizedName || '';
+                const isStash = name.includes('cache') || name.includes('stash') || name.includes('buried');
 
-        const name = cont.lootContainer?.normalizedName || '';
-        const isStash = name.includes('cache') || name.includes('stash') || name.includes('buried');
+                const pos = gameToPixel(cont.position.x, cont.position.z, config);
 
-        const pos = gameToPixel(cont.position.x, cont.position.z, config);
+                if (isStash) {
+                    const marker = L.circleMarker(pos, {
+                        radius: 5,
+                        color: '#7a4a9e',
+                        fillColor: '#1a0a1a',
+                        fillOpacity: 0.8,
+                        weight: 2
+                    });
 
-        if (isStash) {
-            const marker = L.circleMarker(pos, {
-                radius: 5,
-                color: '#7a4a9e',
-                fillColor: '#1a0a1a',
-                fillOpacity: 0.8,
-                weight: 2
-            });
-
-            marker.bindPopup(`
+                    marker.bindPopup(`
                 <div class="popup-title" style="color: var(--eft-purple);">📦 ${cont.lootContainer?.name || 'Stash'}</div>
                 <div class="popup-coords">Game: (${cont.position.x.toFixed(0)}, ${cont.position.z.toFixed(0)})</div>
             `);
 
-            layers.stashes.addLayer(marker);
-        } else {
-            const marker = L.circleMarker(pos, {
-                radius: 3,
-                color: '#9e7a4a',
-                fillColor: '#1a1a0a',
-                fillOpacity: 0.6,
-                weight: 1
-            });
+                    layers.stashes.addLayer(marker);
+                } else {
+                    const marker = L.circleMarker(pos, {
+                        radius: 3,
+                        color: '#9e7a4a',
+                        fillColor: '#1a1a0a',
+                        fillOpacity: 0.6,
+                        weight: 1
+                    });
 
-            marker.bindPopup(`
+                    marker.bindPopup(`
                 <div class="popup-title">${cont.lootContainer?.name || 'Loot'}</div>
                 <div class="popup-coords">Game: (${cont.position.x.toFixed(0)}, ${cont.position.z.toFixed(0)})</div>
             `);
 
-            layers.loot.addLayer(marker);
+                    layers.loot.addLayer(marker);
+                }
+            });
         }
-    });
-}
 
-function drawHazards(hazards, config) {
-    if (!hazards) return;
+        function drawHazards(hazards, config) {
+            if (!hazards) return;
 
-    hazards.forEach(haz => {
-        if (!haz.position) return;
+            hazards.forEach(haz => {
+                if (!haz.position) return;
 
-        const pos = gameToPixel(haz.position.x, haz.position.z, config);
+                const pos = gameToPixel(haz.position.x, haz.position.z, config);
 
-        const marker = L.circleMarker(pos, {
-            radius: 8,
-            color: '#ff4444',
-            fillColor: '#440000',
-            fillOpacity: 0.7,
-            weight: 2
-        });
+                const marker = L.circleMarker(pos, {
+                    radius: 8,
+                    color: '#ff4444',
+                    fillColor: '#440000',
+                    fillOpacity: 0.7,
+                    weight: 2
+                });
 
-        marker.bindPopup(`
+                marker.bindPopup(`
             <div class="popup-title" style="color: #ff4444;">⚠️ ${haz.name || 'Hazard'}</div>
             <div class="popup-row">
                 <span class="popup-label">Type</span>
@@ -1086,81 +1062,82 @@ function drawHazards(hazards, config) {
             <div class="popup-coords">Game: (${haz.position.x.toFixed(0)}, ${haz.position.z.toFixed(0)})</div>
         `);
 
-        layers.hazards.addLayer(marker);
-    });
-}
+                layers.hazards.addLayer(marker);
+            });
+        }
 
-// ============================================================
-// UI FUNCTIONS
-// ============================================================
+        // ============================================================
+        // UI FUNCTIONS
+        // ============================================================
 
-function toggleLayer(name) {
-    const checkbox = document.getElementById(`layer-${name}`);
-    if (checkbox.checked) {
-        layers[name].addTo(map);
-    } else {
-        map.removeLayer(layers[name]);
-    }
-}
-
-function hideAllLayers() {
-    Object.keys(layers).forEach(name => {
-        document.getElementById(`layer-${name}`).checked = false;
-        map.removeLayer(layers[name]);
-    });
-}
-
-function showAllLayers() {
-    Object.keys(layers).forEach(name => {
-        document.getElementById(`layer-${name}`).checked = true;
-        layers[name].addTo(map);
-    });
-}
-
-function resetView() {
-    if (map) {
-        map.fitBounds([[0, 0], [imgHeight, imgWidth]]);
-    }
-}
-
-function updateCounts() {
-    document.getElementById('count-extracts').textContent = layers.extracts.getLayers().length;
-    document.getElementById('count-spawns').textContent = layers.spawns.getLayers().length;
-    document.getElementById('count-bosses').textContent = layers.bosses.getLayers().length;
-    document.getElementById('count-stashes').textContent = layers.stashes.getLayers().length;
-    document.getElementById('count-loot').textContent = layers.loot.getLayers().length;
-    document.getElementById('count-hazards').textContent = layers.hazards.getLayers().length;
-}
-
-function updateStats(data) {
-    if (!data) return;
-
-    document.getElementById('stat-players').textContent = data.players || '-';
-    document.getElementById('stat-duration').textContent = data.raidDuration ? `${data.raidDuration} min` : '-';
-    document.getElementById('stat-enemies').textContent = data.enemies?.join(', ') || '-';
-    document.getElementById('stat-rotation').textContent = `${currentConfig?.rotation || 0}°`;
-    document.getElementById('stat-calibration').textContent = currentConfig?.calibrated ? 'Calibrated' : 'Estimated';
-}
-
-function updateUI() {
-    // Restore layer visibility based on checkboxes
-    Object.keys(layers).forEach(name => {
-        const checkbox = document.getElementById(`layer-${name}`);
-        if (checkbox && checkbox.checked && map) {
-            if (!map.hasLayer(layers[name])) {
+        function toggleLayer(name) {
+            const checkbox = document.getElementById(`layer-${name}`);
+            if (checkbox.checked) {
                 layers[name].addTo(map);
+            } else {
+                map.removeLayer(layers[name]);
             }
         }
-    });
-}
 
-// ============================================================
-// INIT
-// ============================================================
+        function hideAllLayers() {
+            Object.keys(layers).forEach(name => {
+                document.getElementById(`layer-${name}`).checked = false;
+                map.removeLayer(layers[name]);
+            });
+        }
 
-document.addEventListener('DOMContentLoaded', () => {
-    loadMap();
-});
-</script>
+        function showAllLayers() {
+            Object.keys(layers).forEach(name => {
+                document.getElementById(`layer-${name}`).checked = true;
+                layers[name].addTo(map);
+            });
+        }
+
+        function resetView() {
+            if (map) {
+                map.fitBounds([[0, 0], [imgHeight, imgWidth]]);
+            }
+        }
+
+        function updateCounts() {
+            document.getElementById('count-extracts').textContent = layers.extracts.getLayers().length;
+            document.getElementById('count-spawns').textContent = layers.spawns.getLayers().length;
+            document.getElementById('count-bosses').textContent = layers.bosses.getLayers().length;
+            document.getElementById('count-stashes').textContent = layers.stashes.getLayers().length;
+            document.getElementById('count-loot').textContent = layers.loot.getLayers().length;
+            document.getElementById('count-hazards').textContent = layers.hazards.getLayers().length;
+        }
+
+        function updateStats(data) {
+            if (!data) return;
+
+            document.getElementById('stat-players').textContent = data.players || '-';
+            document.getElementById('stat-duration').textContent = data.raidDuration ? `${data.raidDuration} min` : '-';
+            document.getElementById('stat-enemies').textContent = data.enemies?.join(', ') || '-';
+            document.getElementById('stat-rotation').textContent = `${currentConfig?.rotation || 0}°`;
+            document.getElementById('stat-calibration').textContent = currentConfig?.calibrated ? 'Calibrated' : 'Estimated';
+        }
+
+        function updateUI() {
+            // Restore layer visibility based on checkboxes
+            Object.keys(layers).forEach(name => {
+                const checkbox = document.getElementById(`layer-${name}`);
+                if (checkbox && checkbox.checked && map) {
+                    if (!map.hasLayer(layers[name])) {
+                        layers[name].addTo(map);
+                    }
+                }
+            });
+        }
+
+        // ============================================================
+        // INIT
+        // ============================================================
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadMap();
+        });
+    </script>
 </body>
+
 </html>
