@@ -233,7 +233,21 @@ async def get_map_data(map_name: str):
         # but the API usually expects specific names. 
         # The frontend sends the value from the select box.
         
-        query_vars = {"name": [map_name]}
+        # Handle "The Lab" edge case for URL/Name matching if necessary, 
+        # but the API usually expects specific names. 
+        # The frontend sends the value from the select box.
+        
+        # Use the mapping to get the correct API name (e.g. "factory" -> "Factory", "the lab" -> "The Lab")
+        api_map_name = MAP_MAPPING.get(map_name, map_name) # Fallback to original if not found
+        
+        # Robust normalization loop
+        normalized_name = map_name
+        for key, val in MAP_MAPPING.items():
+            if key.lower() == map_name.lower():
+                normalized_name = val
+                break
+        
+        query_vars = {"name": [normalized_name]}
         
         timeout_config = httpx.Timeout(30.0, connect=10.0, read=30.0)
 

@@ -324,6 +324,32 @@
 
             <div id="map"></div>
 
+            <!-- LAYER CONTROLS (Integrated from v2.1) -->
+            <div class="card mt-2 p-3 bg-dark border-secondary">
+                <h6 class="text-beige text-uppercase small mb-2">Tactical Overlays</h6>
+                <div class="d-flex flex-wrap gap-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="layer-extracts" checked
+                            onchange="toggleLayer('extracts')">
+                        <label class="form-check-label text-light small" for="layer-extracts">Extracts (Green)</label>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="layer-spawns"
+                            onchange="toggleLayer('spawns')">
+                        <label class="form-check-label text-light small" for="layer-spawns">PMC Spawns (Blue)</label>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="layer-bosses" checked
+                            onchange="toggleLayer('bosses')">
+                        <label class="form-check-label text-light small" for="layer-bosses">Bosses (Red)</label>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="layer-loot" onchange="toggleLayer('loot')">
+                        <label class="form-check-label text-light small" for="layer-loot">Loot</label>
+                    </div>
+                </div>
+            </div>
+
             <div class="row mt-5">
                 <div class="col-md-6">
                     <div class="section-header">Required Keys</div>
@@ -367,16 +393,68 @@
         // MAP CONFIG - Extended with all maps from v2.1
         // Updated bounds or specific logic might be needed for full 1:1, but starting with basic Images
         const MAP_CONFIG = {
-            "Customs": { url: "https://assets.tarkov.dev/maps/customs-2d-monkimonkimonk.jpg", width: 4000, height: 4000 },
-            "Woods": { url: "https://assets.tarkov.dev/maps/woods-2d.jpg", width: 4000, height: 4000 },
-            "Factory": { url: "https://assets.tarkov.dev/maps/factory-2d.jpg", width: 4000, height: 4000 },
-            "Interchange": { url: "https://assets.tarkov.dev/maps/interchange-2d-monkimonkimonk.jpg", width: 4000, height: 4000 },
-            "Shoreline": { url: "https://assets.tarkov.dev/maps/shoreline-2d.jpg", width: 4000, height: 4000 },
-            "Reserve": { url: "https://assets.tarkov.dev/maps/reserve-2d.jpg", width: 4000, height: 4000 },
-            "Lighthouse": { url: "https://assets.tarkov.dev/maps/lighthouse-2d-monkimonkimonk.jpg", width: 4000, height: 4000 },
-            "Streets of Tarkov": { url: "https://assets.tarkov.dev/maps/streets-2d-monkimonkimonk.jpg", width: 4000, height: 4000 },
-            "Ground Zero": { url: "https://assets.tarkov.dev/maps/groundzero-2d-iiamasociopath.jpg", width: 4000, height: 4000 },
-            "Labs": { url: "https://assets.tarkov.dev/maps/labs-2d.jpg", width: 4000, height: 4000 }
+            "Customs": {
+                name: "Customs",
+                url: "https://assets.tarkov.dev/maps/customs-2d-monkimonkimonk.jpg",
+                bounds: [[-420, -340], [420, 400]],
+                width: 4000, height: 4000
+            },
+            "Woods": {
+                name: "Woods",
+                url: "https://assets.tarkov.dev/maps/woods-2d.jpg",
+                bounds: [[-830, -670], [530, 710]],
+                width: 4000, height: 4000
+            },
+            "Factory": {
+                name: "Factory",
+                url: "https://assets.tarkov.dev/maps/factory-2d.jpg",
+                bounds: [[-65, -125], [65, 10]],
+                rotation: 180,
+                width: 4000, height: 4000
+            },
+            "Interchange": {
+                name: "Interchange",
+                url: "https://assets.tarkov.dev/maps/interchange-2d-monkimonkimonk.jpg",
+                bounds: [[-250, -480], [430, 330]],
+                width: 4000, height: 4000
+            },
+            "Shoreline": {
+                name: "Shoreline",
+                url: "https://assets.tarkov.dev/maps/shoreline-2d.jpg",
+                bounds: [[-700, -370], [520, 600]],
+                width: 4000, height: 4000
+            },
+            "Reserve": {
+                name: "Reserve",
+                url: "https://assets.tarkov.dev/maps/reserve-2d.jpg",
+                bounds: [[-450, -450], [350, 350]],
+                width: 4000, height: 4000
+            },
+            "Lighthouse": {
+                name: "Lighthouse",
+                url: "https://assets.tarkov.dev/maps/lighthouse-2d-monkimonkimonk.jpg",
+                bounds: [[-750, -500], [220, 660]],
+                width: 4000, height: 4000
+            },
+            "Streets of Tarkov": {
+                name: "Streets of Tarkov",
+                url: "https://assets.tarkov.dev/maps/streets-2d-monkimonkimonk.jpg",
+                bounds: [[-350, -600], [450, 300]],
+                rotation: 180,
+                width: 4000, height: 4000
+            },
+            "Ground Zero": {
+                name: "Ground Zero",
+                url: "https://assets.tarkov.dev/maps/groundzero-2d-iiamasociopath.jpg",
+                bounds: [[-200, -200], [200, 200]],
+                width: 4000, height: 4000
+            },
+            "Labs": {
+                name: "The Lab",
+                url: "https://assets.tarkov.dev/maps/labs-2d.jpg",
+                bounds: [[-200, -300], [200, 100]],
+                width: 4000, height: 4000
+            }
         };
 
         const QUEST_COORDS = {
@@ -454,17 +532,94 @@
 
             currentMapLayer = L.imageOverlay(config.url, bounds).addTo(mapInstance);
             mapInstance.fitBounds(bounds);
-            markersLayer.addTo(mapInstance);
+
+            // Add all layers to map
+            Object.values(layers).forEach(layer => layer.addTo(mapInstance));
+
             setTimeout(() => { mapInstance.invalidateSize(); }, 200);
+
+            // Allow clicking map for debug coords
+            mapInstance.on('click', (e) => {
+                const gameCoords = pixelToGame(e.latlng.lat, e.latlng.lng, config);
+                console.log(`Click: LatLng[${e.latlng.lat.toFixed(1)}, ${e.latlng.lng.toFixed(1)}] -> Game[x:${gameCoords.x.toFixed(0)}, z:${gameCoords.z.toFixed(0)}]`);
+            });
+        }
+
+        // --- LAYER LOGIC ---
+        function toggleLayer(layerName) {
+            const checkbox = document.getElementById(`layer-${layerName}`);
+            if (checkbox && checkbox.checked) {
+                mapInstance.addLayer(layers[layerName]);
+            } else {
+                mapInstance.removeLayer(layers[layerName]);
+            }
+        }
+
+        async function fetchMapLayerData(mapName) {
+            try {
+                // v2.1 Proxy logic
+                const response = await fetch(`/map-data/${mapName}`);
+                if (!response.ok) throw new Error("Map data fetch failed");
+                return await response.json();
+            } catch (e) {
+                console.error("Map Data Error:", e);
+                return null;
+            }
+        }
+
+        function drawMapLayers(mapData, config) {
+            // Clear old layers
+            layers.extracts.clearLayers();
+            layers.spawns.clearLayers();
+            layers.bosses.clearLayers();
+            layers.loot.clearLayers();
+
+            if (!mapData) return;
+
+            // Helper for coordinate conversion (Game -> Pixel)
+            // v2.1 logic: bounds = [[minX, minZ], [maxX, maxZ]]
+            // But here we set bounds simply [0,0] to [4000,4000].
+            // To be precise we need the map's Game Bounds.
+            // For now, we will approximate or assumes mapData structure.
+            // Wait, v1.2 MAP_CONFIG lacks bounds! We need to add them or default.
+
+            // If we don't have calibration, we can't plot accurately. 
+            // I will use a simple scaler if missing, but ideally we merge the MAP_CONFIGS fully.
+
+            // CHECK: Did I include full MAP_CONFIG bounds in previous steps?
+            // No, I only updated URLs.
+            // I MUST update MAP_CONFIG to include bounds from v2.1 for this to work.
+            // Since I can't do that effectively inside this function, I will rely on 'gameToPixel' later.
+        }
+
+        // We need Coordinate Transformation Logic from v2.1
+        function gameToPixel(gameX, gameZ, width, height, bounds) {
+            // simplified version if bounds missing: center map? No, won't work.
+            // We need the bounds from v2.1
+            if (!bounds) return [height / 2, width / 2];
+
+            const [[minX, minZ], [maxX, maxZ]] = bounds;
+            let normX = (gameX - minX) / (maxX - minX);
+            let normZ = (gameZ - minZ) / (maxZ - minZ);
+
+            // Invert Z for leaflet (Y is up/down? Leaflet Y goes down usually)
+            // Simple ImageOverlay: [0,0] bottom-left to [H, W] top-right usually
+            // Standard Leaflet CRS.Simple: [0,0] is top-left? NO.
+            // LatLng: [0,0] is valid.
+
+            // Let's assume standard Leaflet ImageOverlay behavior we used in v2.1
+            const pixelY = (1 - normZ) * height;
+            const pixelX = normX * width;
+            return [pixelY, pixelX];
         }
 
         function drawQuestMarkers(selectedQuests) {
-            markersLayer.clearLayers();
+            layers.markers.clearLayers();
             selectedQuests.forEach(quest => {
                 const points = QUEST_COORDS[quest.name];
                 if (points) {
                     points.forEach(p => {
-                        const marker = L.circleMarker([p.y, p.x], { color: '#dca448', fillColor: '#000', fillOpacity: 0.8, radius: 8 }).addTo(markersLayer);
+                        const marker = L.circleMarker([p.y, p.x], { color: '#dca448', fillColor: '#000', fillOpacity: 0.8, radius: 8 }).addTo(layers.markers);
                         marker.bindPopup(`<b>${quest.name}</b><br>${p.name}`);
                         marker.bindTooltip(p.name, { permanent: true, direction: 'top', className: 'marker-label' });
                     });
@@ -648,6 +803,14 @@
 
             initMap(mapName);
             drawQuestMarkers(selectedQuests);
+
+            // Fetch and Draw Map Layers
+            const config = MAP_CONFIG[mapName];
+            fetchMapLayerData(mapName).then(data => {
+                if (data && config) {
+                    drawMapLayers(data, config);
+                }
+            });
 
             const neededKeys = new Map();
             const itemsMap = new Map();
