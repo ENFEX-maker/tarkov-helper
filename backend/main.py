@@ -15,6 +15,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/")
+def health_check():
+    return {"status": "ok", "version": "v2.3-DEBUG", "message": "Backend is reachable"}
+
 TARKOV_API_URL = "https://api.tarkov.dev/graphql"
 CACHE_TTL = 300
 last_fetch_time = 0
