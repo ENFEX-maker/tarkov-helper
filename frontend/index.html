@@ -508,7 +508,8 @@
                 if (!response.ok) throw new Error('Server error: ' + response.status);
                 const data = await response.json();
                 
-                allQuestsGlobal = data.quests || [];
+                // Backend returns array directly, not {quests: [...]}
+                allQuestsGlobal = Array.isArray(data) ? data : (data.quests || []);
                 const savedQuests = getSavedQuests();
                 
                 // Group by trader
