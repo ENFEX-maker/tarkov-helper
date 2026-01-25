@@ -1,1527 +1,233 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tarkov Raid Planner v3.0</title>
+    <title>Tarkov Raid Planner v3.1</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-
     <style>
-        /* ============================================================
-           TARKOV RAID PLANNER - EFT MILITARY THEME v3.0
-           ============================================================ */
-        
-        :root {
-            --bg-black: #0a0a0a;
-            --bg-dark: #0e0e0e;
-            --bg-panel: #121212;
-            --bg-element: #1a1a1a;
-            --bg-hover: #252525;
-            --border-dark: #2a2a2a;
-            --border-gold: #9e8f6b;
-            --text-main: #d0d0d0;
-            --text-sub: #888;
-            --text-beige: #d2c4a6;
-            --eft-gold: #9e8f6b;
-            --eft-gold-bright: #c4b896;
-            --eft-red: #8c3b3b;
-            --eft-green: #4a7a4a;
-            --eft-blue: #4a6a8a;
-            --tier-s: #ffd700;
-            --tier-a: #c0c0c0;
-            --tier-b: #cd7f32;
-            --tier-c: #5a9e5a;
-            --tier-d: #5a7a9e;
-            --tier-f: #9e5a5a;
-        }
-
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            background-color: var(--bg-black);
-            color: var(--text-main);
-            font-family: 'Rajdhani', 'Segoe UI', sans-serif;
-            font-size: 0.95rem;
-            line-height: 1.5;
-            min-height: 100vh;
-        }
-
-        /* Typography */
-        h1, h2, h3, h4, h5 {
-            color: var(--text-beige);
-            font-family: 'Rajdhani', sans-serif;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        .text-beige { color: var(--text-beige) !important; }
-        .text-sub { color: var(--text-sub) !important; }
-        .text-gold { color: var(--eft-gold) !important; }
-
-        /* Container */
-        .container {
-            max-width: 1500px;
-            margin-top: 20px;
-        }
-
-        /* ============================================================
-           NAVIGATION TABS
-           ============================================================ */
-        
-        .nav-tabs-tarkov {
-            border-bottom: 2px solid var(--border-gold);
-            margin-bottom: 30px;
-            display: flex;
-            gap: 0;
-        }
-
-        .nav-tab {
-            background: var(--bg-panel);
-            border: 1px solid var(--border-dark);
-            border-bottom: none;
-            color: var(--text-sub);
-            padding: 15px 40px;
-            font-family: 'Rajdhani', sans-serif;
-            font-size: 1.1rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            position: relative;
-            top: 2px;
-        }
-
-        .nav-tab:hover {
-            background: var(--bg-element);
-            color: var(--text-beige);
-        }
-
-        .nav-tab.active {
-            background: var(--bg-dark);
-            color: var(--text-beige);
-            border-color: var(--border-gold);
-            border-bottom: 2px solid var(--bg-dark);
-        }
-
-        .nav-tab .tab-icon {
-            margin-right: 10px;
-            font-size: 1.2em;
-        }
-
-        /* Tab Content */
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-            animation: fadeIn 0.3s ease;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* ============================================================
-           CARDS & PANELS
-           ============================================================ */
-        
-        .card {
-            background-color: var(--bg-panel);
-            border: 1px solid var(--border-dark);
-            border-radius: 0;
-        }
-
-        .card-header-tarkov {
-            background: linear-gradient(90deg, var(--bg-element) 0%, transparent 100%);
-            border-bottom: 1px solid var(--border-gold);
-            padding: 12px 20px;
-        }
-
-        /* ============================================================
-           FORM ELEMENTS
-           ============================================================ */
-        
-        .form-control, .form-select {
-            background-color: var(--bg-black);
-            color: var(--text-beige);
-            border: 1px solid var(--eft-gold);
-            border-radius: 0;
-            padding: 10px 15px;
-            font-family: 'Share Tech Mono', monospace;
-        }
-
-        .form-control:focus, .form-select:focus {
-            background-color: #050505;
-            color: #fff;
-            box-shadow: 0 0 0 2px rgba(158, 143, 107, 0.3);
-            border-color: var(--eft-gold-bright);
-        }
-
-        .form-control::placeholder {
-            color: #555;
-        }
-
-        /* Buttons */
-        .btn-tarkov {
-            background: linear-gradient(180deg, var(--bg-element) 0%, var(--bg-panel) 100%);
-            color: var(--text-beige);
-            border: 1px solid var(--eft-gold);
-            border-radius: 0;
-            padding: 10px 25px;
-            font-family: 'Rajdhani', sans-serif;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            transition: all 0.2s ease;
-        }
-
-        .btn-tarkov:hover {
-            background: var(--eft-gold);
-            color: #000;
-            transform: translateY(-1px);
-        }
-
-        .btn-tarkov:active {
-            transform: translateY(0);
-        }
-
-        .btn-reset {
-            color: var(--eft-red);
-            border-color: var(--eft-red);
-            background: transparent;
-        }
-
-        .btn-reset:hover {
-            background: var(--eft-red);
-            color: #fff;
-        }
-
-        /* ============================================================
-           QUEST LIST
-           ============================================================ */
-        
-        .quest-item {
-            background-color: var(--bg-element);
-            border: 1px solid var(--border-dark);
-            border-left: 3px solid transparent;
-            margin-bottom: 4px;
-            padding: 12px 15px;
-            cursor: pointer;
-            transition: all 0.15s ease;
-        }
-
-        .quest-item:hover {
-            background-color: var(--bg-hover);
-            border-left-color: var(--eft-gold);
-        }
-
-        .quest-item.selected {
-            background-color: #1a1815;
-            border-left-color: var(--text-beige);
-        }
-
-        .form-check-input {
-            background-color: var(--bg-black);
-            border: 2px solid var(--eft-gold);
-            border-radius: 0;
-            width: 18px;
-            height: 18px;
-        }
-
-        .form-check-input:checked {
-            background-color: var(--text-beige);
-            border-color: var(--text-beige);
-        }
-
-        .form-check-input:focus {
-            box-shadow: none;
-        }
-
-        /* Accordion */
-        .accordion-item {
-            background: transparent;
-            border: none;
-            margin-bottom: 5px;
-        }
-
-        .accordion-button {
-            background-color: var(--bg-panel);
-            color: var(--text-beige);
-            border: 1px solid var(--border-dark);
-            border-radius: 0 !important;
-            font-family: 'Rajdhani', sans-serif;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            padding: 12px 20px;
-        }
-
-        .accordion-button:not(.collapsed) {
-            background-color: var(--bg-element);
-            color: var(--text-beige);
-            box-shadow: none;
-            border-bottom-color: var(--eft-gold);
-        }
-
-        .accordion-button::after {
-            filter: invert(0.7) sepia(1) saturate(0.5);
-        }
-
-        .accordion-body {
-            background-color: var(--bg-dark);
-            border: 1px solid var(--border-dark);
-            border-top: none;
-            padding: 10px;
-        }
-
-        /* ============================================================
-           MAP & RESULTS
-           ============================================================ */
-        
-        #planning-result {
-            display: none;
-            background: var(--bg-panel);
-            border: 1px solid var(--eft-gold);
-            padding: 30px;
-            margin-top: 30px;
-        }
-
-        #map {
-            width: 100%;
-            height: 650px;
-            background-color: #050505;
-            border: 1px solid var(--eft-gold);
-        }
-
-        .leaflet-container {
-            background: #050505;
-        }
-
-        .marker-label {
-            background: rgba(0, 0, 0, 0.9);
-            border: 1px solid var(--eft-gold);
-            color: var(--eft-gold);
-            padding: 3px 8px;
-            border-radius: 0;
-            font-family: 'Share Tech Mono', monospace;
-            font-size: 11px;
-            white-space: nowrap;
-        }
-
-        .layer-controls {
-            background: var(--bg-dark);
-            border: 1px solid var(--border-dark);
-            padding: 15px 20px;
-            margin-top: 10px;
-        }
-
-        .form-switch .form-check-input {
-            width: 40px;
-            height: 20px;
-            border-radius: 0;
-        }
-
-        /* Section Headers */
-        .section-header {
-            border-bottom: 1px solid var(--border-dark);
-            border-left: 3px solid var(--eft-gold);
-            padding: 8px 15px;
-            margin-bottom: 15px;
-            font-family: 'Rajdhani', sans-serif;
-            font-size: 1rem;
-            font-weight: 600;
-            color: var(--text-beige);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        /* Item Boxes */
-        .item-box {
-            background: var(--bg-element);
-            border: 1px solid var(--border-dark);
-            padding: 8px 14px;
-            margin: 4px;
-            display: inline-flex;
-            align-items: center;
-            font-family: 'Share Tech Mono', monospace;
-            font-size: 0.85rem;
-            color: var(--text-main);
-        }
-
-        .item-box img {
-            width: 32px;
-            height: 32px;
-            margin-right: 10px;
-            object-fit: contain;
-        }
-
-        .status-keep {
-            border-color: var(--eft-green);
-            background: rgba(74, 122, 74, 0.15);
-        }
-
-        .status-sell {
-            border-color: var(--eft-red);
-            background: rgba(140, 59, 59, 0.15);
-        }
-
-        /* ============================================================
-           AMMO MANAGER
-           ============================================================ */
-        
-        .ammo-controls {
-            background: var(--bg-panel);
-            border: 1px solid var(--border-dark);
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-
-        .tier-badge {
-            display: inline-block;
-            width: 28px;
-            height: 28px;
-            line-height: 28px;
-            text-align: center;
-            font-family: 'Rajdhani', sans-serif;
-            font-weight: 700;
-            font-size: 0.9rem;
-            border-radius: 0;
-            margin-right: 10px;
-        }
-
-        .tier-S { background: var(--tier-s); color: #000; }
-        .tier-A { background: var(--tier-a); color: #000; }
-        .tier-B { background: var(--tier-b); color: #000; }
-        .tier-C { background: var(--tier-c); color: #fff; }
-        .tier-D { background: var(--tier-d); color: #fff; }
-        .tier-F { background: var(--tier-f); color: #fff; }
-
-        .ammo-card {
-            background: var(--bg-element);
-            border: 1px solid var(--border-dark);
-            padding: 10px 15px;
-            margin-bottom: 6px;
-            cursor: pointer;
-            transition: all 0.15s ease;
-            display: flex;
-            align-items: center;
-        }
-
-        .ammo-card:hover {
-            background: var(--bg-hover);
-            border-color: var(--eft-gold);
-        }
-
-        .ammo-card.owned {
-            background: rgba(158, 143, 107, 0.1);
-            border-left: 3px solid var(--eft-gold);
-        }
-
-        .ammo-card img {
-            width: 40px;
-            height: 40px;
-            object-fit: contain;
-            margin-right: 12px;
-        }
-
-        .ammo-stats {
-            display: flex;
-            gap: 20px;
-            font-family: 'Share Tech Mono', monospace;
-            font-size: 0.8rem;
-            color: var(--text-sub);
-        }
-
-        .ammo-stats span {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .stat-dmg { color: #e07070; }
-        .stat-pen { color: #70a0e0; }
-        .stat-price { color: #e0c070; }
-
-        .caliber-group {
-            margin-bottom: 25px;
-        }
-
-        .caliber-header {
-            background: linear-gradient(90deg, var(--bg-panel) 0%, transparent 100%);
-            border-left: 3px solid var(--eft-gold);
-            padding: 10px 15px;
-            margin-bottom: 10px;
-            font-family: 'Rajdhani', sans-serif;
-            font-weight: 600;
-            font-size: 1rem;
-            color: var(--text-beige);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        /* Results Panel */
-        .results-panel {
-            background: var(--bg-panel);
-            border: 1px solid var(--border-dark);
-            padding: 20px;
-            margin-top: 20px;
-        }
-
-        .results-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-        }
-
-        .result-section h5 {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        .result-count {
-            background: var(--bg-element);
-            padding: 3px 10px;
-            font-family: 'Share Tech Mono', monospace;
-            font-size: 0.85rem;
-        }
-
-        /* Range Slider */
-        .tier-slider-container {
-            padding: 10px 0;
-        }
-
-        .tier-slider {
-            -webkit-appearance: none;
-            width: 100%;
-            height: 8px;
-            background: linear-gradient(90deg, 
-                var(--tier-f) 0%, 
-                var(--tier-d) 20%, 
-                var(--tier-c) 40%, 
-                var(--tier-b) 60%, 
-                var(--tier-a) 80%, 
-                var(--tier-s) 100%
-            );
-            outline: none;
-            border-radius: 0;
-        }
-
-        .tier-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 20px;
-            height: 30px;
-            background: var(--text-beige);
-            cursor: pointer;
-            border: 2px solid #000;
-        }
-
-        .tier-slider::-moz-range-thumb {
-            width: 20px;
-            height: 30px;
-            background: var(--text-beige);
-            cursor: pointer;
-            border: 2px solid #000;
-            border-radius: 0;
-        }
-
-        .tier-labels {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 8px;
-            font-family: 'Rajdhani', sans-serif;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
-        /* Loading & Errors */
-        .loading-overlay {
-            text-align: center;
-            padding: 60px 20px;
-        }
-
-        .spinner-tarkov {
-            width: 50px;
-            height: 50px;
-            border: 3px solid var(--border-dark);
-            border-top-color: var(--eft-gold);
-            border-radius: 0;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .error-box {
-            background: rgba(140, 59, 59, 0.2);
-            border: 1px solid var(--eft-red);
-            color: #e0a0a0;
-            padding: 20px;
-            border-radius: 0;
-        }
-
-        /* Badges */
-        .badge-tarkov {
-            background-color: var(--bg-element);
-            color: var(--text-sub);
-            border: 1px solid var(--border-dark);
-            border-radius: 0;
-            padding: 4px 10px;
-            font-family: 'Share Tech Mono', monospace;
-            font-size: 0.75rem;
-        }
-
-        .badge-active {
-            background-color: var(--text-beige);
-            color: #000;
-            font-weight: 600;
-        }
-
-        /* Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: var(--bg-dark);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--border-dark);
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--eft-gold);
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .nav-tab {
-                padding: 12px 20px;
-                font-size: 0.9rem;
-            }
-            
-            .results-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            #map {
-                height: 400px;
-            }
-        }
+        :root { --bg-black: #0a0a0a; --bg-dark: #0e0e0e; --bg-panel: #121212; --bg-element: #1a1a1a; --bg-hover: #252525; --border-dark: #2a2a2a; --border-gold: #9e8f6b; --text-main: #d0d0d0; --text-sub: #888; --text-beige: #d2c4a6; --eft-gold: #9e8f6b; --eft-gold-bright: #c4b896; --eft-red: #8c3b3b; --eft-green: #4a7a4a; --eft-blue: #4a6a8a; --tier-s: #ffd700; --tier-a: #c0c0c0; --tier-b: #cd7f32; --tier-c: #5a9e5a; --tier-d: #5a7a9e; --tier-f: #9e5a5a; }
+        * { box-sizing: border-box; }
+        body { background-color: var(--bg-black); color: var(--text-main); font-family: 'Rajdhani', 'Segoe UI', sans-serif; font-size: 0.95rem; line-height: 1.5; min-height: 100vh; }
+        h1, h2, h3, h4, h5 { color: var(--text-beige); font-family: 'Rajdhani', sans-serif; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; }
+        .text-beige { color: var(--text-beige) !important; } .text-sub { color: var(--text-sub) !important; } .text-gold { color: var(--eft-gold) !important; }
+        .container { max-width: 1500px; margin-top: 20px; }
+        .nav-tabs-tarkov { border-bottom: 2px solid var(--border-gold); margin-bottom: 30px; display: flex; gap: 0; }
+        .nav-tab { background: var(--bg-panel); border: 1px solid var(--border-dark); border-bottom: none; color: var(--text-sub); padding: 15px 40px; font-family: 'Rajdhani', sans-serif; font-size: 1.1rem; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; cursor: pointer; transition: all 0.2s ease; position: relative; top: 2px; }
+        .nav-tab:hover { background: var(--bg-element); color: var(--text-beige); }
+        .nav-tab.active { background: var(--bg-dark); color: var(--text-beige); border-color: var(--border-gold); border-bottom: 2px solid var(--bg-dark); }
+        .nav-tab .tab-icon { margin-right: 10px; font-size: 1.2em; }
+        .tab-content { display: none; } .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .card { background-color: var(--bg-panel); border: 1px solid var(--border-dark); border-radius: 0; }
+        .form-control, .form-select { background-color: var(--bg-black); color: var(--text-beige); border: 1px solid var(--eft-gold); border-radius: 0; padding: 10px 15px; font-family: 'Share Tech Mono', monospace; }
+        .form-control:focus, .form-select:focus { background-color: #050505; color: #fff; box-shadow: 0 0 0 2px rgba(158, 143, 107, 0.3); border-color: var(--eft-gold-bright); }
+        .form-control::placeholder { color: #555; }
+        .btn-tarkov { background: linear-gradient(180deg, var(--bg-element) 0%, var(--bg-panel) 100%); color: var(--text-beige); border: 1px solid var(--eft-gold); border-radius: 0; padding: 10px 25px; font-family: 'Rajdhani', sans-serif; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; transition: all 0.2s ease; }
+        .btn-tarkov:hover { background: var(--eft-gold); color: #000; transform: translateY(-1px); } .btn-tarkov:active { transform: translateY(0); }
+        .btn-reset { color: var(--eft-red); border-color: var(--eft-red); background: transparent; } .btn-reset:hover { background: var(--eft-red); color: #fff; }
+        .quest-item { background-color: var(--bg-element); border: 1px solid var(--border-dark); border-left: 3px solid transparent; margin-bottom: 4px; padding: 12px 15px; cursor: pointer; transition: all 0.15s ease; }
+        .quest-item:hover { background-color: var(--bg-hover); border-left-color: var(--eft-gold); }
+        .quest-item.selected { background-color: #1a1815; border-left-color: var(--text-beige); }
+        .form-check-input { background-color: var(--bg-black); border: 2px solid var(--eft-gold); border-radius: 0; width: 18px; height: 18px; }
+        .form-check-input:checked { background-color: var(--text-beige); border-color: var(--text-beige); } .form-check-input:focus { box-shadow: none; }
+        .accordion-item { background: transparent; border: none; margin-bottom: 5px; }
+        .accordion-button { background-color: var(--bg-panel); color: var(--text-beige); border: 1px solid var(--border-dark); border-radius: 0 !important; font-family: 'Rajdhani', sans-serif; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; padding: 12px 20px; }
+        .accordion-button:not(.collapsed) { background-color: var(--bg-element); color: var(--text-beige); box-shadow: none; border-bottom-color: var(--eft-gold); }
+        .accordion-button::after { filter: invert(0.7) sepia(1) saturate(0.5); }
+        .accordion-body { background-color: var(--bg-dark); border: 1px solid var(--border-dark); border-top: none; padding: 10px; }
+        #planning-result { display: none; background: var(--bg-panel); border: 1px solid var(--eft-gold); padding: 30px; margin-top: 30px; }
+        #map { width: 100%; height: 650px; background-color: #050505; border: 1px solid var(--eft-gold); }
+        .leaflet-container { background: #050505; }
+        .marker-label { background: rgba(0, 0, 0, 0.9); border: 1px solid var(--eft-gold); color: var(--eft-gold); padding: 3px 8px; border-radius: 0; font-family: 'Share Tech Mono', monospace; font-size: 11px; white-space: nowrap; }
+        .layer-controls { background: var(--bg-dark); border: 1px solid var(--border-dark); padding: 15px 20px; margin-top: 10px; }
+        .form-switch .form-check-input { width: 40px; height: 20px; border-radius: 0; }
+        .section-header { border-bottom: 1px solid var(--border-dark); border-left: 3px solid var(--eft-gold); padding: 8px 15px; margin-bottom: 15px; font-family: 'Rajdhani', sans-serif; font-size: 1rem; font-weight: 600; color: var(--text-beige); text-transform: uppercase; letter-spacing: 1px; }
+        .item-box { background: var(--bg-element); border: 1px solid var(--border-dark); padding: 8px 14px; margin: 4px; display: inline-flex; align-items: center; font-family: 'Share Tech Mono', monospace; font-size: 0.85rem; color: var(--text-main); }
+        .item-box img { width: 32px; height: 32px; margin-right: 10px; object-fit: contain; }
+        .status-provided { border-color: var(--eft-green); background: rgba(74, 122, 74, 0.2); }
+        .status-acquire { border-color: #9e6a4a; background: rgba(158, 106, 74, 0.15); }
+        .item-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; padding: 2px 6px; margin-left: 8px; font-weight: 600; }
+        .label-given { background: var(--eft-green); color: #fff; } .label-find { background: #9e6a4a; color: #fff; }
+        .unlock-card { background: var(--bg-element); border: 1px solid var(--border-dark); padding: 10px 12px; margin-bottom: 8px; }
+        .unlock-card:hover { border-color: var(--eft-gold); }
+        .unlock-link { color: var(--text-beige); text-decoration: none; font-weight: 600; transition: color 0.15s; }
+        .unlock-link:hover { color: #fff; text-decoration: underline; }
+        .ammo-controls { background: var(--bg-panel); border: 1px solid var(--border-dark); padding: 20px; margin-bottom: 20px; }
+        .tier-badge { display: inline-block; width: 28px; height: 28px; line-height: 28px; text-align: center; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.9rem; border-radius: 0; margin-right: 10px; }
+        .tier-S { background: var(--tier-s); color: #000; } .tier-A { background: var(--tier-a); color: #000; } .tier-B { background: var(--tier-b); color: #000; }
+        .tier-C { background: var(--tier-c); color: #fff; } .tier-D { background: var(--tier-d); color: #fff; } .tier-F { background: var(--tier-f); color: #fff; }
+        .ammo-card { background: var(--bg-element); border: 1px solid var(--border-dark); padding: 10px 15px; margin-bottom: 6px; cursor: pointer; transition: all 0.15s ease; display: flex; align-items: center; }
+        .ammo-card:hover { background: var(--bg-hover); border-color: var(--eft-gold); }
+        .ammo-card.owned { background: rgba(158, 143, 107, 0.1); border-left: 3px solid var(--eft-gold); }
+        .ammo-card img { width: 40px; height: 40px; object-fit: contain; margin-right: 12px; }
+        .ammo-stats { display: flex; gap: 20px; font-family: 'Share Tech Mono', monospace; font-size: 0.8rem; color: var(--text-sub); }
+        .ammo-stats span { display: flex; align-items: center; gap: 4px; }
+        .stat-dmg { color: #e07070; } .stat-pen { color: #70a0e0; } .stat-price { color: #e0c070; }
+        .caliber-group { margin-bottom: 25px; }
+        .caliber-header { background: linear-gradient(90deg, var(--bg-panel) 0%, transparent 100%); border-left: 3px solid var(--eft-gold); padding: 10px 15px; margin-bottom: 10px; font-family: 'Rajdhani', sans-serif; font-weight: 600; font-size: 1rem; color: var(--text-beige); text-transform: uppercase; letter-spacing: 1px; }
+        .results-panel { background: var(--bg-panel); border: 1px solid var(--border-dark); padding: 20px; margin-top: 20px; }
+        .result-count { background: var(--bg-element); padding: 3px 10px; font-family: 'Share Tech Mono', monospace; font-size: 0.85rem; }
+        .tier-slider-container { padding: 10px 0; }
+        .tier-slider { -webkit-appearance: none; width: 100%; height: 8px; background: linear-gradient(90deg, var(--tier-f) 0%, var(--tier-d) 20%, var(--tier-c) 40%, var(--tier-b) 60%, var(--tier-a) 80%, var(--tier-s) 100%); outline: none; border-radius: 0; }
+        .tier-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 30px; background: var(--text-beige); cursor: pointer; border: 2px solid #000; }
+        .tier-slider::-moz-range-thumb { width: 20px; height: 30px; background: var(--text-beige); cursor: pointer; border: 2px solid #000; border-radius: 0; }
+        .tier-labels { display: flex; justify-content: space-between; margin-top: 8px; font-family: 'Rajdhani', sans-serif; font-weight: 600; font-size: 0.9rem; }
+        .loading-overlay { text-align: center; padding: 60px 20px; }
+        .spinner-tarkov { width: 50px; height: 50px; border: 3px solid var(--border-dark); border-top-color: var(--eft-gold); border-radius: 0; animation: spin 1s linear infinite; margin: 0 auto; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .error-box { background: rgba(140, 59, 59, 0.2); border: 1px solid var(--eft-red); color: #e0a0a0; padding: 20px; border-radius: 0; }
+        .badge-tarkov { background-color: var(--bg-element); color: var(--text-sub); border: 1px solid var(--border-dark); border-radius: 0; padding: 4px 10px; font-family: 'Share Tech Mono', monospace; font-size: 0.75rem; }
+        .badge-active { background-color: var(--text-beige); color: #000; font-weight: 600; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; } ::-webkit-scrollbar-track { background: var(--bg-dark); } ::-webkit-scrollbar-thumb { background: var(--border-dark); } ::-webkit-scrollbar-thumb:hover { background: var(--eft-gold); }
+        @media (max-width: 768px) { .nav-tab { padding: 12px 20px; font-size: 0.9rem; } #map { height: 400px; } }
     </style>
 </head>
-
 <body>
     <div class="container pb-5">
-        <!-- Header -->
         <div class="d-flex justify-content-between align-items-center mb-3 pb-3" style="border-bottom: 1px solid var(--border-dark);">
-            <div>
-                <h1 class="mb-0" style="font-size: 1.8rem;">
-                    TARKOV TACTICAL SUITE
-                    <span style="font-size: 0.5em; color: var(--text-sub); vertical-align: middle;">v3.0</span>
-                </h1>
-            </div>
-            <div id="connection-status" class="badge-tarkov">
-                <span class="status-dot" style="display:inline-block;width:8px;height:8px;background:#555;margin-right:6px;"></span>
-                Checking...
-            </div>
+            <div><h1 class="mb-0" style="font-size: 1.8rem;">TARKOV TACTICAL SUITE <span style="font-size: 0.5em; color: var(--text-sub); vertical-align: middle;">v3.1</span></h1></div>
+            <div id="connection-status" class="badge-tarkov"><span class="status-dot" style="display:inline-block;width:8px;height:8px;background:#555;margin-right:6px;"></span>Checking...</div>
         </div>
-
-        <!-- Navigation Tabs -->
         <div class="nav-tabs-tarkov">
-            <button class="nav-tab active" onclick="switchTab('planner')">
-                <span class="tab-icon">🗺️</span>Raid Planner
-            </button>
-            <button class="nav-tab" onclick="switchTab('ammo')">
-                <span class="tab-icon">🔫</span>Ammo Manager
-            </button>
+            <button class="nav-tab active" onclick="switchTab('planner')"><span class="tab-icon">🗺️</span>Raid Planner</button>
+            <button class="nav-tab" onclick="switchTab('ammo')"><span class="tab-icon">🔫</span>Ammo Manager</button>
         </div>
-
-        <!-- ============================================================
-             TAB 1: RAID PLANNER
-             ============================================================ -->
         <div id="tab-planner" class="tab-content active">
-            <!-- Map Selection -->
             <div class="card p-4 mb-4">
                 <div class="row g-3 align-items-end">
                     <div class="col-md-5">
                         <label class="text-beige small mb-2 fw-bold text-uppercase">Operational Area</label>
                         <select id="mapSelect" class="form-select" onchange="applyFilters()">
-                            <option value="Customs">Customs</option>
-                            <option value="Factory">Factory</option>
-                            <option value="Woods">Woods</option>
-                            <option value="Interchange">Interchange</option>
-                            <option value="Shoreline">Shoreline</option>
-                            <option value="Reserve">Reserve</option>
-                            <option value="Lighthouse">Lighthouse</option>
-                            <option value="Streets of Tarkov">Streets of Tarkov</option>
-                            <option value="Ground Zero">Ground Zero</option>
-                            <option value="Labs">The Lab</option>
-                            <option value="Any">Global / Any</option>
+                            <option value="Customs">Customs</option><option value="Factory">Factory</option><option value="Woods">Woods</option>
+                            <option value="Interchange">Interchange</option><option value="Shoreline">Shoreline</option><option value="Reserve">Reserve</option>
+                            <option value="Lighthouse">Lighthouse</option><option value="Streets of Tarkov">Streets of Tarkov</option>
+                            <option value="Ground Zero">Ground Zero</option><option value="Labs">The Lab</option><option value="Any">Global / Any</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
-                        <button onclick="loadAllQuests()" id="btn-load" class="btn btn-tarkov w-100">
-                            Load Operations
-                        </button>
-                    </div>
+                    <div class="col-md-3"><button onclick="loadAllQuests()" id="btn-load" class="btn btn-tarkov w-100">Load Operations</button></div>
                 </div>
             </div>
-
-            <!-- Loading -->
-            <div id="loading" class="loading-overlay d-none">
-                <div class="spinner-tarkov mx-auto mb-3"></div>
-                <p class="text-beige">Retrieving Global Intelligence...</p>
-            </div>
-
-            <!-- Error -->
+            <div id="loading" class="loading-overlay d-none"><div class="spinner-tarkov mb-3"></div><p class="text-beige">Retrieving Global Intelligence...</p></div>
             <div id="error-box" class="error-box d-none"></div>
-
-            <!-- Quest Selection -->
             <div id="quest-selection-area" class="d-none">
-                <div class="mb-3">
-                    <input type="text" id="questSearch" class="form-control" 
-                           placeholder="Search operations (e.g. 'Gunsmith', 'Shooter Born')...">
-                </div>
-
+                <div class="mb-3"><input type="text" id="questSearch" class="form-control" placeholder="Search operations (e.g. 'Gunsmith', 'Shooter Born')..."></div>
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h5 class="m-0">Select Active Tasks</h5>
-                    <div>
-                        <button onclick="clearSelection()" class="btn btn-tarkov btn-reset btn-sm me-2">Reset</button>
-                        <button onclick="planRaid()" id="btn-initialize" class="btn btn-tarkov px-4">Initialize Plan</button>
-                    </div>
+                    <div><button onclick="clearSelection()" class="btn btn-tarkov btn-reset btn-sm me-2">Reset</button><button onclick="planRaid()" id="btn-initialize" class="btn btn-tarkov px-4">Initialize Plan</button></div>
                 </div>
-
                 <div id="quest-list" class="accordion"></div>
             </div>
-
-            <!-- Planning Results -->
             <div id="planning-result">
                 <h4 class="mb-4">Tactical Overview</h4>
-                
                 <div id="map"></div>
-
-                <!-- Layer Controls -->
                 <div class="layer-controls">
                     <h6 class="text-beige text-uppercase small mb-3">Tactical Overlays</h6>
                     <div class="d-flex flex-wrap gap-4">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" id="layer-extracts" checked onchange="toggleLayer('extracts')">
-                            <label class="form-check-label text-light small" for="layer-extracts">Extracts</label>
-                        </div>
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" id="layer-spawns" onchange="toggleLayer('spawns')">
-                            <label class="form-check-label text-light small" for="layer-spawns">PMC Spawns</label>
-                        </div>
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" id="layer-bosses" checked onchange="toggleLayer('bosses')">
-                            <label class="form-check-label text-light small" for="layer-bosses">Bosses</label>
-                        </div>
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" id="layer-loot" onchange="toggleLayer('loot')">
-                            <label class="form-check-label text-light small" for="layer-loot">Loot</label>
-                        </div>
+                        <div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="layer-extracts" checked onchange="toggleLayer('extracts')"><label class="form-check-label text-light small" for="layer-extracts">Extracts</label></div>
+                        <div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="layer-spawns" onchange="toggleLayer('spawns')"><label class="form-check-label text-light small" for="layer-spawns">PMC Spawns</label></div>
+                        <div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="layer-bosses" checked onchange="toggleLayer('bosses')"><label class="form-check-label text-light small" for="layer-bosses">Bosses</label></div>
+                        <div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="layer-loot" onchange="toggleLayer('loot')"><label class="form-check-label text-light small" for="layer-loot">Loot</label></div>
                     </div>
                 </div>
-
-                <!-- Requirements -->
                 <div class="row mt-4">
-                    <div class="col-md-6">
-                        <div class="section-header">Required Keys</div>
-                        <div id="required-keys" class="d-flex flex-wrap"></div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="section-header">Required Items</div>
-                        <div id="required-items" class="d-flex flex-wrap"></div>
-                    </div>
+                    <div class="col-md-6"><div class="section-header">Required Keys</div><div id="required-keys" class="d-flex flex-wrap"></div></div>
+                    <div class="col-md-6"><div class="section-header">Required Items</div><div id="required-items" class="d-flex flex-wrap"></div></div>
                 </div>
-
-                <!-- Objectives & Unlocks -->
                 <div class="row mt-4">
-                    <div class="col-md-7">
-                        <div class="section-header">Operational Objectives</div>
-                        <ul id="mission-steps" class="list-group list-group-flush" style="border-left: 2px solid var(--border-dark); padding-left: 15px;"></ul>
-                    </div>
-                    <div class="col-md-5">
-                        <div class="section-header" style="border-left-color: #7070e0;">Intel: Unlocks</div>
-                        <div id="progression-list"></div>
-                    </div>
+                    <div class="col-md-7"><div class="section-header">Operational Objectives</div><ul id="mission-steps" class="list-group list-group-flush" style="border-left: 2px solid var(--border-dark); padding-left: 15px;"></ul></div>
+                    <div class="col-md-5"><div class="section-header" style="border-left-color: #7070e0;">Intel: Unlocks</div><div id="progression-list"></div></div>
                 </div>
             </div>
         </div>
-
-        <!-- ============================================================
-             TAB 2: AMMO MANAGER
-             ============================================================ -->
         <div id="tab-ammo" class="tab-content">
-            <!-- Controls -->
             <div class="ammo-controls">
                 <div class="row g-4 align-items-end">
-                    <div class="col-md-4">
-                        <label class="text-beige small mb-2 fw-bold text-uppercase">Filter by Caliber</label>
-                        <select id="caliberFilter" class="form-select" onchange="filterAmmoByCaliber()">
-                            <option value="ALL">All Calibers</option>
-                        </select>
-                    </div>
+                    <div class="col-md-4"><label class="text-beige small mb-2 fw-bold text-uppercase">Filter by Caliber</label><select id="caliberFilter" class="form-select" onchange="filterAmmoByCaliber()"><option value="ALL">All Calibers</option></select></div>
                     <div class="col-md-5">
                         <label class="text-beige small mb-2 fw-bold text-uppercase">Minimum Keep Tier</label>
-                        <div class="tier-slider-container">
-                            <input type="range" class="tier-slider" id="tierSlider" min="0" max="5" value="3" oninput="updateTierThreshold()">
-                            <div class="tier-labels">
-                                <span style="color: var(--tier-f);">F</span>
-                                <span style="color: var(--tier-d);">D</span>
-                                <span style="color: var(--tier-c);">C</span>
-                                <span style="color: var(--tier-b);">B</span>
-                                <span style="color: var(--tier-a);">A</span>
-                                <span style="color: var(--tier-s);">S</span>
-                            </div>
-                        </div>
-                        <div class="text-center mt-2">
-                            <span class="badge-tarkov badge-active" id="tierDisplay">Keep B-Tier+</span>
-                        </div>
+                        <div class="tier-slider-container"><input type="range" class="tier-slider" id="tierSlider" min="0" max="5" value="3" oninput="updateTierThreshold()"><div class="tier-labels"><span style="color: var(--tier-f);">F</span><span style="color: var(--tier-d);">D</span><span style="color: var(--tier-c);">C</span><span style="color: var(--tier-b);">B</span><span style="color: var(--tier-a);">A</span><span style="color: var(--tier-s);">S</span></div></div>
+                        <div class="text-center mt-2"><span class="badge-tarkov badge-active" id="tierDisplay">Keep B-Tier+</span></div>
                     </div>
-                    <div class="col-md-3">
-                        <button onclick="loadAmmoData()" id="btn-load-ammo" class="btn btn-tarkov w-100">
-                            Load Ammo Data
-                        </button>
-                    </div>
+                    <div class="col-md-3"><button onclick="loadAmmoData()" id="btn-load-ammo" class="btn btn-tarkov w-100">Load Ammo Data</button></div>
                 </div>
             </div>
-
-            <!-- Loading -->
-            <div id="ammo-loading" class="loading-overlay d-none">
-                <div class="spinner-tarkov mx-auto mb-3"></div>
-                <p class="text-beige">Loading Ammunition Database...</p>
-            </div>
-
-            <!-- Error -->
+            <div id="ammo-loading" class="loading-overlay d-none"><div class="spinner-tarkov mb-3"></div><p class="text-beige">Loading Ammunition Database...</p></div>
             <div id="ammo-error" class="error-box d-none"></div>
-
-            <!-- Ammo Content -->
             <div id="ammo-content" class="d-none">
                 <div class="row">
-                    <!-- Ammo List -->
                     <div class="col-lg-7">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="m-0">Ammunition Database</h5>
-                            <span class="badge-tarkov" id="ammo-count">0 types</span>
-                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-3"><h5 class="m-0">Ammunition Database</h5><span class="badge-tarkov" id="ammo-count">0 types</span></div>
                         <p class="text-sub small mb-3">Click ammo to mark as owned. Owned ammo will be analyzed below.</p>
                         <div id="ammo-list" style="max-height: 600px; overflow-y: auto;"></div>
                     </div>
-
-                    <!-- Results -->
                     <div class="col-lg-5">
                         <div class="results-panel">
                             <h5 class="mb-4">Stash Analysis</h5>
-                            
-                            <div class="mb-4">
-                                <div class="section-header" style="border-left-color: var(--eft-green);">
-                                    ✅ KEEP <span class="result-count ms-2" id="keep-count">0</span>
-                                </div>
-                                <div id="keep-list" style="max-height: 250px; overflow-y: auto;"></div>
-                            </div>
-
-                            <div>
-                                <div class="section-header" style="border-left-color: var(--eft-red);">
-                                    💰 SELL <span class="result-count ms-2" id="sell-count">0</span>
-                                </div>
-                                <div id="sell-list" style="max-height: 250px; overflow-y: auto;"></div>
-                            </div>
-
-                            <div class="mt-4 pt-3" style="border-top: 1px solid var(--border-dark);">
-                                <div class="d-flex justify-content-between text-sub small">
-                                    <span>Est. Sell Value:</span>
-                                    <span class="text-gold" id="total-sell-value">₽0</span>
-                                </div>
-                            </div>
+                            <div class="mb-4"><div class="section-header" style="border-left-color: var(--eft-green);">✅ KEEP <span class="result-count ms-2" id="keep-count">0</span></div><div id="keep-list" style="max-height: 250px; overflow-y: auto;"></div></div>
+                            <div><div class="section-header" style="border-left-color: var(--eft-red);">💰 SELL <span class="result-count ms-2" id="sell-count">0</span></div><div id="sell-list" style="max-height: 250px; overflow-y: auto;"></div></div>
+                            <div class="mt-4 pt-3" style="border-top: 1px solid var(--border-dark);"><div class="d-flex justify-content-between text-sub small"><span>Est. Sell Value:</span><span class="text-gold" id="total-sell-value">₽0</span></div></div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
     <script>
-        // ============================================================
-        // CONFIGURATION
-        // ============================================================
-        
         const API_BASE = '/api';
         const STORAGE_KEY_QUESTS = 'tarkov_planner_selected_quests';
         const STORAGE_KEY_AMMO = 'tarkov_ammo_owned';
-
-        // State
-        let allQuestsGlobal = [];
-        let allAmmoData = null;
-        let ownedAmmo = new Set();
-        let currentTierThreshold = 'B';
-
-        // Map
-        let mapInstance = null;
-        let currentMapLayer = null;
-        const layers = {
-            markers: L.layerGroup(),
-            extracts: L.layerGroup(),
-            spawns: L.layerGroup(),
-            bosses: L.layerGroup(),
-            loot: L.layerGroup()
-        };
-
-        // Map configurations
+        const WIKI_BASE_URL = 'https://escapefromtarkov.fandom.com/wiki/';
+        let allQuestsGlobal = [], allAmmoData = null, ownedAmmo = new Set(), currentTierThreshold = 'B';
+        let mapInstance = null, currentMapLayer = null;
+        const layers = { markers: L.layerGroup(), extracts: L.layerGroup(), spawns: L.layerGroup(), bosses: L.layerGroup(), loot: L.layerGroup() };
         const MAP_CONFIG = {
-            "Customs": { name: "Customs", url: "https://assets.tarkov.dev/maps/customs-2d.jpg", bounds: [[-420, -340], [420, 400]], width: 4000, height: 4000 },
-            "Woods": { name: "Woods", url: "https://assets.tarkov.dev/maps/woods-2d.jpg", bounds: [[-830, -670], [530, 710]], width: 4000, height: 4000 },
-            "Factory": { name: "Factory", url: "https://assets.tarkov.dev/maps/factory-2d.jpg", bounds: [[-65, -125], [65, 10]], rotation: 180, width: 4000, height: 4000 },
-            "Interchange": { name: "Interchange", url: "https://assets.tarkov.dev/maps/interchange-2d.jpg", bounds: [[-250, -480], [430, 330]], width: 4000, height: 4000 },
-            "Shoreline": { name: "Shoreline", url: "https://assets.tarkov.dev/maps/shoreline-2d.jpg", bounds: [[-700, -370], [520, 600]], width: 4000, height: 4000 },
-            "Reserve": { name: "Reserve", url: "https://assets.tarkov.dev/maps/reserve-2d.jpg", bounds: [[-450, -450], [350, 350]], width: 4000, height: 4000 },
-            "Lighthouse": { name: "Lighthouse", url: "https://assets.tarkov.dev/maps/lighthouse-2d.jpg", bounds: [[-750, -500], [220, 660]], width: 4000, height: 4000 },
-            "Streets of Tarkov": { name: "Streets of Tarkov", url: "https://assets.tarkov.dev/maps/streets-2d.jpg", bounds: [[-350, -600], [450, 300]], rotation: 180, width: 4000, height: 4000 },
-            "Ground Zero": { name: "Ground Zero", url: "https://assets.tarkov.dev/maps/groundzero-2d.jpg", bounds: [[-200, -200], [200, 200]], width: 4000, height: 4000 },
-            "Labs": { name: "The Lab", url: "https://assets.tarkov.dev/maps/labs-2d.jpg", bounds: [[-200, -300], [200, 100]], width: 4000, height: 4000 }
+            "Customs": { name: "Customs", url: "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/0/0b/CustomsMapRealNorthColour_Reemr.png/revision/latest?cb=20250713153259", bounds: [[-420, -340], [420, 400]], width: 4096, height: 4096 },
+            "Woods": { name: "Woods", url: "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/d/de/WikiWoodsRe3mr.jpg/revision/latest?cb=20260113172026", bounds: [[-830, -670], [530, 710]], width: 4096, height: 4096 },
+            "Factory": { name: "Factory", url: "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/3/33/Factory2DMapbyRe3mr.jpg/revision/latest?cb=20251127130957", bounds: [[-65, -125], [65, 10]], rotation: 180, width: 4096, height: 4096 },
+            "Interchange": { name: "Interchange", url: "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/2/27/InterchangeMapByre3mr.jpg/revision/latest?cb=20251207112307", bounds: [[-250, -480], [430, 330]], width: 4096, height: 4096 },
+            "Shoreline": { name: "Shoreline", url: "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/a/a1/ShorelineQuestsRe3mr.jpg/revision/latest?cb=20260124124127", bounds: [[-700, -370], [520, 600]], width: 4096, height: 4096 },
+            "Reserve": { name: "Reserve", url: "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/3/38/Re3mrReserveCardinalNorthWikiVer.jpg/revision/latest?cb=20260113163242", bounds: [[-450, -450], [350, 350]], width: 4096, height: 4096 },
+            "Lighthouse": { name: "Lighthouse", url: "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/9/9f/Re3mrLighthouseVerticalDay-min.jpg/revision/latest?cb=20251231133713", bounds: [[-750, -500], [220, 660]], width: 4096, height: 4096 },
+            "Streets of Tarkov": { name: "Streets of Tarkov", url: "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/1/17/StreetsOfTarkov3DMapByRE3MR.jpg/revision/latest?cb=20260103123303", bounds: [[-350, -600], [450, 300]], rotation: 180, width: 4096, height: 4096 },
+            "Ground Zero": { name: "Ground Zero", url: "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/4/44/GroundZero3DMapByRe3mr.png/revision/latest?cb=20250822164650", bounds: [[-200, -200], [200, 200]], width: 4096, height: 4096 },
+            "Labs": { name: "The Lab", url: "https://static.wikia.nocookie.net/escapefromtarkov_gamepedia/images/0/0b/TheLabMapFull.png/revision/latest?cb=20181225202712", bounds: [[-200, -300], [200, 100]], width: 4096, height: 4096 }
         };
-
         const TIER_ORDER = ['F', 'D', 'C', 'B', 'A', 'S'];
         const TIER_NAMES = { 0: 'F', 1: 'D', 2: 'C', 3: 'B', 4: 'A', 5: 'S' };
-
-        // ============================================================
-        // INITIALIZATION
-        // ============================================================
-        
-        document.addEventListener('DOMContentLoaded', () => {
-            checkBackendConnection();
-            loadSavedAmmo();
-            document.getElementById('questSearch').addEventListener('input', applyFilters);
-        });
-
-        async function checkBackendConnection() {
-            const statusEl = document.getElementById('connection-status');
-            try {
-                const response = await fetch(`${API_BASE}/`);
-                if (response.ok) {
-                    const data = await response.json();
-                    statusEl.innerHTML = `<span class="status-dot" style="display:inline-block;width:8px;height:8px;background:#4a4;border-radius:50%;margin-right:6px;"></span>Connected (${data.version})`;
-                } else {
-                    throw new Error('Bad response');
-                }
-            } catch (e) {
-                statusEl.innerHTML = `<span class="status-dot" style="display:inline-block;width:8px;height:8px;background:#a44;border-radius:50%;margin-right:6px;"></span>Offline`;
-            }
-        }
-
-        // ============================================================
-        // TAB NAVIGATION
-        // ============================================================
-        
-        function switchTab(tabName) {
-            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            
-            event.target.closest('.nav-tab').classList.add('active');
-            document.getElementById(`tab-${tabName}`).classList.add('active');
-        }
-
-        // ============================================================
-        // RAID PLANNER - QUEST LOGIC
-        // ============================================================
-        
-        function getSavedQuests() {
-            const saved = localStorage.getItem(STORAGE_KEY_QUESTS);
-            return saved ? new Set(JSON.parse(saved)) : new Set();
-        }
-
-        function saveQuestState(questId, isChecked) {
-            const savedSet = getSavedQuests();
-            if (isChecked) savedSet.add(questId);
-            else savedSet.delete(questId);
-            localStorage.setItem(STORAGE_KEY_QUESTS, JSON.stringify([...savedSet]));
-            updatePlanButton();
-        }
-
-        function updatePlanButton() {
-            const count = getSavedQuests().size;
-            const btn = document.getElementById('btn-initialize');
-            if (btn) btn.innerHTML = count > 0 ? `Initialize Plan (${count})` : 'Initialize Plan';
-        }
-
-        function clearSelection() {
-            if (confirm('Reset all selected operations?')) {
-                localStorage.removeItem(STORAGE_KEY_QUESTS);
-                document.querySelectorAll('.quest-checkbox').forEach(cb => cb.checked = false);
-                document.querySelectorAll('.quest-item').forEach(div => div.classList.remove('selected'));
-                document.getElementById('planning-result').style.display = 'none';
-                document.getElementById('questSearch').value = '';
-                applyFilters();
-                updatePlanButton();
-            }
-        }
-
-        async function loadAllQuests() {
-            const loader = document.getElementById('loading');
-            const selectionArea = document.getElementById('quest-selection-area');
-            const btnLoad = document.getElementById('btn-load');
-            const errBox = document.getElementById('error-box');
-
-            selectionArea.classList.add('d-none');
-            document.getElementById('planning-result').style.display = 'none';
-            loader.classList.remove('d-none');
-            errBox.classList.add('d-none');
-
-            try {
-                const response = await fetch(`${API_BASE}/quests/ALL`);
-                if (!response.ok) {
-                    const text = await response.text();
-                    throw new Error(`Server error: ${response.status} - ${text}`);
-                }
-                
-                allQuestsGlobal = await response.json();
-
-                if (allQuestsGlobal.length === 0) {
-                    document.getElementById('quest-list').innerHTML = '<div class="text-center text-sub p-4">No quests received from API.</div>';
-                } else {
-                    applyFilters();
-                    selectionArea.classList.remove('d-none');
-                    btnLoad.innerHTML = 'Reload Operations';
-                    btnLoad.classList.add('btn-secondary');
-                }
-            } catch (error) {
-                errBox.innerHTML = `<strong>CONNECTION ERROR:</strong> ${error.message}<br><small>Check that the backend container is running and accessible.</small>`;
-                errBox.classList.remove('d-none');
-            } finally {
-                loader.classList.add('d-none');
-            }
-        }
-
-        function applyFilters() {
-            const term = document.getElementById('questSearch').value.toLowerCase();
-            const selectedMap = document.getElementById('mapSelect').value;
-            let filtered = [];
-
-            if (term.length > 0) {
-                filtered = allQuestsGlobal.filter(q => q.name.toLowerCase().includes(term));
-            } else {
-                filtered = allQuestsGlobal.filter(q => {
-                    const qMap = q.map ? q.map.name : 'Any';
-                    if (selectedMap === 'Any') return qMap === 'Any' || !q.map;
-                    return qMap === selectedMap || qMap === 'Any' || !q.map;
-                });
-            }
-            renderQuestList(filtered);
-        }
-
-        function renderQuestList(questsToRender) {
-            const listContainer = document.getElementById('quest-list');
-            listContainer.innerHTML = '';
-            const savedSet = getSavedQuests();
-            const isFiltering = document.getElementById('questSearch').value.length > 0;
-            updatePlanButton();
-
-            const groups = {};
-            const standalone = [];
-            
-            questsToRender.forEach(quest => {
-                const match = quest.name.match(/^(.*?) - Part \d+$/);
-                if (match) {
-                    const groupName = match[1];
-                    if (!groups[groupName]) groups[groupName] = [];
-                    groups[groupName].push(quest);
-                } else {
-                    standalone.push(quest);
-                }
-            });
-
-            for (const [groupName, groupQuests] of Object.entries(groups)) {
-                const groupId = groupName.replace(/[^a-zA-Z0-9]/g, '');
-                const activeCount = groupQuests.filter(q => savedSet.has(q.id)).length;
-                const hasActive = activeCount > 0;
-                const shouldExpand = isFiltering || hasActive;
-
-                const accordItem = document.createElement('div');
-                accordItem.className = 'accordion-item';
-
-                let groupHtml = `
-                    <h2 class="accordion-header">
-                        <button class="accordion-button ${shouldExpand ? '' : 'collapsed'}" 
-                                type="button" data-bs-toggle="collapse" data-bs-target="#collapse-${groupId}"
-                                id="btn-${groupId}" data-total="${groupQuests.length}">
-                            ${groupName}
-                            <span class="badge-tarkov ${hasActive ? 'badge-active' : ''} ms-auto me-3">
-                                ${hasActive ? activeCount + ' Active' : groupQuests.length + ' Tasks'}
-                            </span>
-                        </button>
-                    </h2>
-                    <div id="collapse-${groupId}" class="accordion-collapse collapse ${shouldExpand ? 'show' : ''}">
-                        <div class="accordion-body">
-                `;
-                groupQuests.forEach(q => groupHtml += createQuestItemHtml(q, savedSet, groupId));
-                groupHtml += `</div></div>`;
-                accordItem.innerHTML = groupHtml;
-                listContainer.appendChild(accordItem);
-            }
-
-            if (standalone.length > 0) {
-                const standaloneContainer = document.createElement('div');
-                standaloneContainer.className = 'mt-3';
-                standalone.forEach(q => standaloneContainer.innerHTML += createQuestItemHtml(q, savedSet, null));
-                listContainer.appendChild(standaloneContainer);
-            }
-        }
-
-        function createQuestItemHtml(quest, savedSet, groupId) {
-            const isChecked = savedSet.has(quest.id);
-            const groupAttr = groupId ? `data-parent-group="${groupId}"` : '';
-            
-            return `
-                <div class="quest-item d-flex align-items-center ${isChecked ? 'selected' : ''}" 
-                     onclick="toggleSelection('${quest.id}', this, event)">
-                    <input class="form-check-input quest-checkbox" type="checkbox" id="cb-${quest.id}" 
-                           value="${quest.id}" ${isChecked ? 'checked' : ''} ${groupAttr}
-                           onchange="event.stopPropagation(); toggleSelection('${quest.id}', this.parentElement, event)">
-                    <div class="ms-3 flex-grow-1">
-                        <div class="fw-bold" style="color: var(--text-main);">${quest.name}</div>
-                        <div class="mt-1 d-flex gap-4" style="font-size: 0.8rem; color: var(--text-sub);">
-                            <span>${quest.trader?.name || '?'}</span>
-                            <span>Lvl ${quest.minPlayerLevel || '?'}</span>
-                            <span>${quest.map?.name || 'Global'}</span>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        function toggleSelection(questId, divElement, event) {
-            const checkbox = document.getElementById(`cb-${questId}`);
-            if (event.target !== checkbox && event.target.tagName !== 'A') {
-                checkbox.checked = !checkbox.checked;
-            }
-            if (checkbox.checked) divElement.classList.add('selected');
-            else divElement.classList.remove('selected');
-            saveQuestState(questId, checkbox.checked);
-
-            const groupId = checkbox.getAttribute('data-parent-group');
-            if (groupId) {
-                const btn = document.getElementById(`btn-${groupId}`);
-                const count = document.querySelectorAll(`input[data-parent-group="${groupId}"]:checked`).length;
-                const badge = btn.querySelector('.badge-tarkov');
-                badge.textContent = count > 0 ? `${count} Active` : `${btn.dataset.total} Tasks`;
-                badge.classList.toggle('badge-active', count > 0);
-            }
-        }
-
-        // ============================================================
-        // RAID PLANNER - MAP LOGIC
-        // ============================================================
-        
-        function initMap(mapName) {
-            const config = MAP_CONFIG[mapName];
-            if (!config) {
-                console.error('Map config not found for', mapName);
-                return;
-            }
-            
-            if (mapInstance) mapInstance.remove();
-
-            mapInstance = L.map('map', { 
-                crs: L.CRS.Simple, 
-                minZoom: -2, 
-                maxZoom: 2, 
-                zoomSnap: 0.5, 
-                attributionControl: false 
-            });
-
-            const bounds = [[0, 0], [config.height, config.width]];
-            currentMapLayer = L.imageOverlay(config.url, bounds).addTo(mapInstance);
-            mapInstance.fitBounds(bounds);
-
-            Object.values(layers).forEach(layer => layer.addTo(mapInstance));
-
-            setTimeout(() => mapInstance.invalidateSize(), 200);
-
-            // Debug: click to get coords
-            mapInstance.on('click', (e) => {
-                const gameCoords = pixelToGame(e.latlng.lat, e.latlng.lng, config);
-                console.log(`Map Click: Pixel[${e.latlng.lat.toFixed(0)}, ${e.latlng.lng.toFixed(0)}] -> Game[x:${gameCoords.x.toFixed(0)}, z:${gameCoords.z.toFixed(0)}]`);
-            });
-        }
-
-        function toggleLayer(layerName) {
-            const checkbox = document.getElementById(`layer-${layerName}`);
-            if (checkbox?.checked) {
-                mapInstance.addLayer(layers[layerName]);
-            } else {
-                mapInstance.removeLayer(layers[layerName]);
-            }
-        }
-
-        async function fetchMapLayerData(mapName) {
-            try {
-                // Use backend proxy instead of direct API call
-                const response = await fetch(`${API_BASE}/map/${mapName}`);
-                if (!response.ok) throw new Error('Map data fetch failed');
-                return await response.json();
-            } catch (e) {
-                console.error('Map Data Error:', e);
-                return null;
-            }
-        }
-
-        function drawMapLayers(data, config) {
-            layers.extracts.clearLayers();
-            layers.spawns.clearLayers();
-            layers.bosses.clearLayers();
-            layers.loot.clearLayers();
-
-            if (!data) return;
-
-            // Extracts
-            if (data.extracts) {
-                data.extracts.forEach(ex => {
-                    if (!ex.position) return;
-                    const [y, x] = gameToPixel(ex.position.x, ex.position.z, config.width, config.height, config.bounds, config.rotation);
-                    const color = ex.faction === 'Scav' ? '#dda040' : '#40aa40';
-                    L.circleMarker([y, x], { radius: 7, color: color, fillColor: color, fillOpacity: 0.8, weight: 2 })
-                        .bindTooltip(ex.name, { direction: 'top', className: 'marker-label' })
-                        .addTo(layers.extracts);
-                });
-            }
-
-            // Spawns
-            if (data.spawns) {
-                data.spawns.forEach(sp => {
-                    if (!sp.position) return;
-                    const [y, x] = gameToPixel(sp.position.x, sp.position.z, config.width, config.height, config.bounds, config.rotation);
-                    L.circleMarker([y, x], { radius: 5, color: '#4080c0', fillColor: '#4080c0', fillOpacity: 0.7, weight: 1 })
-                        .bindTooltip(`Spawn: ${sp.zoneName || 'Unknown'}`, { direction: 'top', className: 'marker-label' })
-                        .addTo(layers.spawns);
-                });
-            }
-
-            // Bosses
-            if (data.bosses) {
-                data.bosses.forEach(boss => {
-                    if (!boss.spawnLocations) return;
-                    boss.spawnLocations.forEach(loc => {
-                        if (!loc.position) return;
-                        const [y, x] = gameToPixel(loc.position.x, loc.position.z, config.width, config.height, config.bounds, config.rotation);
-                        L.circleMarker([y, x], { radius: 9, color: '#c04040', fillColor: '#c04040', fillOpacity: 0.8, weight: 2 })
-                            .bindTooltip(`⚠️ ${boss.name} (${(loc.chance * 100).toFixed(0)}%)`, { direction: 'top', className: 'marker-label' })
-                            .addTo(layers.bosses);
-                    });
-                });
-            }
-        }
-
-        function gameToPixel(gameX, gameZ, width, height, bounds, rotation = 0) {
-            const [[minX, minZ], [maxX, maxZ]] = bounds;
-            let normX = (gameX - minX) / (maxX - minX);
-            let normZ = (gameZ - minZ) / (maxZ - minZ);
-
-            if (rotation === 180) {
-                normX = 1 - normX;
-                normZ = 1 - normZ;
-            } else if (rotation === 90) {
-                [normX, normZ] = [1 - normZ, normX];
-            } else if (rotation === 270 || rotation === -90) {
-                [normX, normZ] = [normZ, 1 - normX];
-            }
-
-            return [(1 - normZ) * height, normX * width];
-        }
-
-        function pixelToGame(pixelY, pixelX, config) {
-            const { width, height, bounds, rotation = 0 } = config;
-            const [[minX, minZ], [maxX, maxZ]] = bounds;
-
-            let normX = pixelX / width;
-            let normZ = 1 - (pixelY / height);
-
-            if (rotation === 180) {
-                normX = 1 - normX;
-                normZ = 1 - normZ;
-            }
-
-            return {
-                x: minX + normX * (maxX - minX),
-                z: minZ + normZ * (maxZ - minZ)
-            };
-        }
-
-        async function planRaid() {
-            const resultBox = document.getElementById('planning-result');
-            const mapName = document.getElementById('mapSelect').value;
-            const savedSet = getSavedQuests();
-
-            if (savedSet.size === 0) {
-                alert('No operations selected.');
-                return;
-            }
-
-            const selectedQuests = allQuestsGlobal.filter(q => savedSet.has(q.id));
-
-            resultBox.style.display = 'block';
-            resultBox.scrollIntoView({ behavior: 'smooth' });
-
-            initMap(mapName);
-
-            // Fetch map data through backend proxy
-            const config = MAP_CONFIG[mapName];
-            const mapData = await fetchMapLayerData(mapName);
-            if (mapData && config) {
-                drawMapLayers(mapData, config);
-            }
-
-            // Process quest data
-            const neededKeys = new Map();
-            const itemsMap = new Map();
-            const objectives = [];
-            const unlocks = [];
-
-            selectedQuests.forEach(quest => {
-                if (quest.neededKeys) {
-                    quest.neededKeys.forEach(g => {
-                        if (g.keys?.length > 0) {
-                            neededKeys.set(g.keys[0].name, g.keys[0]);
-                        }
-                    });
-                }
-
-                if (quest.objectives) {
-                    quest.objectives.forEach(obj => {
-                        objectives.push({ quest: quest.name, desc: obj.description });
-                        const item = obj.item || obj.markerItem;
-                        if (item) {
-                            if (!itemsMap.has(item.id)) {
-                                itemsMap.set(item.id, { name: item.name, icon: item.iconLink, count: 0 });
-                            }
-                            itemsMap.get(item.id).count += (obj.count || 1);
-                        }
-                    });
-                }
-
-                if (quest.derived_unlocks) {
-                    quest.derived_unlocks.forEach(u => {
-                        unlocks.push({ from: quest.name, ...u });
-                    });
-                }
-            });
-
-            // Render results
-            document.getElementById('required-keys').innerHTML = neededKeys.size > 0
-                ? Array.from(neededKeys.values()).map(k => 
-                    `<div class="item-box">${k.iconLink ? `<img src="${k.iconLink}" alt="">` : ''}<span>${k.shortName || k.name}</span></div>`
-                ).join('')
-                : '<span class="text-sub p-2">None required.</span>';
-
-            document.getElementById('required-items').innerHTML = itemsMap.size > 0
-                ? Array.from(itemsMap.values()).map(i => 
-                    `<div class="item-box">${i.icon ? `<img src="${i.icon}" alt="">` : ''}<div>${i.count}x ${i.name}</div></div>`
-                ).join('')
-                : '<span class="text-sub p-2">None required.</span>';
-
-            document.getElementById('mission-steps').innerHTML = objectives.map(obj => 
-                `<li class="list-group-item bg-transparent text-light border-0 ps-0 py-2">
-                    <span class="text-beige fw-bold">${obj.quest}:</span> 
-                    <span style="color: var(--text-sub);">${obj.desc}</span>
-                </li>`
-            ).join('');
-
-            document.getElementById('progression-list').innerHTML = unlocks.length > 0
-                ? unlocks.map(u => 
-                    `<div class="mb-2 p-2" style="background: var(--bg-element); border: 1px solid var(--border-dark);">
-                        <div style="font-size: 0.8rem; color: var(--text-sub);">From ${u.from}:</div>
-                        <div class="fw-bold text-light">➔ ${u.name}</div>
-                        <div class="small text-sub">${u.map} | ${u.trader}</div>
-                    </div>`
-                ).join('')
-                : '<div class="text-sub p-2">No immediate unlocks.</div>';
-        }
-
-        // ============================================================
-        // AMMO MANAGER
-        // ============================================================
-        
-        function loadSavedAmmo() {
-            const saved = localStorage.getItem(STORAGE_KEY_AMMO);
-            ownedAmmo = saved ? new Set(JSON.parse(saved)) : new Set();
-        }
-
-        function saveOwnedAmmo() {
-            localStorage.setItem(STORAGE_KEY_AMMO, JSON.stringify([...ownedAmmo]));
-        }
-
-        async function loadAmmoData() {
-            const loader = document.getElementById('ammo-loading');
-            const content = document.getElementById('ammo-content');
-            const errBox = document.getElementById('ammo-error');
-            const btnLoad = document.getElementById('btn-load-ammo');
-
-            content.classList.add('d-none');
-            loader.classList.remove('d-none');
-            errBox.classList.add('d-none');
-
-            try {
-                const response = await fetch(`${API_BASE}/ammo`);
-                if (!response.ok) {
-                    throw new Error(`Server error: ${response.status}`);
-                }
-
-                allAmmoData = await response.json();
-
-                // Populate caliber filter
-                const caliberSelect = document.getElementById('caliberFilter');
-                caliberSelect.innerHTML = '<option value="ALL">All Calibers</option>';
-                allAmmoData.calibers.forEach(cal => {
-                    caliberSelect.innerHTML += `<option value="${cal}">${cal}</option>`;
-                });
-
-                document.getElementById('ammo-count').textContent = `${allAmmoData.all.length} types`;
-
-                renderAmmoList();
-                content.classList.remove('d-none');
-                btnLoad.innerHTML = 'Refresh Data';
-                btnLoad.classList.add('btn-secondary');
-
-            } catch (error) {
-                errBox.innerHTML = `<strong>ERROR:</strong> ${error.message}`;
-                errBox.classList.remove('d-none');
-            } finally {
-                loader.classList.add('d-none');
-            }
-        }
-
-        function filterAmmoByCaliber() {
-            renderAmmoList();
-        }
-
-        function updateTierThreshold() {
-            const value = parseInt(document.getElementById('tierSlider').value);
-            currentTierThreshold = TIER_NAMES[value];
-            document.getElementById('tierDisplay').textContent = `Keep ${currentTierThreshold}-Tier+`;
-            updateAmmoAnalysis();
-        }
-
-        function renderAmmoList() {
-            if (!allAmmoData) return;
-
-            const container = document.getElementById('ammo-list');
-            const caliberFilter = document.getElementById('caliberFilter').value;
-
-            let html = '';
-
-            if (caliberFilter === 'ALL') {
-                // Group by caliber
-                for (const [caliber, ammos] of Object.entries(allAmmoData.byCaliber)) {
-                    html += renderCaliberGroup(caliber, ammos);
-                }
-            } else {
-                const ammos = allAmmoData.byCaliber[caliberFilter] || [];
-                html += renderCaliberGroup(caliberFilter, ammos);
-            }
-
-            container.innerHTML = html;
-            updateAmmoAnalysis();
-        }
-
-        function renderCaliberGroup(caliber, ammos) {
-            let html = `<div class="caliber-group">
-                <div class="caliber-header">${caliber} <span class="text-sub small">(${ammos.length})</span></div>`;
-
-            ammos.forEach(ammo => {
-                const isOwned = ownedAmmo.has(ammo.id);
-                html += `
-                    <div class="ammo-card ${isOwned ? 'owned' : ''}" onclick="toggleAmmoOwned('${ammo.id}')">
-                        <span class="tier-badge tier-${ammo.tier}">${ammo.tier}</span>
-                        ${ammo.iconLink ? `<img src="${ammo.iconLink}" alt="">` : ''}
-                        <div class="flex-grow-1">
-                            <div class="fw-bold" style="color: var(--text-main);">${ammo.shortName}</div>
-                            <div class="ammo-stats">
-                                <span class="stat-dmg">💥 ${ammo.damage}</span>
-                                <span class="stat-pen">🛡️ ${ammo.penetration}</span>
-                                ${ammo.sellPrice > 0 ? `<span class="stat-price">₽${ammo.sellPrice.toLocaleString()}</span>` : ''}
-                            </div>
-                        </div>
-                        ${isOwned ? '<span class="badge-tarkov badge-active">OWNED</span>' : ''}
-                    </div>
-                `;
-            });
-
-            html += '</div>';
-            return html;
-        }
-
-        function toggleAmmoOwned(ammoId) {
-            if (ownedAmmo.has(ammoId)) {
-                ownedAmmo.delete(ammoId);
-            } else {
-                ownedAmmo.add(ammoId);
-            }
-            saveOwnedAmmo();
-            renderAmmoList();
-        }
-
-        function updateAmmoAnalysis() {
-            if (!allAmmoData) return;
-
-            const keepList = document.getElementById('keep-list');
-            const sellList = document.getElementById('sell-list');
-            const keepCount = document.getElementById('keep-count');
-            const sellCount = document.getElementById('sell-count');
-            const totalValue = document.getElementById('total-sell-value');
-
-            const thresholdIndex = TIER_ORDER.indexOf(currentTierThreshold);
-            const keepTiers = TIER_ORDER.slice(thresholdIndex);
-
-            const owned = allAmmoData.all.filter(a => ownedAmmo.has(a.id));
-            const keep = owned.filter(a => keepTiers.includes(a.tier));
-            const sell = owned.filter(a => !keepTiers.includes(a.tier));
-
-            keepCount.textContent = keep.length;
-            sellCount.textContent = sell.length;
-
-            keepList.innerHTML = keep.length > 0
-                ? keep.map(a => renderAnalysisItem(a, 'keep')).join('')
-                : '<div class="text-sub p-2 small">No ammo to keep marked.</div>';
-
-            sellList.innerHTML = sell.length > 0
-                ? sell.map(a => renderAnalysisItem(a, 'sell')).join('')
-                : '<div class="text-sub p-2 small">No ammo to sell.</div>';
-
-            const total = sell.reduce((sum, a) => sum + (a.sellPrice || 0), 0);
-            totalValue.textContent = `₽${total.toLocaleString()}`;
-        }
-
-        function renderAnalysisItem(ammo, type) {
-            const statusClass = type === 'keep' ? 'status-keep' : 'status-sell';
-            return `
-                <div class="item-box ${statusClass} w-100 mb-1">
-                    <span class="tier-badge tier-${ammo.tier}" style="width:24px;height:24px;line-height:24px;font-size:0.75rem;">${ammo.tier}</span>
-                    ${ammo.iconLink ? `<img src="${ammo.iconLink}" style="width:28px;height:28px;">` : ''}
-                    <div class="flex-grow-1">
-                        <div style="font-size:0.85rem;">${ammo.shortName}</div>
-                        <div style="font-size:0.7rem;color:var(--text-sub);">${ammo.caliber}</div>
-                    </div>
-                    ${type === 'sell' && ammo.sellPrice > 0 ? `<span class="stat-price small">₽${ammo.sellPrice.toLocaleString()}</span>` : ''}
-                </div>
-            `;
-        }
+        function getWikiUrl(n) { return WIKI_BASE_URL + encodeURIComponent(n.replace(/\s+/g, '_')); }
+        document.addEventListener('DOMContentLoaded', () => { checkBackendConnection(); loadSavedAmmo(); document.getElementById('questSearch').addEventListener('input', applyFilters); });
+        async function checkBackendConnection() { const s = document.getElementById('connection-status'); try { const r = await fetch(API_BASE + '/'); if (r.ok) { const d = await r.json(); s.innerHTML = '<span style="display:inline-block;width:8px;height:8px;background:#4a4;border-radius:50%;margin-right:6px;"></span>Connected (' + d.version + ')'; } else throw new Error(); } catch (e) { s.innerHTML = '<span style="display:inline-block;width:8px;height:8px;background:#a44;border-radius:50%;margin-right:6px;"></span>Offline'; } }
+        function switchTab(t) { document.querySelectorAll('.nav-tab').forEach(x => x.classList.remove('active')); document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active')); event.target.closest('.nav-tab').classList.add('active'); document.getElementById('tab-' + t).classList.add('active'); }
+        function getSavedQuests() { const s = localStorage.getItem(STORAGE_KEY_QUESTS); return s ? new Set(JSON.parse(s)) : new Set(); }
+        function saveQuestState(id, c) { const s = getSavedQuests(); c ? s.add(id) : s.delete(id); localStorage.setItem(STORAGE_KEY_QUESTS, JSON.stringify([...s])); updatePlanButton(); }
+        function updatePlanButton() { const c = getSavedQuests().size, b = document.getElementById('btn-initialize'); if (b) b.innerHTML = c > 0 ? 'Initialize Plan (' + c + ')' : 'Initialize Plan'; }
+        function clearSelection() { if (confirm('Reset all selected operations?')) { localStorage.removeItem(STORAGE_KEY_QUESTS); document.querySelectorAll('.quest-checkbox').forEach(x => x.checked = false); document.querySelectorAll('.quest-item').forEach(x => x.classList.remove('selected')); document.getElementById('planning-result').style.display = 'none'; document.getElementById('questSearch').value = ''; applyFilters(); updatePlanButton(); } }
+        async function loadAllQuests() { const l = document.getElementById('loading'), s = document.getElementById('quest-selection-area'), b = document.getElementById('btn-load'), e = document.getElementById('error-box'); s.classList.add('d-none'); document.getElementById('planning-result').style.display = 'none'; l.classList.remove('d-none'); e.classList.add('d-none'); try { const r = await fetch(API_BASE + '/quests/ALL'); if (!r.ok) throw new Error('Server error: ' + r.status); allQuestsGlobal = await r.json(); if (allQuestsGlobal.length === 0) document.getElementById('quest-list').innerHTML = '<div class="text-center text-sub p-4">No quests received.</div>'; else { applyFilters(); s.classList.remove('d-none'); b.innerHTML = 'Reload Operations'; b.classList.add('btn-secondary'); } } catch (err) { e.innerHTML = '<strong>ERROR:</strong> ' + err.message; e.classList.remove('d-none'); } finally { l.classList.add('d-none'); } }
+        function applyFilters() { const t = document.getElementById('questSearch').value.toLowerCase(), m = document.getElementById('mapSelect').value; let f = t.length > 0 ? allQuestsGlobal.filter(q => q.name.toLowerCase().includes(t)) : allQuestsGlobal.filter(q => { const qm = q.map ? q.map.name : 'Any'; return m === 'Any' ? (qm === 'Any' || !q.map) : (qm === m || qm === 'Any' || !q.map); }); renderQuestList(f); }
+        function renderQuestList(qs) { const lc = document.getElementById('quest-list'); lc.innerHTML = ''; const ss = getSavedQuests(), isF = document.getElementById('questSearch').value.length > 0; updatePlanButton(); const gs = {}, sa = []; qs.forEach(q => { const m = q.name.match(/^(.*?) - Part \d+$/); m ? (gs[m[1]] = gs[m[1]] || [], gs[m[1]].push(q)) : sa.push(q); }); for (const [gn, gqs] of Object.entries(gs)) { const gid = gn.replace(/[^a-zA-Z0-9]/g, ''), ac = gqs.filter(q => ss.has(q.id)).length, ha = ac > 0, se = isF || ha; const ai = document.createElement('div'); ai.className = 'accordion-item'; let h = '<h2 class="accordion-header"><button class="accordion-button ' + (se ? '' : 'collapsed') + '" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-' + gid + '" id="btn-' + gid + '" data-total="' + gqs.length + '">' + gn + '<span class="badge-tarkov ' + (ha ? 'badge-active' : '') + ' ms-auto me-3">' + (ha ? ac + ' Active' : gqs.length + ' Tasks') + '</span></button></h2><div id="collapse-' + gid + '" class="accordion-collapse collapse ' + (se ? 'show' : '') + '"><div class="accordion-body">'; gqs.forEach(q => h += createQuestItemHtml(q, ss, gid)); h += '</div></div>'; ai.innerHTML = h; lc.appendChild(ai); } if (sa.length > 0) { const sc = document.createElement('div'); sc.className = 'mt-3'; sa.forEach(q => sc.innerHTML += createQuestItemHtml(q, ss, null)); lc.appendChild(sc); } }
+        function createQuestItemHtml(q, ss, gid) { const ic = ss.has(q.id), ga = gid ? 'data-parent-group="' + gid + '"' : ''; return '<div class="quest-item d-flex align-items-center ' + (ic ? 'selected' : '') + '" onclick="toggleSelection(\'' + q.id + '\', this, event)"><input class="form-check-input quest-checkbox" type="checkbox" id="cb-' + q.id + '" value="' + q.id + '" ' + (ic ? 'checked' : '') + ' ' + ga + ' onchange="event.stopPropagation(); toggleSelection(\'' + q.id + '\', this.parentElement, event)"><div class="ms-3 flex-grow-1"><div class="fw-bold" style="color: var(--text-main);">' + q.name + '</div><div class="mt-1 d-flex gap-4" style="font-size: 0.8rem; color: var(--text-sub);"><span>' + (q.trader?.name || '?') + '</span><span>Lvl ' + (q.minPlayerLevel || '?') + '</span><span>' + (q.map?.name || 'Global') + '</span></div></div></div>'; }
+        function toggleSelection(qid, div, ev) { const cb = document.getElementById('cb-' + qid); if (ev.target !== cb && ev.target.tagName !== 'A') cb.checked = !cb.checked; cb.checked ? div.classList.add('selected') : div.classList.remove('selected'); saveQuestState(qid, cb.checked); const gid = cb.getAttribute('data-parent-group'); if (gid) { const btn = document.getElementById('btn-' + gid), cnt = document.querySelectorAll('input[data-parent-group="' + gid + '"]:checked').length, bdg = btn.querySelector('.badge-tarkov'); bdg.textContent = cnt > 0 ? cnt + ' Active' : btn.dataset.total + ' Tasks'; bdg.classList.toggle('badge-active', cnt > 0); } }
+        function initMap(mn) { const cfg = MAP_CONFIG[mn]; if (!cfg) return; if (mapInstance) mapInstance.remove(); mapInstance = L.map('map', { crs: L.CRS.Simple, minZoom: -2, maxZoom: 2, zoomSnap: 0.5, attributionControl: false }); const bnds = [[0, 0], [cfg.height, cfg.width]]; currentMapLayer = L.imageOverlay(cfg.url, bnds).addTo(mapInstance); mapInstance.fitBounds(bnds); Object.values(layers).forEach(l => l.addTo(mapInstance)); setTimeout(() => mapInstance.invalidateSize(), 200); }
+        function toggleLayer(ln) { const cb = document.getElementById('layer-' + ln); cb?.checked ? mapInstance.addLayer(layers[ln]) : mapInstance.removeLayer(layers[ln]); }
+        async function fetchMapLayerData(mn) { try { const r = await fetch(API_BASE + '/map/' + mn); if (!r.ok) throw new Error(); return await r.json(); } catch (e) { return null; } }
+        function drawMapLayers(d, cfg) { layers.extracts.clearLayers(); layers.spawns.clearLayers(); layers.bosses.clearLayers(); layers.loot.clearLayers(); if (!d) return; if (d.extracts) d.extracts.forEach(ex => { if (!ex.position) return; const [y, x] = gameToPixel(ex.position.x, ex.position.z, cfg.width, cfg.height, cfg.bounds, cfg.rotation); const c = ex.faction === 'Scav' ? '#dda040' : '#40aa40'; L.circleMarker([y, x], { radius: 7, color: c, fillColor: c, fillOpacity: 0.8, weight: 2 }).bindTooltip(ex.name, { direction: 'top', className: 'marker-label' }).addTo(layers.extracts); }); if (d.spawns) d.spawns.forEach(sp => { if (!sp.position) return; const [y, x] = gameToPixel(sp.position.x, sp.position.z, cfg.width, cfg.height, cfg.bounds, cfg.rotation); L.circleMarker([y, x], { radius: 5, color: '#4080c0', fillColor: '#4080c0', fillOpacity: 0.7, weight: 1 }).bindTooltip('Spawn: ' + (sp.zoneName || 'Unknown'), { direction: 'top', className: 'marker-label' }).addTo(layers.spawns); }); if (d.bosses) d.bosses.forEach(b => { if (!b.spawnLocations) return; b.spawnLocations.forEach(loc => { if (!loc.position) return; const [y, x] = gameToPixel(loc.position.x, loc.position.z, cfg.width, cfg.height, cfg.bounds, cfg.rotation); L.circleMarker([y, x], { radius: 9, color: '#c04040', fillColor: '#c04040', fillOpacity: 0.8, weight: 2 }).bindTooltip('⚠️ ' + b.name + ' (' + (loc.chance * 100).toFixed(0) + '%)', { direction: 'top', className: 'marker-label' }).addTo(layers.bosses); }); }); }
+        function gameToPixel(gx, gz, w, h, bnds, rot = 0) { const [[minX, minZ], [maxX, maxZ]] = bnds; let nx = (gx - minX) / (maxX - minX), nz = (gz - minZ) / (maxZ - minZ); if (rot === 180) { nx = 1 - nx; nz = 1 - nz; } return [(1 - nz) * h, nx * w]; }
+        async function planRaid() { const rb = document.getElementById('planning-result'), mn = document.getElementById('mapSelect').value, ss = getSavedQuests(); if (ss.size === 0) { alert('No operations selected.'); return; } const sqs = allQuestsGlobal.filter(q => ss.has(q.id)); rb.style.display = 'block'; rb.scrollIntoView({ behavior: 'smooth' }); initMap(mn); const cfg = MAP_CONFIG[mn], md = await fetchMapLayerData(mn); if (md && cfg) drawMapLayers(md, cfg); const provIds = new Set(); sqs.forEach(q => { if (q.startRewards?.items) q.startRewards.items.forEach(r => { if (r.item?.id) provIds.add(r.item.id); }); }); const nk = new Map(), im = new Map(), objs = [], unlks = []; sqs.forEach(q => { if (q.neededKeys) q.neededKeys.forEach(g => { if (g.keys?.length > 0) nk.set(g.keys[0].name, g.keys[0]); }); if (q.objectives) q.objectives.forEach(o => { objs.push({ quest: q.name, desc: o.description }); const it = o.item || o.markerItem; if (it) { const ip = provIds.has(it.id); if (!im.has(it.id)) im.set(it.id, { name: it.name, icon: it.iconLink, count: 0, isProvided: ip }); im.get(it.id).count += (o.count || 1); if (ip) im.get(it.id).isProvided = true; } }); if (q.derived_unlocks) q.derived_unlocks.forEach(u => unlks.push({ from: q.name, ...u })); }); document.getElementById('required-keys').innerHTML = nk.size > 0 ? Array.from(nk.values()).map(k => '<div class="item-box">' + (k.iconLink ? '<img src="' + k.iconLink + '">' : '') + '<span>' + (k.shortName || k.name) + '</span></div>').join('') : '<span class="text-sub p-2">None required.</span>'; const ia = Array.from(im.values()).sort((a, b) => (b.isProvided ? 1 : 0) - (a.isProvided ? 1 : 0)); document.getElementById('required-items').innerHTML = ia.length > 0 ? ia.map(i => '<div class="item-box ' + (i.isProvided ? 'status-provided' : 'status-acquire') + '">' + (i.icon ? '<img src="' + i.icon + '">' : '') + '<div>' + i.count + 'x ' + i.name + '</div><span class="item-label ' + (i.isProvided ? 'label-given' : 'label-find') + '">' + (i.isProvided ? 'GIVEN' : 'FIND') + '</span></div>').join('') : '<span class="text-sub p-2">None required.</span>'; document.getElementById('mission-steps').innerHTML = objs.map(o => '<li class="list-group-item bg-transparent text-light border-0 ps-0 py-2"><span class="text-beige fw-bold">' + o.quest + ':</span> <span style="color: var(--text-sub);">' + o.desc + '</span></li>').join(''); document.getElementById('progression-list').innerHTML = unlks.length > 0 ? unlks.map(u => '<div class="unlock-card"><div style="font-size: 0.8rem; color: var(--text-sub);">From ' + u.from + ':</div><div class="fw-bold">➔ <a href="' + getWikiUrl(u.name) + '" target="_blank" rel="noopener noreferrer" class="unlock-link">' + u.name + '</a></div><div class="small text-sub">' + u.map + ' | ' + u.trader + '</div></div>').join('') : '<div class="text-sub p-2">No immediate unlocks.</div>'; }
+        function loadSavedAmmo() { const s = localStorage.getItem(STORAGE_KEY_AMMO); ownedAmmo = s ? new Set(JSON.parse(s)) : new Set(); }
+        function saveOwnedAmmo() { localStorage.setItem(STORAGE_KEY_AMMO, JSON.stringify([...ownedAmmo])); }
+        async function loadAmmoData() { const l = document.getElementById('ammo-loading'), c = document.getElementById('ammo-content'), e = document.getElementById('ammo-error'), b = document.getElementById('btn-load-ammo'); c.classList.add('d-none'); l.classList.remove('d-none'); e.classList.add('d-none'); try { const r = await fetch(API_BASE + '/ammo'); if (!r.ok) throw new Error('Server error: ' + r.status); allAmmoData = await r.json(); const cs = document.getElementById('caliberFilter'); cs.innerHTML = '<option value="ALL">All Calibers</option>'; allAmmoData.calibers.forEach(cal => cs.innerHTML += '<option value="' + cal + '">' + cal + '</option>'); document.getElementById('ammo-count').textContent = allAmmoData.all.length + ' types'; renderAmmoList(); c.classList.remove('d-none'); b.innerHTML = 'Refresh Data'; b.classList.add('btn-secondary'); } catch (err) { e.innerHTML = '<strong>ERROR:</strong> ' + err.message; e.classList.remove('d-none'); } finally { l.classList.add('d-none'); } }
+        function filterAmmoByCaliber() { renderAmmoList(); }
+        function updateTierThreshold() { const v = parseInt(document.getElementById('tierSlider').value); currentTierThreshold = TIER_NAMES[v]; document.getElementById('tierDisplay').textContent = 'Keep ' + currentTierThreshold + '-Tier+'; updateAmmoAnalysis(); }
+        function renderAmmoList() { if (!allAmmoData) return; const c = document.getElementById('ammo-list'), cf = document.getElementById('caliberFilter').value; let h = ''; if (cf === 'ALL') { for (const [cal, ams] of Object.entries(allAmmoData.byCaliber)) h += renderCaliberGroup(cal, ams); } else { h += renderCaliberGroup(cf, allAmmoData.byCaliber[cf] || []); } c.innerHTML = h; updateAmmoAnalysis(); }
+        function renderCaliberGroup(cal, ams) { let h = '<div class="caliber-group"><div class="caliber-header">' + cal + ' <span class="text-sub small">(' + ams.length + ')</span></div>'; ams.forEach(a => { const io = ownedAmmo.has(a.id); h += '<div class="ammo-card ' + (io ? 'owned' : '') + '" onclick="toggleAmmoOwned(\'' + a.id + '\')"><span class="tier-badge tier-' + a.tier + '">' + a.tier + '</span>' + (a.iconLink ? '<img src="' + a.iconLink + '">' : '') + '<div class="flex-grow-1"><div class="fw-bold" style="color: var(--text-main);">' + a.shortName + '</div><div class="ammo-stats"><span class="stat-dmg">💥 ' + a.damage + '</span><span class="stat-pen">🛡️ ' + a.penetration + '</span>' + (a.sellPrice > 0 ? '<span class="stat-price">₽' + a.sellPrice.toLocaleString() + '</span>' : '') + '</div></div>' + (io ? '<span class="badge-tarkov badge-active">OWNED</span>' : '') + '</div>'; }); return h + '</div>'; }
+        function toggleAmmoOwned(id) { ownedAmmo.has(id) ? ownedAmmo.delete(id) : ownedAmmo.add(id); saveOwnedAmmo(); renderAmmoList(); }
+        function updateAmmoAnalysis() { if (!allAmmoData) return; const kl = document.getElementById('keep-list'), sl = document.getElementById('sell-list'), kc = document.getElementById('keep-count'), sc = document.getElementById('sell-count'), tv = document.getElementById('total-sell-value'); const ti = TIER_ORDER.indexOf(currentTierThreshold), kt = TIER_ORDER.slice(ti); const ow = allAmmoData.all.filter(a => ownedAmmo.has(a.id)), kp = ow.filter(a => kt.includes(a.tier)), se = ow.filter(a => !kt.includes(a.tier)); kc.textContent = kp.length; sc.textContent = se.length; kl.innerHTML = kp.length > 0 ? kp.map(a => renderAnalysisItem(a, 'keep')).join('') : '<div class="text-sub p-2 small">No ammo to keep marked.</div>'; sl.innerHTML = se.length > 0 ? se.map(a => renderAnalysisItem(a, 'sell')).join('') : '<div class="text-sub p-2 small">No ammo to sell.</div>'; tv.textContent = '₽' + se.reduce((s, a) => s + (a.sellPrice || 0), 0).toLocaleString(); }
+        function renderAnalysisItem(a, t) { return '<div class="item-box ' + (t === 'keep' ? 'status-provided' : 'status-acquire') + ' w-100 mb-1"><span class="tier-badge tier-' + a.tier + '" style="width:24px;height:24px;line-height:24px;font-size:0.75rem;">' + a.tier + '</span>' + (a.iconLink ? '<img src="' + a.iconLink + '" style="width:28px;height:28px;">' : '') + '<div class="flex-grow-1"><div style="font-size:0.85rem;">' + a.shortName + '</div><div style="font-size:0.7rem;color:var(--text-sub);">' + a.caliber + '</div></div>' + (t === 'sell' && a.sellPrice > 0 ? '<span class="stat-price small">₽' + a.sellPrice.toLocaleString() + '</span>' : '') + '</div>'; }
     </script>
 </body>
-
 </html>
