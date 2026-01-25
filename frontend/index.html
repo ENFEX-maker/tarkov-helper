@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tarkov Raid Planner v3.6</title>
+    <title>Tarkov Raid Planner v3.7</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
@@ -55,22 +55,28 @@
         .form-select-tarkov, .form-control-tarkov { background: var(--bg-element); border: 1px solid var(--border-dark); color: var(--text-main); padding: 10px 15px; font-family: 'Rajdhani', sans-serif; }
         .form-select-tarkov:focus, .form-control-tarkov:focus { background: var(--bg-hover); border-color: var(--eft-gold); color: var(--text-main); box-shadow: none; outline: none; }
         .form-select-tarkov option { background: var(--bg-dark); color: var(--text-main); }
+        .form-select-tarkov option:disabled { color: var(--text-sub); opacity: 0.5; }
         #map { height: 600px; background: var(--bg-dark); border: 1px solid var(--border-dark); }
         .map-controls { display: flex; align-items: center; gap: 15px; padding: 10px 15px; background: var(--bg-element); border: 1px solid var(--border-dark); border-bottom: none; font-size: 0.85rem; color: var(--text-sub); }
         .map-controls .btn-tarkov { padding: 5px 12px; font-size: 0.8rem; }
         .marker-count { margin-left: auto; color: var(--eft-gold); font-weight: 600; }
+        .map-hint { padding: 8px 15px; background: rgba(158, 143, 107, 0.1); border: 1px solid var(--border-dark); border-top: none; font-size: 0.8rem; color: var(--eft-gold); }
+        .map-hint.warning { background: rgba(140, 59, 59, 0.15); color: var(--eft-red); }
         .leaflet-container { background: var(--bg-dark); }
         .marker-label { background: rgba(0,0,0,0.85) !important; border: 1px solid var(--eft-gold) !important; color: var(--text-beige) !important; font-family: 'Rajdhani', sans-serif !important; padding: 5px 10px !important; border-radius: 0 !important; }
-        .quest-marker-popup { min-width: 200px; }
+        .quest-marker-popup { min-width: 200px; max-width: 280px; }
         .quest-marker-popup h6 { color: var(--eft-gold); margin-bottom: 8px; font-size: 0.9rem; }
         .quest-marker-popup p { margin: 0; font-size: 0.85rem; color: var(--text-main); }
         .quest-marker-popup .obj-type { display: inline-block; padding: 2px 8px; font-size: 0.7rem; text-transform: uppercase; margin-bottom: 5px; }
+        .quest-marker-popup .obj-num { display: inline-block; background: var(--eft-gold); color: #000; font-weight: 700; padding: 2px 6px; font-size: 0.7rem; margin-right: 5px; }
         .obj-pickup { background: #2d5a2d; color: #7fff7f; }
         .obj-place { background: #5a5a2d; color: #ffff7f; }
         .obj-mark { background: #5a2d5a; color: #ff7fff; }
         .obj-find { background: #2d5a5a; color: #7fffff; }
         .obj-kill { background: #5a2d2d; color: #ff7f7f; }
         .obj-locate { background: #2d2d5a; color: #7f7fff; }
+        .marker-number { position: absolute; top: -8px; right: -8px; background: var(--eft-gold); color: #000; font-weight: 700; font-size: 0.65rem; width: 16px; height: 16px; line-height: 16px; text-align: center; border-radius: 50%; }
+        .quest-marker-icon { background: transparent !important; border: none !important; }
         .item-box { display: flex; align-items: center; gap: 10px; background: var(--bg-dark); border: 1px solid var(--border-dark); padding: 8px 12px; margin-bottom: 6px; }
         .item-box img { width: 40px; height: 40px; object-fit: contain; }
         .item-label { font-size: 0.65rem; padding: 2px 6px; font-weight: 700; letter-spacing: 1px; }
@@ -108,6 +114,20 @@
         .loading-spinner { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; color: var(--text-sub); }
         .spinner { width: 40px; height: 40px; border: 3px solid var(--border-dark); border-top-color: var(--eft-gold); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        
+        /* Tier Editor Styles */
+        .tier-config { margin-bottom: 20px; }
+        .tier-config-row { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--bg-dark); border: 1px solid var(--border-dark); margin-bottom: 4px; }
+        .tier-config-row .tier-badge { flex-shrink: 0; }
+        .tier-config-row label { font-size: 0.8rem; color: var(--text-sub); min-width: 80px; }
+        .tier-config-row input[type="number"] { width: 70px; background: var(--bg-element); border: 1px solid var(--border-dark); color: var(--text-main); padding: 4px 8px; font-family: 'Rajdhani', sans-serif; text-align: center; }
+        .tier-config-row input[type="number"]:focus { border-color: var(--eft-gold); outline: none; }
+        .tier-override { position: relative; }
+        .tier-override-btn { position: absolute; right: 5px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-sub); cursor: pointer; padding: 2px 6px; font-size: 0.7rem; }
+        .tier-override-btn:hover { color: var(--eft-gold); }
+        .ammo-card.overridden { border-left: 3px solid var(--eft-gold); }
+        .override-indicator { font-size: 0.65rem; color: var(--eft-gold); margin-left: auto; }
+        .tier-select-mini { background: var(--bg-element); border: 1px solid var(--border-dark); color: var(--text-main); padding: 2px 6px; font-size: 0.75rem; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -149,21 +169,22 @@
                             <div class="col-md-6">
                                 <select id="mapSelect" class="form-select-tarkov w-100" onchange="onMapChange()">
                                     <option value="customs">Customs</option>
-                                    <option value="woods">Woods</option>
-                                    <option value="shoreline">Shoreline</option>
-                                    <option value="interchange">Interchange</option>
-                                    <option value="reserve">Reserve</option>
-                                    <option value="lighthouse">Lighthouse</option>
-                                    <option value="streets">Streets of Tarkov</option>
-                                    <option value="groundzero">Ground Zero</option>
                                     <option value="factory">Factory</option>
+                                    <option value="groundzero">Ground Zero</option>
+                                    <option value="interchange">Interchange</option>
                                     <option value="labs">The Lab</option>
+                                    <option value="lighthouse">Lighthouse</option>
+                                    <option value="reserve">Reserve</option>
+                                    <option value="shoreline">Shoreline</option>
+                                    <option value="streets">Streets of Tarkov</option>
+                                    <option value="woods">Woods</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
                                 <button class="btn-tarkov w-100" onclick="planRaid()">Plan Raid</button>
                             </div>
                         </div>
+                        <div id="mapHint" class="map-hint" style="display: none;"></div>
                         <div class="map-controls">
                             <span>Scroll to zoom | Drag to pan | Click markers for details</span>
                             <span class="marker-count" id="markerCount">0 markers</span>
@@ -229,6 +250,45 @@
                 </div>
                 <div class="col-lg-4">
                     <div class="tarkov-panel">
+                        <h5>Tier Configuration</h5>
+                        <div class="tier-config" id="tierConfig">
+                            <div class="text-sub small mb-2">Penetration thresholds:</div>
+                            <div class="tier-config-row">
+                                <span class="tier-badge tier-S">S</span>
+                                <label>Min Pen:</label>
+                                <input type="number" id="tierThresholdS" value="55" min="0" max="100" onchange="updateTierConfig()">
+                            </div>
+                            <div class="tier-config-row">
+                                <span class="tier-badge tier-A">A</span>
+                                <label>Min Pen:</label>
+                                <input type="number" id="tierThresholdA" value="45" min="0" max="100" onchange="updateTierConfig()">
+                            </div>
+                            <div class="tier-config-row">
+                                <span class="tier-badge tier-B">B</span>
+                                <label>Min Pen:</label>
+                                <input type="number" id="tierThresholdB" value="35" min="0" max="100" onchange="updateTierConfig()">
+                            </div>
+                            <div class="tier-config-row">
+                                <span class="tier-badge tier-C">C</span>
+                                <label>Min Pen:</label>
+                                <input type="number" id="tierThresholdC" value="25" min="0" max="100" onchange="updateTierConfig()">
+                            </div>
+                            <div class="tier-config-row">
+                                <span class="tier-badge tier-D">D</span>
+                                <label>Min Pen:</label>
+                                <input type="number" id="tierThresholdD" value="15" min="0" max="100" onchange="updateTierConfig()">
+                            </div>
+                            <div class="tier-config-row">
+                                <span class="tier-badge tier-F">F</span>
+                                <label>Below D</label>
+                            </div>
+                            <div class="mt-2 d-flex gap-2">
+                                <button class="btn-tarkov flex-grow-1" onclick="resetTierConfig()" style="padding: 6px 12px; font-size: 0.8rem;">Reset Defaults</button>
+                                <button class="btn-tarkov flex-grow-1" onclick="clearTierOverrides()" style="padding: 6px 12px; font-size: 0.8rem;">Clear Overrides</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tarkov-panel">
                         <h5>Keep/Sell Analysis</h5>
                         <div class="mb-3">
                             <label class="form-label text-sub small">Minimum tier to keep:</label>
@@ -285,6 +345,11 @@
         // Tier configuration
         const TIER_NAMES = ['S', 'A', 'B', 'C', 'D', 'F'];
         const TIER_ORDER = ['S', 'A', 'B', 'C', 'D', 'F'];
+        const STORAGE_KEY_TIER_CONFIG = 'tarkov_planner_tier_config_v1';
+        const STORAGE_KEY_TIER_OVERRIDES = 'tarkov_planner_tier_overrides_v1';
+        
+        // Default tier thresholds (penetration values)
+        const DEFAULT_TIER_THRESHOLDS = { S: 55, A: 45, B: 35, C: 25, D: 15 };
         
         // State
         let mapInstance = null;
@@ -299,12 +364,15 @@
         let currentMapHeight = 0;
         let currentMapWidth = 0;
         let selectedQuestNamesForMarkers = [];
+        let requiredMapsForQuests = new Set();
+        let tierThresholds = { ...DEFAULT_TIER_THRESHOLDS };
+        let tierOverrides = {}; // ammoId -> tier
 
         // ============================================================================
         // STATUS INDICATOR
         // ============================================================================
         
-        function updateStatus(connected, version = '3.6') {
+        function updateStatus(connected, version = '3.7') {
             const dot = document.getElementById('statusDot');
             const text = document.getElementById('statusText');
             if (connected) {
@@ -336,17 +404,31 @@
                     const questTitle = (quest.title || quest.name || '').toLowerCase().trim();
                     
                     if (quest.objectives) {
+                        let objIndex = 0;
                         quest.objectives.forEach(obj => {
                             if (obj.gps && obj.gps.leftPercent !== undefined && obj.gps.topPercent !== undefined) {
                                 const mapKey = getMapKeyFromLocation(obj.location, quest);
                                 if (!mapKey) return;
                                 
+                                objIndex++;
+                                
+                                // Build concise description from available fields
+                                const descParts = [];
+                                if (obj.target) descParts.push(obj.target);
+                                if (obj.tool && !descParts.includes(obj.tool)) descParts.push(`with ${obj.tool}`);
+                                const description = descParts.length > 0 
+                                    ? descParts.join(' ').substring(0, 80) 
+                                    : `Objective #${objIndex}`;
+                                
                                 const locData = {
                                     questId: questId,
                                     questName: quest.title || quest.name || `Quest ${questId}`,
+                                    objectiveIndex: objIndex,
                                     objectiveId: obj.id,
                                     type: obj.type || 'unknown',
-                                    description: obj.target || obj.tool || `Objective ${obj.id}`,
+                                    description: description,
+                                    target: obj.target || '',
+                                    tool: obj.tool || '',
                                     leftPercent: obj.gps.leftPercent,
                                     topPercent: obj.gps.topPercent,
                                     floor: obj.gps.floor || 'Ground_Level',
@@ -451,17 +533,33 @@
                     const typeKey = loc.type.toLowerCase();
                     const color = colors[typeKey] || colors['unknown'];
                     
-                    const marker = L.circleMarker([leafletY, leafletX], {
-                        radius: 10,
-                        color: color.border,
-                        fillColor: color.fill,
-                        fillOpacity: 0.9,
-                        weight: 3
+                    markerCount++;
+                    
+                    // Create custom div icon with number
+                    const markerHtml = `
+                        <div style="position: relative; width: 24px; height: 24px;">
+                            <div style="width: 24px; height: 24px; border-radius: 50%; background: ${color.fill}; border: 3px solid ${color.border};"></div>
+                            <div style="position: absolute; top: -6px; right: -6px; background: #c4b896; color: #000; font-weight: 700; font-size: 10px; width: 14px; height: 14px; line-height: 14px; text-align: center; border-radius: 50%;">${loc.objectiveIndex || markerCount}</div>
+                        </div>
+                    `;
+                    
+                    const icon = L.divIcon({
+                        html: markerHtml,
+                        className: 'quest-marker-icon',
+                        iconSize: [24, 24],
+                        iconAnchor: [12, 12]
                     });
+                    
+                    const marker = L.marker([leafletY, leafletX], { icon: icon });
+                    
+                    // Build tooltip text: short and informative
+                    const typeLabel = loc.type.charAt(0).toUpperCase() + loc.type.slice(1);
+                    const tooltipText = `#${loc.objectiveIndex || markerCount}: ${typeLabel} - ${loc.description}`;
                     
                     const typeClass = `obj-${typeKey}`;
                     const popupContent = `
                         <div class="quest-marker-popup">
+                            <span class="obj-num">#${loc.objectiveIndex || markerCount}</span>
                             <span class="obj-type ${typeClass}">${loc.type}</span>
                             <h6>${loc.questName}</h6>
                             <p>${loc.description}</p>
@@ -470,10 +568,9 @@
                     `;
                     
                     marker.bindPopup(popupContent, { className: 'marker-label' });
-                    marker.bindTooltip(loc.questName, { direction: 'top', className: 'marker-label', offset: [0, -10] });
+                    marker.bindTooltip(tooltipText, { direction: 'top', className: 'marker-label', offset: [0, -15] });
                     
                     questMarkersLayer.addLayer(marker);
-                    markerCount++;
                 });
             });
             
@@ -533,7 +630,7 @@
                 const savedQuests = getSavedQuests();
                 
                 // Update connection status
-                updateStatus(true, '3.6');
+                updateStatus(true, '3.7');
                 
                 // Group by trader
                 const byTrader = {};
@@ -608,6 +705,102 @@
             
             const groupId = cb.getAttribute('data-parent-group');
             if (groupId) updateTraderBadge(groupId);
+            
+            // Update map selection based on selected quests
+            updateMapSelection();
+        }
+        
+        function updateMapSelection() {
+            const savedQuests = getSavedQuests();
+            const selectedQuests = allQuestsGlobal.filter(q => savedQuests.has(q.id));
+            const mapSelect = document.getElementById('mapSelect');
+            const mapHint = document.getElementById('mapHint');
+            
+            if (selectedQuests.length === 0) {
+                // No quests selected - enable all maps, hide hint
+                Array.from(mapSelect.options).forEach(opt => opt.disabled = false);
+                mapHint.style.display = 'none';
+                requiredMapsForQuests = new Set();
+                return;
+            }
+            
+            // Collect required maps from API quest data AND tarkovdata locations
+            requiredMapsForQuests = new Set();
+            
+            selectedQuests.forEach(q => {
+                // From API quest map field
+                if (q.map?.name && q.map.name.toLowerCase() !== 'any') {
+                    const mapKey = mapNameToKey(q.map.name);
+                    if (mapKey) requiredMapsForQuests.add(mapKey);
+                }
+                
+                // From tarkovdata GPS locations
+                if (questLocationsData) {
+                    const questTitle = q.name.toLowerCase().trim();
+                    const locations = questLocationsData.byQuestName[questTitle] || [];
+                    locations.forEach(loc => {
+                        if (loc.mapKey) requiredMapsForQuests.add(loc.mapKey);
+                    });
+                }
+            });
+            
+            // If no specific maps found (all "any" quests), enable all
+            if (requiredMapsForQuests.size === 0) {
+                Array.from(mapSelect.options).forEach(opt => opt.disabled = false);
+                mapHint.textContent = 'Selected quests can be completed on any map';
+                mapHint.className = 'map-hint';
+                mapHint.style.display = 'block';
+                return;
+            }
+            
+            // Enable/disable map options
+            const mapNames = [];
+            Array.from(mapSelect.options).forEach(opt => {
+                const isRequired = requiredMapsForQuests.has(opt.value);
+                opt.disabled = !isRequired;
+                if (isRequired) {
+                    mapNames.push(opt.textContent);
+                }
+            });
+            
+            // Sort alphabetically and select first
+            mapNames.sort();
+            const sortedMaps = Array.from(requiredMapsForQuests).sort();
+            
+            // Auto-select first available map if current selection is disabled
+            const currentSelected = mapSelect.value;
+            if (!requiredMapsForQuests.has(currentSelected)) {
+                mapSelect.value = sortedMaps[0];
+            }
+            
+            // Show hint
+            if (requiredMapsForQuests.size === 1) {
+                mapHint.textContent = `Quest location: ${mapNames[0]}`;
+                mapHint.className = 'map-hint';
+            } else {
+                mapHint.textContent = `Quests require ${requiredMapsForQuests.size} maps: ${mapNames.join(', ')}`;
+                mapHint.className = 'map-hint warning';
+            }
+            mapHint.style.display = 'block';
+        }
+        
+        function mapNameToKey(mapName) {
+            const nameMap = {
+                'customs': 'customs',
+                'woods': 'woods',
+                'shoreline': 'shoreline',
+                'interchange': 'interchange',
+                'reserve': 'reserve',
+                'lighthouse': 'lighthouse',
+                'streets of tarkov': 'streets',
+                'streets': 'streets',
+                'ground zero': 'groundzero',
+                'factory': 'factory',
+                'the lab': 'labs',
+                'laboratory': 'labs',
+                'labs': 'labs'
+            };
+            return nameMap[mapName.toLowerCase()] || null;
         }
         
         function updateTraderBadge(groupId) {
@@ -935,9 +1128,12 @@
             
             ammos.forEach(a => {
                 const isOwned = ownedAmmo.has(a.id);
+                const displayTier = getAmmoTier(a);
+                const isOverridden = tierOverrides[a.id] !== undefined;
+                
                 html += `
-                    <div class="ammo-card ${isOwned ? 'owned' : ''}" onclick="toggleAmmoOwned('${a.id}')">
-                        <span class="tier-badge tier-${a.tier}">${a.tier}</span>
+                    <div class="ammo-card ${isOwned ? 'owned' : ''} ${isOverridden ? 'overridden' : ''}" onclick="toggleAmmoOwned('${a.id}')">
+                        <span class="tier-badge tier-${displayTier}">${displayTier}</span>
                         ${a.iconLink ? `<img src="${a.iconLink}">` : ''}
                         <div class="flex-grow-1">
                             <div class="fw-bold" style="color: var(--text-main);">${a.shortName}</div>
@@ -947,12 +1143,96 @@
                                 ${a.sellPrice > 0 ? `<span class="stat-price">${a.sellPrice.toLocaleString()} RUB</span>` : ''}
                             </div>
                         </div>
+                        ${isOverridden ? '<span class="override-indicator">CUSTOM</span>' : ''}
                         ${isOwned ? '<span class="badge-tarkov badge-active">OWNED</span>' : ''}
+                        <select class="tier-select-mini" onclick="event.stopPropagation()" onchange="setTierOverride('${a.id}', this.value)">
+                            <option value="" ${!isOverridden ? 'selected' : ''}>Auto</option>
+                            ${TIER_NAMES.map(t => `<option value="${t}" ${tierOverrides[a.id] === t ? 'selected' : ''}>${t}</option>`).join('')}
+                        </select>
                     </div>
                 `;
             });
             
             return html + '</div>';
+        }
+        
+        function getAmmoTier(ammo) {
+            // Check for manual override first
+            if (tierOverrides[ammo.id]) {
+                return tierOverrides[ammo.id];
+            }
+            // Calculate based on penetration thresholds
+            const pen = ammo.penetration;
+            if (pen >= tierThresholds.S) return 'S';
+            if (pen >= tierThresholds.A) return 'A';
+            if (pen >= tierThresholds.B) return 'B';
+            if (pen >= tierThresholds.C) return 'C';
+            if (pen >= tierThresholds.D) return 'D';
+            return 'F';
+        }
+        
+        function setTierOverride(ammoId, tier) {
+            if (tier === '') {
+                delete tierOverrides[ammoId];
+            } else {
+                tierOverrides[ammoId] = tier;
+            }
+            saveTierOverrides();
+            renderAmmoList();
+        }
+        
+        function updateTierConfig() {
+            tierThresholds.S = parseInt(document.getElementById('tierThresholdS').value) || 55;
+            tierThresholds.A = parseInt(document.getElementById('tierThresholdA').value) || 45;
+            tierThresholds.B = parseInt(document.getElementById('tierThresholdB').value) || 35;
+            tierThresholds.C = parseInt(document.getElementById('tierThresholdC').value) || 25;
+            tierThresholds.D = parseInt(document.getElementById('tierThresholdD').value) || 15;
+            saveTierConfig();
+            renderAmmoList();
+        }
+        
+        function resetTierConfig() {
+            tierThresholds = { ...DEFAULT_TIER_THRESHOLDS };
+            document.getElementById('tierThresholdS').value = tierThresholds.S;
+            document.getElementById('tierThresholdA').value = tierThresholds.A;
+            document.getElementById('tierThresholdB').value = tierThresholds.B;
+            document.getElementById('tierThresholdC').value = tierThresholds.C;
+            document.getElementById('tierThresholdD').value = tierThresholds.D;
+            saveTierConfig();
+            renderAmmoList();
+        }
+        
+        function clearTierOverrides() {
+            tierOverrides = {};
+            saveTierOverrides();
+            renderAmmoList();
+        }
+        
+        function saveTierConfig() {
+            localStorage.setItem(STORAGE_KEY_TIER_CONFIG, JSON.stringify(tierThresholds));
+        }
+        
+        function loadTierConfig() {
+            const saved = localStorage.getItem(STORAGE_KEY_TIER_CONFIG);
+            if (saved) {
+                tierThresholds = JSON.parse(saved);
+                document.getElementById('tierThresholdS').value = tierThresholds.S;
+                document.getElementById('tierThresholdA').value = tierThresholds.A;
+                document.getElementById('tierThresholdB').value = tierThresholds.B;
+                document.getElementById('tierThresholdC').value = tierThresholds.C;
+                document.getElementById('tierThresholdD').value = tierThresholds.D;
+            }
+        }
+        
+        function saveTierOverrides() {
+            localStorage.setItem(STORAGE_KEY_TIER_OVERRIDES, JSON.stringify(tierOverrides));
+        }
+        
+        function loadTierOverrides() {
+            const saved = localStorage.getItem(STORAGE_KEY_TIER_OVERRIDES);
+            if (saved) {
+                tierOverrides = JSON.parse(saved);
+            }
         }
         
         function toggleAmmoOwned(id) {
@@ -974,8 +1254,8 @@
             const keepTiers = TIER_ORDER.slice(0, tierIndex + 1);
             
             const owned = allAmmoData.all.filter(a => ownedAmmo.has(a.id));
-            const keep = owned.filter(a => keepTiers.includes(a.tier));
-            const sell = owned.filter(a => !keepTiers.includes(a.tier));
+            const keep = owned.filter(a => keepTiers.includes(getAmmoTier(a)));
+            const sell = owned.filter(a => !keepTiers.includes(getAmmoTier(a)));
             
             keepCount.textContent = keep.length;
             sellCount.textContent = sell.length;
@@ -992,9 +1272,10 @@
         }
         
         function renderAnalysisItem(ammo, type) {
+            const displayTier = getAmmoTier(ammo);
             return `
                 <div class="item-box ${type === 'keep' ? 'status-provided' : 'status-acquire'} w-100 mb-1">
-                    <span class="tier-badge tier-${ammo.tier}" style="width:24px;height:24px;line-height:24px;font-size:0.75rem;">${ammo.tier}</span>
+                    <span class="tier-badge tier-${displayTier}" style="width:24px;height:24px;line-height:24px;font-size:0.75rem;">${displayTier}</span>
                     ${ammo.iconLink ? `<img src="${ammo.iconLink}" style="width:28px;height:28px;">` : ''}
                     <div class="flex-grow-1">
                         <div style="font-size:0.85rem;">${ammo.shortName}</div>
@@ -1011,12 +1292,17 @@
         
         document.addEventListener('DOMContentLoaded', async () => {
             loadSavedAmmo();
+            loadTierConfig();
+            loadTierOverrides();
             
             // Load quest locations from tarkovdata
             await loadQuestLocationsData();
             
             // Load quests from backend
-            loadQuests();
+            await loadQuests();
+            
+            // Update map selection based on any saved quest selections
+            updateMapSelection();
             
             // Initialize map without markers (markers appear after Plan Raid)
             initMap('customs', []);
