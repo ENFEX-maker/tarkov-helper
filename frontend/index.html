@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tarkov Raid Planner v3.4</title>
+    <title>Tarkov Raid Planner v3.5</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
@@ -15,6 +15,15 @@
         h1, h2, h3, h4, h5 { color: var(--text-beige); font-family: 'Rajdhani', sans-serif; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; }
         .text-beige { color: var(--text-beige) !important; } .text-sub { color: var(--text-sub) !important; } .text-gold { color: var(--eft-gold) !important; }
         .container { max-width: 1500px; margin-top: 20px; }
+        
+        /* Header with status indicator */
+        .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .header-row h1 { margin: 0; font-size: 1.8rem; }
+        .status-indicator { display: flex; align-items: center; gap: 10px; background: var(--bg-element); border: 1px solid var(--border-dark); padding: 8px 15px; font-size: 0.85rem; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--eft-green); animation: pulse 2s infinite; }
+        .status-dot.offline { background: var(--eft-red); animation: none; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        
         .nav-tabs-tarkov { border-bottom: 2px solid var(--border-gold); margin-bottom: 30px; display: flex; gap: 0; }
         .nav-tab { background: var(--bg-panel); border: 1px solid var(--border-dark); border-bottom: none; color: var(--text-sub); padding: 15px 40px; font-family: 'Rajdhani', sans-serif; font-size: 1.1rem; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; cursor: pointer; transition: all 0.2s ease; position: relative; top: 2px; }
         .nav-tab:hover { background: var(--bg-element); color: var(--text-beige); }
@@ -49,6 +58,7 @@
         #map { height: 600px; background: var(--bg-dark); border: 1px solid var(--border-dark); }
         .map-controls { display: flex; align-items: center; gap: 15px; padding: 10px 15px; background: var(--bg-element); border: 1px solid var(--border-dark); border-bottom: none; font-size: 0.85rem; color: var(--text-sub); }
         .map-controls .btn-tarkov { padding: 5px 12px; font-size: 0.8rem; }
+        .marker-count { margin-left: auto; color: var(--eft-gold); font-weight: 600; }
         .leaflet-container { background: var(--bg-dark); }
         .marker-label { background: rgba(0,0,0,0.85) !important; border: 1px solid var(--eft-gold) !important; color: var(--text-beige) !important; font-family: 'Rajdhani', sans-serif !important; padding: 5px 10px !important; border-radius: 0 !important; }
         .quest-marker-popup { min-width: 200px; }
@@ -95,22 +105,24 @@
         .analysis-list { max-height: 300px; overflow-y: auto; }
         .search-box { position: relative; margin-bottom: 15px; }
         .search-box input { width: 100%; padding-right: 35px; }
-        .search-box::after { content: "🔍"; position: absolute; right: 12px; top: 50%; transform: translateY(-50%); opacity: 0.5; }
         .loading-spinner { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; color: var(--text-sub); }
         .spinner { width: 40px; height: 40px; border: 3px solid var(--border-dark); border-top-color: var(--eft-gold); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .version-tag { position: fixed; bottom: 10px; right: 10px; font-size: 0.7rem; color: var(--text-sub); opacity: 0.5; }
-        .quest-location-status { background: var(--bg-element); border: 1px solid var(--border-dark); padding: 10px 15px; margin-bottom: 15px; font-size: 0.85rem; }
-        .quest-location-status .count { color: var(--eft-gold); font-weight: bold; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1 class="text-center mb-4" style="font-size: 1.8rem;">⚔️ Tarkov Raid Planner</h1>
+        <div class="header-row">
+            <h1>Tarkov Raid Planner</h1>
+            <div class="status-indicator">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">Connecting...</span>
+            </div>
+        </div>
         
         <div class="nav-tabs-tarkov">
-            <div class="nav-tab active" onclick="switchTab('planner')">📋 Mission Planner</div>
-            <div class="nav-tab" onclick="switchTab('ammo')">🎯 Ammo Manager</div>
+            <div class="nav-tab active" onclick="switchTab('planner')">Mission Planner</div>
+            <div class="nav-tab" onclick="switchTab('ammo')">Ammo Manager</div>
         </div>
 
         <!-- MISSION PLANNER TAB -->
@@ -149,15 +161,13 @@
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <button class="btn-tarkov w-100" onclick="planRaid()">▶ Plan Raid</button>
+                                <button class="btn-tarkov w-100" onclick="planRaid()">Plan Raid</button>
                             </div>
                         </div>
-                        <div class="quest-location-status" id="quest-loc-status">
-                            📍 Quest Locations: <span class="count">Loading...</span>
-                        </div>
                         <div class="map-controls">
-                            <span>🖱️ Scroll to zoom • Drag to pan • Click markers for details</span>
-                            <button class="btn-tarkov ms-auto" onclick="resetMapView()">↺ Reset View</button>
+                            <span>Scroll to zoom | Drag to pan | Click markers for details</span>
+                            <span class="marker-count" id="markerCount">0 markers</span>
+                            <button class="btn-tarkov" onclick="resetMapView()">Reset View</button>
                         </div>
                         <div id="map"></div>
                     </div>
@@ -165,22 +175,22 @@
             </div>
 
             <div id="planning-result" class="tarkov-panel" style="display: none;">
-                <h5>📋 Mission Briefing</h5>
+                <h5>Mission Briefing</h5>
                 <div class="row">
                     <div class="col-md-4">
-                        <h6 class="text-beige mb-3">🔑 Required Keys</h6>
+                        <h6 class="text-beige mb-3">Required Keys</h6>
                         <div id="required-keys"></div>
                     </div>
                     <div class="col-md-4">
-                        <h6 class="text-beige mb-3">📦 Required Items</h6>
+                        <h6 class="text-beige mb-3">Required Items</h6>
                         <div id="required-items"></div>
                     </div>
                     <div class="col-md-4">
-                        <h6 class="text-beige mb-3">🔓 Unlocks</h6>
+                        <h6 class="text-beige mb-3">Unlocks</h6>
                         <div id="progression-list"></div>
                     </div>
                 </div>
-                <h6 class="text-beige mt-4 mb-3">📝 Objectives</h6>
+                <h6 class="text-beige mt-4 mb-3">Objectives</h6>
                 <ul id="mission-steps" class="list-group list-group-flush" style="max-height: 250px; overflow-y: auto;"></ul>
             </div>
         </div>
@@ -206,7 +216,7 @@
                                 <button id="btn-load-ammo" class="btn-tarkov w-100" onclick="loadAmmoData()">Load Data</button>
                             </div>
                         </div>
-                        <div class="text-sub small mb-3">Click ammo to mark as owned • <span id="ammo-count">0</span> loaded</div>
+                        <div class="text-sub small mb-3">Click ammo to mark as owned | <span id="ammo-count">0</span> loaded</div>
                         <div id="ammo-loading" class="loading-spinner d-none">
                             <div class="spinner"></div>
                             <div>Loading ammunition data...</div>
@@ -228,18 +238,18 @@
                         <div class="analysis-panel" style="flex-direction: column;">
                             <div class="analysis-col">
                                 <div class="analysis-header" style="background: rgba(74, 122, 74, 0.2);">
-                                    <h6 style="color: var(--eft-green);">✓ KEEP</h6>
+                                    <h6 style="color: var(--eft-green);">KEEP</h6>
                                     <span class="badge-tarkov badge-active" id="keep-count">0</span>
                                 </div>
                                 <div id="keep-list" class="analysis-list"></div>
                             </div>
                             <div class="analysis-col">
                                 <div class="analysis-header" style="background: rgba(140, 59, 59, 0.2);">
-                                    <h6 style="color: var(--eft-red);">✗ SELL</h6>
+                                    <h6 style="color: var(--eft-red);">SELL</h6>
                                     <span class="badge-tarkov" id="sell-count">0</span>
                                 </div>
                                 <div id="sell-list" class="analysis-list"></div>
-                                <div class="text-end mt-2 text-sub small">Total value: <span id="total-sell-value" class="text-gold">₽0</span></div>
+                                <div class="text-end mt-2 text-sub small">Total value: <span id="total-sell-value" class="text-gold">0 RUB</span></div>
                             </div>
                         </div>
                     </div>
@@ -247,8 +257,6 @@
             </div>
         </div>
     </div>
-
-    <div class="version-tag">v3.4 - tarkovdata integration</div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -260,33 +268,19 @@
         const STORAGE_KEY_QUESTS = 'tarkov_planner_quests_v3';
         const STORAGE_KEY_AMMO = 'tarkov_planner_ammo_v3';
         
-        // Local map images (Re3mr maps)
+        // Map configuration with calibration offsets for Re3mr maps
+        // offsetX/Y: percentage point adjustments, scaleX/Y: scaling factors
         const MAP_CONFIG = {
-            customs:     { file: 'maps/customs.jpg' },
-            woods:       { file: 'maps/woods.jpg' },
-            shoreline:   { file: 'maps/shoreline.jpg' },
-            interchange: { file: 'maps/interchange.jpg' },
-            reserve:     { file: 'maps/reserve.jpg' },
-            lighthouse:  { file: 'maps/lighthouse.jpg' },
-            streets:     { file: 'maps/streets.jpg' },
-            groundzero:  { file: 'maps/groundzero.jpg' },
-            factory:     { file: 'maps/factory.jpg' },
-            labs:        { file: 'maps/labs.jpg' }
-        };
-        
-        // Map name mapping for tarkovdata
-        const MAP_NAME_TO_KEY = {
-            'Customs': 'customs',
-            'Woods': 'woods',
-            'Shoreline': 'shoreline',
-            'Interchange': 'interchange',
-            'Reserve': 'reserve',
-            'Lighthouse': 'lighthouse',
-            'Streets of Tarkov': 'streets',
-            'Ground Zero': 'groundzero',
-            'Factory': 'factory',
-            'The Lab': 'labs',
-            'Laboratory': 'labs'
+            customs:     { file: 'maps/customs.jpg', offsetX: 0, offsetY: 0, scaleX: 1.0, scaleY: 1.0 },
+            woods:       { file: 'maps/woods.jpg', offsetX: 0, offsetY: 0, scaleX: 1.0, scaleY: 1.0 },
+            shoreline:   { file: 'maps/shoreline.jpg', offsetX: -8, offsetY: -12, scaleX: 1.15, scaleY: 1.15 },
+            interchange: { file: 'maps/interchange.jpg', offsetX: 0, offsetY: 0, scaleX: 1.0, scaleY: 1.0 },
+            reserve:     { file: 'maps/reserve.jpg', offsetX: 0, offsetY: 0, scaleX: 1.0, scaleY: 1.0 },
+            lighthouse:  { file: 'maps/lighthouse.jpg', offsetX: 0, offsetY: 0, scaleX: 1.0, scaleY: 1.0 },
+            streets:     { file: 'maps/streets.jpg', offsetX: 0, offsetY: 0, scaleX: 1.0, scaleY: 1.0 },
+            groundzero:  { file: 'maps/groundzero.jpg', offsetX: 0, offsetY: 0, scaleX: 1.0, scaleY: 1.0 },
+            factory:     { file: 'maps/factory.jpg', offsetX: 0, offsetY: 0, scaleX: 1.0, scaleY: 1.0 },
+            labs:        { file: 'maps/labs.jpg', offsetX: 0, offsetY: 0, scaleX: 1.0, scaleY: 1.0 }
         };
 
         // Tier configuration
@@ -305,6 +299,23 @@
         let questMarkersLayer = null;
         let currentMapHeight = 0;
         let currentMapWidth = 0;
+        let selectedQuestNamesForMarkers = [];
+
+        // ============================================================================
+        // STATUS INDICATOR
+        // ============================================================================
+        
+        function updateStatus(connected, version = '3.5') {
+            const dot = document.getElementById('statusDot');
+            const text = document.getElementById('statusText');
+            if (connected) {
+                dot.classList.remove('offline');
+                text.textContent = `v${version} connected`;
+            } else {
+                dot.classList.add('offline');
+                text.textContent = 'Offline';
+            }
+        }
 
         // ============================================================================
         // TARKOVDATA INTEGRATION - Quest Locations
@@ -318,23 +329,20 @@
                 if (!response.ok) throw new Error('Failed to load tarkovdata');
                 const data = await response.json();
                 
-                // Parse quest locations from tarkovdata format
-                questLocationsData = {};
+                // Parse quest locations - index by quest name for matching
+                questLocationsData = { byMap: {}, byQuestName: {} };
                 let totalLocations = 0;
                 
                 for (const [questId, quest] of Object.entries(data)) {
+                    const questTitle = (quest.title || quest.name || '').toLowerCase().trim();
+                    
                     if (quest.objectives) {
                         quest.objectives.forEach(obj => {
                             if (obj.gps && obj.gps.leftPercent !== undefined && obj.gps.topPercent !== undefined) {
-                                // Determine map from location field
                                 const mapKey = getMapKeyFromLocation(obj.location, quest);
                                 if (!mapKey) return;
                                 
-                                if (!questLocationsData[mapKey]) {
-                                    questLocationsData[mapKey] = [];
-                                }
-                                
-                                questLocationsData[mapKey].push({
+                                const locData = {
                                     questId: questId,
                                     questName: quest.title || quest.name || `Quest ${questId}`,
                                     objectiveId: obj.id,
@@ -342,130 +350,152 @@
                                     description: obj.target || obj.tool || `Objective ${obj.id}`,
                                     leftPercent: obj.gps.leftPercent,
                                     topPercent: obj.gps.topPercent,
-                                    floor: obj.gps.floor || 'Ground_Level'
-                                });
+                                    floor: obj.gps.floor || 'Ground_Level',
+                                    mapKey: mapKey
+                                };
+                                
+                                // Index by map
+                                if (!questLocationsData.byMap[mapKey]) {
+                                    questLocationsData.byMap[mapKey] = [];
+                                }
+                                questLocationsData.byMap[mapKey].push(locData);
+                                
+                                // Index by quest name (lowercase for matching)
+                                if (!questLocationsData.byQuestName[questTitle]) {
+                                    questLocationsData.byQuestName[questTitle] = [];
+                                }
+                                questLocationsData.byQuestName[questTitle].push(locData);
+                                
                                 totalLocations++;
                             }
                         });
                     }
                 }
                 
-                document.getElementById('quest-loc-status').innerHTML = 
-                    `📍 Quest Locations: <span class="count">${totalLocations} objectives</span> loaded from tarkovdata`;
-                
-                console.log('Quest locations loaded:', questLocationsData);
+                console.log('Quest locations loaded:', totalLocations, 'objectives');
                 return questLocationsData;
             } catch (error) {
                 console.error('Error loading quest locations:', error);
-                document.getElementById('quest-loc-status').innerHTML = 
-                    `📍 Quest Locations: <span style="color: var(--eft-red);">Failed to load</span>`;
                 return null;
             }
         }
         
         function getMapKeyFromLocation(locationId, quest) {
-            // tarkovdata uses numeric location IDs
             const locationMap = {
-                0: 'customs',      // Customs
-                1: 'factory',      // Factory
-                2: 'woods',        // Woods
-                3: 'shoreline',    // Shoreline
-                4: 'interchange',  // Interchange
-                5: 'lighthouse',   // Lighthouse
-                6: 'reserve',      // Reserve
-                7: 'labs',         // The Lab
-                8: 'streets',      // Streets of Tarkov
-                9: 'groundzero'    // Ground Zero
+                0: 'customs',
+                1: 'factory',
+                2: 'woods',
+                3: 'shoreline',
+                4: 'interchange',
+                5: 'lighthouse',
+                6: 'reserve',
+                7: 'labs',
+                8: 'streets',
+                9: 'groundzero'
             };
             
             if (locationId !== undefined && locationMap[locationId]) {
                 return locationMap[locationId];
             }
-            
-            // Try to get from quest's map field
             if (quest.location !== undefined && locationMap[quest.location]) {
                 return locationMap[quest.location];
             }
-            
             return null;
         }
         
-        function drawQuestMarkers(mapKey, mapWidth, mapHeight) {
+        function drawQuestMarkers(mapKey, mapWidth, mapHeight, questNames = []) {
             if (!questMarkersLayer) {
                 questMarkersLayer = L.layerGroup();
             }
             questMarkersLayer.clearLayers();
             
-            if (!questLocationsData || !questLocationsData[mapKey]) {
-                console.log('No quest locations for map:', mapKey);
+            // Only draw markers if we have selected quests
+            if (!questLocationsData || questNames.length === 0) {
+                updateMarkerCount(0);
                 return;
             }
             
-            const locations = questLocationsData[mapKey];
-            console.log(`Drawing ${locations.length} quest markers for ${mapKey}`);
+            const cfg = MAP_CONFIG[mapKey] || { offsetX: 0, offsetY: 0, scaleX: 1, scaleY: 1 };
+            let markerCount = 0;
             
-            locations.forEach(loc => {
-                // Convert percent to pixel coordinates
-                const pixelX = (loc.leftPercent / 100) * mapWidth;
-                const pixelY = (loc.topPercent / 100) * mapHeight;
+            // Draw markers only for selected quests
+            questNames.forEach(qName => {
+                const normalizedName = qName.toLowerCase().trim();
+                const locations = questLocationsData.byQuestName[normalizedName] || [];
                 
-                // Leaflet uses [y, x] format with inverted Y for CRS.Simple
-                const leafletY = mapHeight - pixelY;
-                const leafletX = pixelX;
-                
-                // Determine marker color based on objective type
-                const colors = {
-                    'find': { fill: '#2d5a5a', border: '#7fffff' },
-                    'pickup': { fill: '#2d5a2d', border: '#7fff7f' },
-                    'place': { fill: '#5a5a2d', border: '#ffff7f' },
-                    'mark': { fill: '#5a2d5a', border: '#ff7fff' },
-                    'kill': { fill: '#5a2d2d', border: '#ff7f7f' },
-                    'locate': { fill: '#2d2d5a', border: '#7f7fff' },
-                    'key': { fill: '#5a4a2d', border: '#ffc07f' },
-                    'skill': { fill: '#4a4a4a', border: '#c0c0c0' },
-                    'reputation': { fill: '#2d4a5a', border: '#7fc0ff' },
-                    'warning': { fill: '#5a3a2d', border: '#ff9f7f' },
-                    'unknown': { fill: '#3a3a3a', border: '#909090' }
-                };
-                
-                const typeKey = loc.type.toLowerCase();
-                const color = colors[typeKey] || colors['unknown'];
-                
-                const marker = L.circleMarker([leafletY, leafletX], {
-                    radius: 8,
-                    color: color.border,
-                    fillColor: color.fill,
-                    fillOpacity: 0.9,
-                    weight: 2
+                locations.forEach(loc => {
+                    // Only draw if this location is on the current map
+                    if (loc.mapKey !== mapKey) return;
+                    
+                    // Apply calibration: offset and scale
+                    let adjLeftPercent = (loc.leftPercent * cfg.scaleX) + cfg.offsetX;
+                    let adjTopPercent = (loc.topPercent * cfg.scaleY) + cfg.offsetY;
+                    
+                    // Clamp to valid range
+                    adjLeftPercent = Math.max(0, Math.min(100, adjLeftPercent));
+                    adjTopPercent = Math.max(0, Math.min(100, adjTopPercent));
+                    
+                    // Convert percent to pixel coordinates
+                    const pixelX = (adjLeftPercent / 100) * mapWidth;
+                    const pixelY = (adjTopPercent / 100) * mapHeight;
+                    
+                    // Leaflet CRS.Simple: Y is inverted
+                    const leafletY = mapHeight - pixelY;
+                    const leafletX = pixelX;
+                    
+                    // Color by objective type
+                    const colors = {
+                        'find': { fill: '#2d5a5a', border: '#7fffff' },
+                        'pickup': { fill: '#2d5a2d', border: '#7fff7f' },
+                        'place': { fill: '#5a5a2d', border: '#ffff7f' },
+                        'mark': { fill: '#5a2d5a', border: '#ff7fff' },
+                        'kill': { fill: '#5a2d2d', border: '#ff7f7f' },
+                        'locate': { fill: '#2d2d5a', border: '#7f7fff' },
+                        'key': { fill: '#5a4a2d', border: '#ffc07f' },
+                        'skill': { fill: '#4a4a4a', border: '#c0c0c0' },
+                        'reputation': { fill: '#2d4a5a', border: '#7fc0ff' },
+                        'warning': { fill: '#5a3a2d', border: '#ff9f7f' },
+                        'unknown': { fill: '#3a3a3a', border: '#909090' }
+                    };
+                    
+                    const typeKey = loc.type.toLowerCase();
+                    const color = colors[typeKey] || colors['unknown'];
+                    
+                    const marker = L.circleMarker([leafletY, leafletX], {
+                        radius: 10,
+                        color: color.border,
+                        fillColor: color.fill,
+                        fillOpacity: 0.9,
+                        weight: 3
+                    });
+                    
+                    const typeClass = `obj-${typeKey}`;
+                    const popupContent = `
+                        <div class="quest-marker-popup">
+                            <span class="obj-type ${typeClass}">${loc.type}</span>
+                            <h6>${loc.questName}</h6>
+                            <p>${loc.description}</p>
+                            ${loc.floor !== 'Ground_Level' ? `<p class="text-sub" style="font-size: 0.75rem; margin-top: 5px;">Floor: ${loc.floor}</p>` : ''}
+                        </div>
+                    `;
+                    
+                    marker.bindPopup(popupContent, { className: 'marker-label' });
+                    marker.bindTooltip(loc.questName, { direction: 'top', className: 'marker-label', offset: [0, -10] });
+                    
+                    questMarkersLayer.addLayer(marker);
+                    markerCount++;
                 });
-                
-                // Create popup content
-                const typeClass = `obj-${typeKey}`;
-                const popupContent = `
-                    <div class="quest-marker-popup">
-                        <span class="obj-type ${typeClass}">${loc.type}</span>
-                        <h6>${loc.questName}</h6>
-                        <p>${loc.description}</p>
-                        ${loc.floor !== 'Ground_Level' ? `<p class="text-sub" style="font-size: 0.75rem; margin-top: 5px;">Floor: ${loc.floor}</p>` : ''}
-                    </div>
-                `;
-                
-                marker.bindPopup(popupContent, {
-                    className: 'marker-label'
-                });
-                
-                marker.bindTooltip(loc.questName, {
-                    direction: 'top',
-                    className: 'marker-label',
-                    offset: [0, -8]
-                });
-                
-                questMarkersLayer.addLayer(marker);
             });
             
             if (mapInstance) {
                 questMarkersLayer.addTo(mapInstance);
             }
+            
+            updateMarkerCount(markerCount);
+        }
+        
+        function updateMarkerCount(count) {
+            document.getElementById('markerCount').textContent = count + ' marker' + (count !== 1 ? 's' : '');
         }
 
         // ============================================================================
@@ -508,9 +538,12 @@
                 if (!response.ok) throw new Error('Server error: ' + response.status);
                 const data = await response.json();
                 
-                // Backend returns array directly, not {quests: [...]}
+                // Handle both array and object response
                 allQuestsGlobal = Array.isArray(data) ? data : (data.quests || []);
                 const savedQuests = getSavedQuests();
+                
+                // Update connection status
+                updateStatus(true, '3.5');
                 
                 // Group by trader
                 const byTrader = {};
@@ -520,7 +553,6 @@
                     byTrader[trader].quests.push(q);
                 });
                 
-                // Render
                 let html = '';
                 for (const [trader, data] of Object.entries(byTrader)) {
                     const groupId = 'trader-' + trader.replace(/\s+/g, '-');
@@ -538,14 +570,14 @@
                         const isSelected = savedQuests.has(q.id);
                         html += `
                             <div class="quest-row ${isSelected ? 'selected' : ''}" onclick="toggleSelection('${q.id}', this, event)">
-                                <input type="checkbox" id="cb-${q.id}" ${isSelected ? 'checked' : ''} data-parent-group="${groupId}">
+                                <input type="checkbox" id="cb-${q.id}" ${isSelected ? 'checked' : ''} data-parent-group="${groupId}" data-quest-name="${q.name}">
                                 <div class="quest-info">
                                     <div class="quest-name">
                                         <a href="${getWikiUrl(q.name)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">${q.name}</a>
                                     </div>
                                     <div class="quest-meta">
-                                        <span>📍 ${q.map?.name || 'Any'}</span>
-                                        <span>📊 Lvl ${q.minPlayerLevel || '?'}</span>
+                                        <span>${q.map?.name || 'Any'}</span>
+                                        <span>Lvl ${q.minPlayerLevel || '?'}</span>
                                     </div>
                                 </div>
                             </div>
@@ -559,14 +591,14 @@
                 list.classList.remove('d-none');
                 loading.classList.add('d-none');
                 
-                // Update badge counts
                 for (const [trader, data] of Object.entries(byTrader)) {
                     const groupId = 'trader-' + trader.replace(/\s+/g, '-');
                     updateTraderBadge(groupId);
                 }
                 
             } catch (err) {
-                error.innerHTML = `<strong>ERROR:</strong> ${err.message}<br><small>Make sure the backend is running on ${API_BASE}</small>`;
+                updateStatus(false);
+                error.innerHTML = `<strong>ERROR:</strong> ${err.message}<br><small>Make sure the backend is running</small>`;
                 error.classList.remove('d-none');
                 loading.classList.add('d-none');
             }
@@ -609,7 +641,7 @@
         // MAP MANAGEMENT
         // ============================================================================
         
-        async function initMap(mapName) {
+        async function initMap(mapName, questNames = []) {
             const cfg = MAP_CONFIG[mapName];
             if (!cfg) return;
             
@@ -618,29 +650,31 @@
                 mapInstance = null;
             }
             
-            // Load image to get natural dimensions
             const img = new Image();
             img.src = cfg.file;
             
-            await new Promise((resolve, reject) => {
-                img.onload = resolve;
-                img.onerror = () => {
-                    document.getElementById('map').innerHTML = `
-                        <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--eft-red);">
-                            <div class="text-center">
-                                <div style="font-size: 2rem;">⚠️</div>
-                                <div>Map image not found: ${cfg.file}</div>
+            try {
+                await new Promise((resolve, reject) => {
+                    img.onload = resolve;
+                    img.onerror = () => {
+                        document.getElementById('map').innerHTML = `
+                            <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--eft-red);">
+                                <div class="text-center">
+                                    <div style="font-size: 2rem;">!</div>
+                                    <div>Map image not found: ${cfg.file}</div>
+                                </div>
                             </div>
-                        </div>
-                    `;
-                    reject(new Error('Image not found'));
-                };
-            });
+                        `;
+                        reject(new Error('Image not found'));
+                    };
+                });
+            } catch (e) {
+                return;
+            }
             
             currentMapWidth = img.naturalWidth;
             currentMapHeight = img.naturalHeight;
             
-            // Create map with image bounds
             imageBounds = [[0, 0], [currentMapHeight, currentMapWidth]];
             
             mapInstance = L.map('map', {
@@ -655,11 +689,10 @@
             currentMapLayer = L.imageOverlay(cfg.file, imageBounds).addTo(mapInstance);
             mapInstance.fitBounds(imageBounds);
             
-            // Initialize quest markers layer
             questMarkersLayer = L.layerGroup().addTo(mapInstance);
             
-            // Draw quest markers for this map
-            drawQuestMarkers(mapName, currentMapWidth, currentMapHeight);
+            // Draw quest markers only for selected quests
+            drawQuestMarkers(mapName, currentMapWidth, currentMapHeight, questNames);
             
             setTimeout(() => mapInstance.invalidateSize(), 200);
         }
@@ -672,7 +705,8 @@
         
         function onMapChange() {
             const mapName = document.getElementById('mapSelect').value;
-            initMap(mapName);
+            // Redraw with currently selected quests (if any)
+            initMap(mapName, selectedQuestNamesForMarkers);
         }
 
         // ============================================================================
@@ -691,11 +725,14 @@
             
             const selectedQuests = allQuestsGlobal.filter(q => savedQuests.has(q.id));
             
+            // Store selected quest names for markers
+            selectedQuestNamesForMarkers = selectedQuests.map(q => q.name);
+            
             resultBox.style.display = 'block';
             resultBox.scrollIntoView({ behavior: 'smooth' });
             
-            // Initialize map
-            await initMap(mapName);
+            // Initialize map with selected quest markers
+            await initMap(mapName, selectedQuestNamesForMarkers);
             
             // Collect items provided by quest starts
             const providedItemIds = new Set();
@@ -714,7 +751,6 @@
             const unlocks = [];
             
             selectedQuests.forEach(q => {
-                // Keys
                 if (q.neededKeys) {
                     q.neededKeys.forEach(g => {
                         if (g.keys?.length > 0) {
@@ -723,7 +759,6 @@
                     });
                 }
                 
-                // Items and objectives
                 if (q.objectives) {
                     q.objectives.forEach(o => {
                         objectives.push({ quest: q.name, desc: o.description });
@@ -732,12 +767,7 @@
                         if (item) {
                             const isProvided = providedItemIds.has(item.id);
                             if (!itemsMap.has(item.id)) {
-                                itemsMap.set(item.id, { 
-                                    name: item.name, 
-                                    icon: item.iconLink, 
-                                    count: 0, 
-                                    isProvided 
-                                });
+                                itemsMap.set(item.id, { name: item.name, icon: item.iconLink, count: 0, isProvided });
                             }
                             itemsMap.get(item.id).count += (o.count || 1);
                             if (isProvided) itemsMap.get(item.id).isProvided = true;
@@ -745,13 +775,12 @@
                     });
                 }
                 
-                // Unlocks
                 if (q.derived_unlocks) {
                     q.derived_unlocks.forEach(u => unlocks.push({ from: q.name, ...u }));
                 }
             });
             
-            // Render keys
+            // Render results
             document.getElementById('required-keys').innerHTML = neededKeys.size > 0 
                 ? Array.from(neededKeys.values()).map(k => `
                     <div class="item-box">
@@ -761,7 +790,6 @@
                 `).join('') 
                 : '<span class="text-sub p-2">None required.</span>';
             
-            // Render items (provided first)
             const itemsArray = Array.from(itemsMap.values())
                 .sort((a, b) => (b.isProvided ? 1 : 0) - (a.isProvided ? 1 : 0));
             
@@ -777,7 +805,6 @@
                 `).join('') 
                 : '<span class="text-sub p-2">None required.</span>';
             
-            // Render objectives
             document.getElementById('mission-steps').innerHTML = objectives.map(o => `
                 <li class="list-group-item bg-transparent text-light border-0 ps-0 py-2">
                     <span class="text-beige fw-bold">${o.quest}:</span> 
@@ -785,13 +812,12 @@
                 </li>
             `).join('');
             
-            // Render unlocks
             document.getElementById('progression-list').innerHTML = unlocks.length > 0 
                 ? unlocks.map(u => `
                     <div class="unlock-card">
                         <div style="font-size: 0.8rem; color: var(--text-sub);">From ${u.from}:</div>
                         <div class="fw-bold">
-                            ➔ <a href="${getWikiUrl(u.name)}" target="_blank" rel="noopener noreferrer" class="unlock-link">${u.name}</a>
+                            <a href="${getWikiUrl(u.name)}" target="_blank" rel="noopener noreferrer" class="unlock-link">${u.name}</a>
                         </div>
                         <div class="small text-sub">${u.map} | ${u.trader}</div>
                     </div>
@@ -828,7 +854,6 @@
                 
                 allAmmoData = await response.json();
                 
-                // Populate caliber dropdown
                 const caliberSelect = document.getElementById('caliberFilter');
                 caliberSelect.innerHTML = '<option value="ALL">All Calibers</option>';
                 allAmmoData.calibers.forEach(cal => {
@@ -850,13 +875,8 @@
             }
         }
         
-        function filterAmmoByCaliber() {
-            renderAmmoList();
-        }
-        
-        function filterAmmoBySearch() {
-            renderAmmoList();
-        }
+        function filterAmmoByCaliber() { renderAmmoList(); }
+        function filterAmmoBySearch() { renderAmmoList(); }
         
         function updateTierThreshold() {
             const value = parseInt(document.getElementById('tierSlider').value);
@@ -912,9 +932,9 @@
                         <div class="flex-grow-1">
                             <div class="fw-bold" style="color: var(--text-main);">${a.shortName}</div>
                             <div class="ammo-stats">
-                                <span class="stat-dmg">💥 ${a.damage}</span>
-                                <span class="stat-pen">🛡️ ${a.penetration}</span>
-                                ${a.sellPrice > 0 ? `<span class="stat-price">₽${a.sellPrice.toLocaleString()}</span>` : ''}
+                                <span class="stat-dmg">DMG ${a.damage}</span>
+                                <span class="stat-pen">PEN ${a.penetration}</span>
+                                ${a.sellPrice > 0 ? `<span class="stat-price">${a.sellPrice.toLocaleString()} RUB</span>` : ''}
                             </div>
                         </div>
                         ${isOwned ? '<span class="badge-tarkov badge-active">OWNED</span>' : ''}
@@ -941,7 +961,7 @@
             const totalValue = document.getElementById('total-sell-value');
             
             const tierIndex = TIER_ORDER.indexOf(currentTierThreshold);
-            const keepTiers = TIER_ORDER.slice(tierIndex);
+            const keepTiers = TIER_ORDER.slice(0, tierIndex + 1);
             
             const owned = allAmmoData.all.filter(a => ownedAmmo.has(a.id));
             const keep = owned.filter(a => keepTiers.includes(a.tier));
@@ -958,7 +978,7 @@
                 ? sell.map(a => renderAnalysisItem(a, 'sell')).join('') 
                 : '<div class="text-sub p-2 small">No ammo to sell.</div>';
             
-            totalValue.textContent = '₽' + sell.reduce((sum, a) => sum + (a.sellPrice || 0), 0).toLocaleString();
+            totalValue.textContent = sell.reduce((sum, a) => sum + (a.sellPrice || 0), 0).toLocaleString() + ' RUB';
         }
         
         function renderAnalysisItem(ammo, type) {
@@ -970,7 +990,7 @@
                         <div style="font-size:0.85rem;">${ammo.shortName}</div>
                         <div style="font-size:0.7rem;color:var(--text-sub);">${ammo.caliber}</div>
                     </div>
-                    ${type === 'sell' && ammo.sellPrice > 0 ? `<span class="stat-price small">₽${ammo.sellPrice.toLocaleString()}</span>` : ''}
+                    ${type === 'sell' && ammo.sellPrice > 0 ? `<span class="stat-price small">${ammo.sellPrice.toLocaleString()} RUB</span>` : ''}
                 </div>
             `;
         }
@@ -988,8 +1008,8 @@
             // Load quests from backend
             loadQuests();
             
-            // Initialize map
-            initMap('customs');
+            // Initialize map without markers (markers appear after Plan Raid)
+            initMap('customs', []);
         });
     </script>
 </body>
