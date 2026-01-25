@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tarkov Raid Planner v3.8</title>
+    <title>Tarkov Raid Planner v4.0</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
@@ -157,7 +157,10 @@
         
         <div class="nav-tabs-tarkov">
             <div class="nav-tab active" onclick="switchTab('planner')">Mission Planner</div>
-            <div class="nav-tab" onclick="switchTab('ammo')">Ammo Manager</div>
+            <div class="nav-tab" onclick="switchTab('ammo')">Ammo</div>
+            <div class="nav-tab" onclick="switchTab('weapons')">Weapons</div>
+            <div class="nav-tab" onclick="switchTab('gear')">Gear</div>
+            <div class="nav-tab" onclick="switchTab('attachments')">Attachments</div>
         </div>
 
         <!-- MISSION PLANNER TAB -->
@@ -366,6 +369,248 @@
                 </div>
             </div>
         </div>
+
+        <!-- WEAPONS TAB -->
+        <div id="tab-weapons" class="tab-content">
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="tarkov-panel">
+                        <h5>Weapons Database</h5>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <select id="weaponTypeFilter" class="form-select-tarkov w-100" onchange="filterWeapons()">
+                                    <option value="ALL">All Types</option>
+                                </select>
+                            </div>
+                            <div class="col-md-5">
+                                <input type="text" class="form-control-tarkov w-100" placeholder="Search weapons..." id="weaponSearch" oninput="filterWeapons()">
+                            </div>
+                            <div class="col-md-3">
+                                <button id="btn-load-weapons" class="btn-tarkov w-100" onclick="loadWeaponsData()">Load Data</button>
+                            </div>
+                        </div>
+                        <div class="text-sub small mb-3">Click weapon to mark as owned | <span id="weapon-count">0</span> loaded</div>
+                        <div id="weapons-loading" class="loading-spinner d-none">
+                            <div class="spinner"></div>
+                            <div>Loading weapons data...</div>
+                        </div>
+                        <div id="weapons-content" class="d-none">
+                            <div id="weapons-list" style="max-height: 500px; overflow-y: auto;"></div>
+                        </div>
+                        <div id="weapons-error" class="alert alert-danger d-none"></div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="tarkov-panel">
+                        <h5>Weapon Tier Config</h5>
+                        <div class="tier-config">
+                            <div class="text-sub small mb-2">Ergonomics thresholds:</div>
+                            <div class="tier-config-row"><span class="tier-badge tier-S">S</span><label>Min Ergo:</label><input type="number" id="weaponTierErgoS" value="70" min="0" max="100" onchange="updateWeaponTierConfig()"></div>
+                            <div class="tier-config-row"><span class="tier-badge tier-A">A</span><label>Min Ergo:</label><input type="number" id="weaponTierErgoA" value="55" min="0" max="100" onchange="updateWeaponTierConfig()"></div>
+                            <div class="tier-config-row"><span class="tier-badge tier-B">B</span><label>Min Ergo:</label><input type="number" id="weaponTierErgoB" value="40" min="0" max="100" onchange="updateWeaponTierConfig()"></div>
+                            <div class="tier-config-row"><span class="tier-badge tier-C">C</span><label>Min Ergo:</label><input type="number" id="weaponTierErgoC" value="28" min="0" max="100" onchange="updateWeaponTierConfig()"></div>
+                            <div class="tier-config-row"><span class="tier-badge tier-D">D</span><label>Min Ergo:</label><input type="number" id="weaponTierErgoD" value="15" min="0" max="100" onchange="updateWeaponTierConfig()"></div>
+                            <div class="tier-config-section mt-3">
+                                <div class="text-sub small mb-2">Recoil thresholds (lower = better):</div>
+                                <div class="tier-config-row"><span class="tier-badge tier-S">S</span><label>Max Recoil:</label><input type="number" id="weaponTierRecoilS" value="50" min="0" max="500" onchange="updateWeaponTierConfig()"></div>
+                                <div class="tier-config-row"><span class="tier-badge tier-A">A</span><label>Max Recoil:</label><input type="number" id="weaponTierRecoilA" value="80" min="0" max="500" onchange="updateWeaponTierConfig()"></div>
+                                <div class="tier-config-row"><span class="tier-badge tier-B">B</span><label>Max Recoil:</label><input type="number" id="weaponTierRecoilB" value="120" min="0" max="500" onchange="updateWeaponTierConfig()"></div>
+                                <div class="tier-config-row"><span class="tier-badge tier-C">C</span><label>Max Recoil:</label><input type="number" id="weaponTierRecoilC" value="180" min="0" max="500" onchange="updateWeaponTierConfig()"></div>
+                                <div class="tier-config-row"><span class="tier-badge tier-D">D</span><label>Max Recoil:</label><input type="number" id="weaponTierRecoilD" value="250" min="0" max="500" onchange="updateWeaponTierConfig()"></div>
+                            </div>
+                            <div class="tier-config-row mt-2"><span class="tier-badge tier-F">F</span><label>Below D</label></div>
+                            <div class="text-sub small mt-2" style="font-size: 0.7rem;">Tier reached if Ergo <u>or</u> Recoil meets threshold</div>
+                            <div class="mt-2 d-flex gap-2">
+                                <button class="btn-tarkov flex-grow-1" onclick="resetWeaponTierConfig()" style="padding: 6px 12px; font-size: 0.8rem;">Reset</button>
+                                <button class="btn-tarkov flex-grow-1" onclick="clearWeaponOverrides()" style="padding: 6px 12px; font-size: 0.8rem;">Clear Overrides</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tarkov-panel">
+                        <h5>Keep/Sell Analysis</h5>
+                        <div class="mb-3">
+                            <label class="form-label text-sub small">Minimum tier to keep:</label>
+                            <input type="range" class="form-range" id="weaponTierSlider" min="0" max="5" value="2" oninput="updateWeaponTierThreshold()">
+                            <div class="text-center text-beige" id="weaponTierDisplay">Keep B-Tier+</div>
+                        </div>
+                        <div class="analysis-panel" style="flex-direction: column;">
+                            <div class="analysis-col">
+                                <div class="analysis-header" style="background: rgba(74, 122, 74, 0.2);"><h6 style="color: var(--eft-green);">KEEP</h6><span class="badge-tarkov badge-active" id="weapon-keep-count">0</span></div>
+                                <div id="weapon-keep-list" class="analysis-list"></div>
+                            </div>
+                            <div class="analysis-col">
+                                <div class="analysis-header" style="background: rgba(140, 59, 59, 0.2);"><h6 style="color: var(--eft-red);">SELL</h6><span class="badge-tarkov" id="weapon-sell-count">0</span></div>
+                                <div id="weapon-sell-list" class="analysis-list"></div>
+                                <div class="text-end mt-2 text-sub small">Total value: <span id="weapon-total-sell-value" class="text-gold">0 RUB</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GEAR TAB -->
+        <div id="tab-gear" class="tab-content">
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="tarkov-panel">
+                        <h5>Gear Database</h5>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <select id="gearTypeFilter" class="form-select-tarkov w-100" onchange="filterGear()">
+                                    <option value="ALL">All Types</option>
+                                    <option value="armor">Body Armor</option>
+                                    <option value="helmet">Helmets</option>
+                                    <option value="rig">Tactical Rigs</option>
+                                    <option value="backpack">Backpacks</option>
+                                    <option value="headphones">Headsets</option>
+                                </select>
+                            </div>
+                            <div class="col-md-5">
+                                <input type="text" class="form-control-tarkov w-100" placeholder="Search gear..." id="gearSearch" oninput="filterGear()">
+                            </div>
+                            <div class="col-md-3">
+                                <button id="btn-load-gear" class="btn-tarkov w-100" onclick="loadGearData()">Load Data</button>
+                            </div>
+                        </div>
+                        <div class="text-sub small mb-3">Click gear to mark as owned | <span id="gear-count">0</span> loaded</div>
+                        <div id="gear-loading" class="loading-spinner d-none">
+                            <div class="spinner"></div>
+                            <div>Loading gear data...</div>
+                        </div>
+                        <div id="gear-content" class="d-none">
+                            <div id="gear-list" style="max-height: 500px; overflow-y: auto;"></div>
+                        </div>
+                        <div id="gear-error" class="alert alert-danger d-none"></div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="tarkov-panel">
+                        <h5>Gear Tier Config</h5>
+                        <div class="tier-config">
+                            <div class="text-sub small mb-2">Armor Class thresholds:</div>
+                            <div class="tier-config-row"><span class="tier-badge tier-S">S</span><label>Min Class:</label><input type="number" id="gearTierClassS" value="6" min="1" max="6" onchange="updateGearTierConfig()"></div>
+                            <div class="tier-config-row"><span class="tier-badge tier-A">A</span><label>Min Class:</label><input type="number" id="gearTierClassA" value="5" min="1" max="6" onchange="updateGearTierConfig()"></div>
+                            <div class="tier-config-row"><span class="tier-badge tier-B">B</span><label>Min Class:</label><input type="number" id="gearTierClassB" value="4" min="1" max="6" onchange="updateGearTierConfig()"></div>
+                            <div class="tier-config-row"><span class="tier-badge tier-C">C</span><label>Min Class:</label><input type="number" id="gearTierClassC" value="3" min="1" max="6" onchange="updateGearTierConfig()"></div>
+                            <div class="tier-config-row"><span class="tier-badge tier-D">D</span><label>Min Class:</label><input type="number" id="gearTierClassD" value="2" min="1" max="6" onchange="updateGearTierConfig()"></div>
+                            <div class="tier-config-section mt-3">
+                                <div class="text-sub small mb-2">Durability thresholds:</div>
+                                <div class="tier-config-row"><span class="tier-badge tier-S">S</span><label>Min Dur:</label><input type="number" id="gearTierDurS" value="70" min="0" max="100" onchange="updateGearTierConfig()"></div>
+                                <div class="tier-config-row"><span class="tier-badge tier-A">A</span><label>Min Dur:</label><input type="number" id="gearTierDurA" value="55" min="0" max="100" onchange="updateGearTierConfig()"></div>
+                                <div class="tier-config-row"><span class="tier-badge tier-B">B</span><label>Min Dur:</label><input type="number" id="gearTierDurB" value="40" min="0" max="100" onchange="updateGearTierConfig()"></div>
+                                <div class="tier-config-row"><span class="tier-badge tier-C">C</span><label>Min Dur:</label><input type="number" id="gearTierDurC" value="30" min="0" max="100" onchange="updateGearTierConfig()"></div>
+                                <div class="tier-config-row"><span class="tier-badge tier-D">D</span><label>Min Dur:</label><input type="number" id="gearTierDurD" value="20" min="0" max="100" onchange="updateGearTierConfig()"></div>
+                            </div>
+                            <div class="tier-config-row mt-2"><span class="tier-badge tier-F">F</span><label>Below D</label></div>
+                            <div class="text-sub small mt-2" style="font-size: 0.7rem;">Tier reached if Class <u>or</u> Durability meets threshold</div>
+                            <div class="mt-2 d-flex gap-2">
+                                <button class="btn-tarkov flex-grow-1" onclick="resetGearTierConfig()" style="padding: 6px 12px; font-size: 0.8rem;">Reset</button>
+                                <button class="btn-tarkov flex-grow-1" onclick="clearGearOverrides()" style="padding: 6px 12px; font-size: 0.8rem;">Clear Overrides</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tarkov-panel">
+                        <h5>Keep/Sell Analysis</h5>
+                        <div class="mb-3">
+                            <label class="form-label text-sub small">Minimum tier to keep:</label>
+                            <input type="range" class="form-range" id="gearTierSlider" min="0" max="5" value="2" oninput="updateGearTierThreshold()">
+                            <div class="text-center text-beige" id="gearTierDisplay">Keep B-Tier+</div>
+                        </div>
+                        <div class="analysis-panel" style="flex-direction: column;">
+                            <div class="analysis-col">
+                                <div class="analysis-header" style="background: rgba(74, 122, 74, 0.2);"><h6 style="color: var(--eft-green);">KEEP</h6><span class="badge-tarkov badge-active" id="gear-keep-count">0</span></div>
+                                <div id="gear-keep-list" class="analysis-list"></div>
+                            </div>
+                            <div class="analysis-col">
+                                <div class="analysis-header" style="background: rgba(140, 59, 59, 0.2);"><h6 style="color: var(--eft-red);">SELL</h6><span class="badge-tarkov" id="gear-sell-count">0</span></div>
+                                <div id="gear-sell-list" class="analysis-list"></div>
+                                <div class="text-end mt-2 text-sub small">Total value: <span id="gear-total-sell-value" class="text-gold">0 RUB</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ATTACHMENTS TAB -->
+        <div id="tab-attachments" class="tab-content">
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="tarkov-panel">
+                        <h5>Attachments Database</h5>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <select id="attachmentTypeFilter" class="form-select-tarkov w-100" onchange="filterAttachments()">
+                                    <option value="ALL">All Types</option>
+                                </select>
+                            </div>
+                            <div class="col-md-5">
+                                <input type="text" class="form-control-tarkov w-100" placeholder="Search attachments..." id="attachmentSearch" oninput="filterAttachments()">
+                            </div>
+                            <div class="col-md-3">
+                                <button id="btn-load-attachments" class="btn-tarkov w-100" onclick="loadAttachmentsData()">Load Data</button>
+                            </div>
+                        </div>
+                        <div class="text-sub small mb-3">Click attachment to mark as owned | <span id="attachment-count">0</span> loaded</div>
+                        <div id="attachments-loading" class="loading-spinner d-none">
+                            <div class="spinner"></div>
+                            <div>Loading attachments data...</div>
+                        </div>
+                        <div id="attachments-content" class="d-none">
+                            <div id="attachments-list" style="max-height: 500px; overflow-y: auto;"></div>
+                        </div>
+                        <div id="attachments-error" class="alert alert-danger d-none"></div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="tarkov-panel">
+                        <h5>Attachment Tier Config</h5>
+                        <div class="tier-config">
+                            <div class="text-sub small mb-2">Ergonomics Modifier thresholds:</div>
+                            <div class="tier-config-row"><span class="tier-badge tier-S">S</span><label>Min Ergo+:</label><input type="number" id="attachTierErgoS" value="15" min="-50" max="50" onchange="updateAttachmentTierConfig()"></div>
+                            <div class="tier-config-row"><span class="tier-badge tier-A">A</span><label>Min Ergo+:</label><input type="number" id="attachTierErgoA" value="10" min="-50" max="50" onchange="updateAttachmentTierConfig()"></div>
+                            <div class="tier-config-row"><span class="tier-badge tier-B">B</span><label>Min Ergo+:</label><input type="number" id="attachTierErgoB" value="5" min="-50" max="50" onchange="updateAttachmentTierConfig()"></div>
+                            <div class="tier-config-row"><span class="tier-badge tier-C">C</span><label>Min Ergo+:</label><input type="number" id="attachTierErgoC" value="2" min="-50" max="50" onchange="updateAttachmentTierConfig()"></div>
+                            <div class="tier-config-row"><span class="tier-badge tier-D">D</span><label>Min Ergo+:</label><input type="number" id="attachTierErgoD" value="0" min="-50" max="50" onchange="updateAttachmentTierConfig()"></div>
+                            <div class="tier-config-section mt-3">
+                                <div class="text-sub small mb-2">Recoil Modifier thresholds (negative = better):</div>
+                                <div class="tier-config-row"><span class="tier-badge tier-S">S</span><label>Max Recoil:</label><input type="number" id="attachTierRecoilS" value="-5" min="-50" max="50" onchange="updateAttachmentTierConfig()"></div>
+                                <div class="tier-config-row"><span class="tier-badge tier-A">A</span><label>Max Recoil:</label><input type="number" id="attachTierRecoilA" value="-3" min="-50" max="50" onchange="updateAttachmentTierConfig()"></div>
+                                <div class="tier-config-row"><span class="tier-badge tier-B">B</span><label>Max Recoil:</label><input type="number" id="attachTierRecoilB" value="-1" min="-50" max="50" onchange="updateAttachmentTierConfig()"></div>
+                                <div class="tier-config-row"><span class="tier-badge tier-C">C</span><label>Max Recoil:</label><input type="number" id="attachTierRecoilC" value="0" min="-50" max="50" onchange="updateAttachmentTierConfig()"></div>
+                                <div class="tier-config-row"><span class="tier-badge tier-D">D</span><label>Max Recoil:</label><input type="number" id="attachTierRecoilD" value="2" min="-50" max="50" onchange="updateAttachmentTierConfig()"></div>
+                            </div>
+                            <div class="tier-config-row mt-2"><span class="tier-badge tier-F">F</span><label>Below D</label></div>
+                            <div class="text-sub small mt-2" style="font-size: 0.7rem;">Tier reached if Ergo+ <u>or</u> Recoil meets threshold</div>
+                            <div class="mt-2 d-flex gap-2">
+                                <button class="btn-tarkov flex-grow-1" onclick="resetAttachmentTierConfig()" style="padding: 6px 12px; font-size: 0.8rem;">Reset</button>
+                                <button class="btn-tarkov flex-grow-1" onclick="clearAttachmentOverrides()" style="padding: 6px 12px; font-size: 0.8rem;">Clear Overrides</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tarkov-panel">
+                        <h5>Keep/Sell Analysis</h5>
+                        <div class="mb-3">
+                            <label class="form-label text-sub small">Minimum tier to keep:</label>
+                            <input type="range" class="form-range" id="attachmentTierSlider" min="0" max="5" value="2" oninput="updateAttachmentTierThreshold()">
+                            <div class="text-center text-beige" id="attachmentTierDisplay">Keep B-Tier+</div>
+                        </div>
+                        <div class="analysis-panel" style="flex-direction: column;">
+                            <div class="analysis-col">
+                                <div class="analysis-header" style="background: rgba(74, 122, 74, 0.2);"><h6 style="color: var(--eft-green);">KEEP</h6><span class="badge-tarkov badge-active" id="attachment-keep-count">0</span></div>
+                                <div id="attachment-keep-list" class="analysis-list"></div>
+                            </div>
+                            <div class="analysis-col">
+                                <div class="analysis-header" style="background: rgba(140, 59, 59, 0.2);"><h6 style="color: var(--eft-red);">SELL</h6><span class="badge-tarkov" id="attachment-sell-count">0</span></div>
+                                <div id="attachment-sell-list" class="analysis-list"></div>
+                                <div class="text-end mt-2 text-sub small">Total value: <span id="attachment-total-sell-value" class="text-gold">0 RUB</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -398,10 +643,39 @@
         const STORAGE_KEY_TIER_CONFIG = 'tarkov_planner_tier_config_v1';
         const STORAGE_KEY_TIER_OVERRIDES = 'tarkov_planner_tier_overrides_v1';
         
+        // Storage keys for new tabs
+        const STORAGE_KEY_WEAPONS = 'tarkov_planner_weapons_v1';
+        const STORAGE_KEY_WEAPONS_TIER = 'tarkov_planner_weapons_tier_v1';
+        const STORAGE_KEY_WEAPONS_OVERRIDES = 'tarkov_planner_weapons_overrides_v1';
+        const STORAGE_KEY_GEAR = 'tarkov_planner_gear_v1';
+        const STORAGE_KEY_GEAR_TIER = 'tarkov_planner_gear_tier_v1';
+        const STORAGE_KEY_GEAR_OVERRIDES = 'tarkov_planner_gear_overrides_v1';
+        const STORAGE_KEY_ATTACHMENTS = 'tarkov_planner_attachments_v1';
+        const STORAGE_KEY_ATTACHMENTS_TIER = 'tarkov_planner_attachments_tier_v1';
+        const STORAGE_KEY_ATTACHMENTS_OVERRIDES = 'tarkov_planner_attachments_overrides_v1';
+        
         // Default tier thresholds (penetration and damage values)
         const DEFAULT_TIER_THRESHOLDS = { 
             pen: { S: 55, A: 45, B: 35, C: 25, D: 15 },
             dmg: { S: 80, A: 65, B: 50, C: 40, D: 30 }
+        };
+        
+        // Default tier thresholds for Weapons (Ergonomics higher=better, Recoil lower=better)
+        const DEFAULT_WEAPON_TIER_THRESHOLDS = {
+            ergo: { S: 70, A: 55, B: 40, C: 28, D: 15 },
+            recoil: { S: 50, A: 80, B: 120, C: 180, D: 250 }  // Max recoil (lower is better)
+        };
+        
+        // Default tier thresholds for Gear (Armor Class, Durability)
+        const DEFAULT_GEAR_TIER_THRESHOLDS = {
+            armorClass: { S: 6, A: 5, B: 4, C: 3, D: 2 },
+            durability: { S: 70, A: 55, B: 40, C: 30, D: 20 }
+        };
+        
+        // Default tier thresholds for Attachments (Ergo modifier, Recoil modifier)
+        const DEFAULT_ATTACHMENT_TIER_THRESHOLDS = {
+            ergoMod: { S: 15, A: 10, B: 5, C: 2, D: 0 },       // Min ergo bonus
+            recoilMod: { S: -5, A: -3, B: -1, C: 0, D: 2 }     // Max recoil (negative=better)
         };
         
         // State
@@ -420,12 +694,39 @@
         let requiredMapsForQuests = new Set();
         let tierThresholds = JSON.parse(JSON.stringify(DEFAULT_TIER_THRESHOLDS));
         let tierOverrides = {}; // ammoId -> tier
+        
+        // Weapons state
+        let allWeaponsData = null;
+        let ownedWeapons = new Set();
+        let weaponTierThresholds = JSON.parse(JSON.stringify(DEFAULT_WEAPON_TIER_THRESHOLDS));
+        let weaponTierOverrides = {};
+        let currentWeaponTierThreshold = 'B';
+        let weaponTypeFilter = 'ALL';
+        let weaponSearchQuery = '';
+        
+        // Gear state
+        let allGearData = null;
+        let ownedGear = new Set();
+        let gearTierThresholds = JSON.parse(JSON.stringify(DEFAULT_GEAR_TIER_THRESHOLDS));
+        let gearTierOverrides = {};
+        let currentGearTierThreshold = 'B';
+        let gearTypeFilter = 'ALL';
+        let gearSearchQuery = '';
+        
+        // Attachments state
+        let allAttachmentsData = null;
+        let ownedAttachments = new Set();
+        let attachmentTierThresholds = JSON.parse(JSON.stringify(DEFAULT_ATTACHMENT_TIER_THRESHOLDS));
+        let attachmentTierOverrides = {};
+        let currentAttachmentTierThreshold = 'B';
+        let attachmentTypeFilter = 'ALL';
+        let attachmentSearchQuery = '';
 
         // ============================================================================
         // STATUS INDICATOR
         // ============================================================================
         
-        function updateStatus(connected, version = '3.8') {
+        function updateStatus(connected, version = '4.0') {
             const dot = document.getElementById('statusDot');
             const text = document.getElementById('statusText');
             if (connected) {
@@ -703,7 +1004,7 @@
                 const savedQuests = getSavedQuests();
                 
                 // Update connection status
-                updateStatus(true, '3.8');
+                updateStatus(true, '4.0');
                 
                 // Group by trader
                 const byTrader = {};
@@ -1427,6 +1728,1019 @@
                         <div style="font-size:0.7rem;color:var(--text-sub);">${ammo.caliber}</div>
                     </div>
                     ${type === 'sell' && ammo.sellPrice > 0 ? `<span class="stat-price small">${ammo.sellPrice.toLocaleString()} RUB</span>` : ''}
+                </div>
+            `;
+        }
+
+        // ============================================================================
+        // WEAPONS MANAGER
+        // ============================================================================
+        
+        async function loadWeaponsData() {
+            const loading = document.getElementById('weapons-loading');
+            const content = document.getElementById('weapons-content');
+            const error = document.getElementById('weapons-error');
+            const btn = document.getElementById('btn-load-weapons');
+            
+            loading.classList.remove('d-none');
+            content.classList.add('d-none');
+            error.classList.add('d-none');
+            btn.disabled = true;
+            btn.textContent = 'Loading...';
+            
+            try {
+                const query = `{
+                    items(types: [gun]) {
+                        id
+                        name
+                        shortName
+                        iconLink
+                        avg24hPrice
+                        sellFor { price vendor { name } }
+                        types
+                        properties {
+                            ... on ItemPropertiesWeapon {
+                                caliber
+                                fireRate
+                                ergonomics
+                                recoilVertical
+                                recoilHorizontal
+                                effectiveDistance
+                            }
+                        }
+                    }
+                }`;
+                
+                const response = await fetch('https://api.tarkov.dev/graphql', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query })
+                });
+                
+                const data = await response.json();
+                
+                if (data.errors) throw new Error(data.errors[0].message);
+                
+                // Process weapons
+                const weapons = data.data.items.map(w => {
+                    const props = w.properties || {};
+                    const bestSell = w.sellFor?.reduce((best, s) => s.price > best.price ? s : best, { price: 0 }) || { price: 0 };
+                    return {
+                        id: w.id,
+                        name: w.name,
+                        shortName: w.shortName,
+                        iconLink: w.iconLink,
+                        caliber: props.caliber || 'Unknown',
+                        fireRate: props.fireRate || 0,
+                        ergonomics: props.ergonomics || 0,
+                        recoilVertical: props.recoilVertical || 0,
+                        recoilHorizontal: props.recoilHorizontal || 0,
+                        totalRecoil: (props.recoilVertical || 0) + (props.recoilHorizontal || 0),
+                        effectiveDistance: props.effectiveDistance || 0,
+                        sellPrice: bestSell.price,
+                        sellTo: bestSell.vendor?.name || 'Fence',
+                        types: w.types || []
+                    };
+                }).filter(w => w.ergonomics > 0); // Filter out items without weapon stats
+                
+                // Group by caliber
+                const byCaliber = {};
+                weapons.forEach(w => {
+                    const cal = w.caliber || 'Other';
+                    if (!byCaliber[cal]) byCaliber[cal] = [];
+                    byCaliber[cal].push(w);
+                });
+                
+                // Sort within each caliber by tier
+                Object.values(byCaliber).forEach(arr => {
+                    arr.sort((a, b) => {
+                        const tierA = TIER_ORDER.indexOf(getWeaponTier(a).tier);
+                        const tierB = TIER_ORDER.indexOf(getWeaponTier(b).tier);
+                        return tierA - tierB;
+                    });
+                });
+                
+                allWeaponsData = { all: weapons, byCaliber };
+                
+                // Populate type filter
+                const typeFilter = document.getElementById('weaponTypeFilter');
+                const calibers = Object.keys(byCaliber).sort();
+                typeFilter.innerHTML = '<option value="ALL">All Calibers (' + weapons.length + ')</option>' +
+                    calibers.map(c => `<option value="${c}">${c} (${byCaliber[c].length})</option>`).join('');
+                
+                document.getElementById('weapon-count').textContent = weapons.length;
+                
+                loading.classList.add('d-none');
+                content.classList.remove('d-none');
+                btn.textContent = 'Reload';
+                btn.disabled = false;
+                
+                loadOwnedWeapons();
+                loadWeaponTierConfig();
+                loadWeaponTierOverrides();
+                renderWeaponsList();
+                
+            } catch (err) {
+                loading.classList.add('d-none');
+                error.classList.remove('d-none');
+                error.textContent = 'Error loading weapons: ' + err.message;
+                btn.textContent = 'Retry';
+                btn.disabled = false;
+            }
+        }
+        
+        function renderWeaponsList() {
+            if (!allWeaponsData) return;
+            
+            const container = document.getElementById('weapons-list');
+            let html = '';
+            
+            const calibers = weaponTypeFilter === 'ALL' 
+                ? Object.keys(allWeaponsData.byCaliber).sort()
+                : [weaponTypeFilter];
+            
+            calibers.forEach(cal => {
+                let weapons = allWeaponsData.byCaliber[cal] || [];
+                
+                // Apply search filter
+                if (weaponSearchQuery) {
+                    const q = weaponSearchQuery.toLowerCase();
+                    weapons = weapons.filter(w => 
+                        w.name.toLowerCase().includes(q) || 
+                        w.shortName.toLowerCase().includes(q)
+                    );
+                }
+                
+                if (weapons.length === 0) return;
+                
+                html += `<div class="caliber-group mb-3">
+                    <div class="caliber-header">${cal} (${weapons.length})</div>
+                    <div class="ammo-grid">`;
+                
+                weapons.forEach(w => {
+                    const isOwned = ownedWeapons.has(w.id);
+                    const tierInfo = getWeaponTier(w);
+                    const isOverridden = weaponTierOverrides[w.id] !== undefined;
+                    const sourceClass = tierInfo.source === 'ERGO' ? 'source-pen' : tierInfo.source === 'RECOIL' ? 'source-dmg' : tierInfo.source === 'ERGO+RECOIL' ? 'source-both' : '';
+                    
+                    html += `
+                        <div class="ammo-card ${isOwned ? 'owned' : ''} ${isOverridden ? 'overridden' : ''}" onclick="toggleWeaponOwned('${w.id}')">
+                            <span class="tier-badge tier-${tierInfo.tier}">${tierInfo.tier}</span>
+                            ${w.iconLink ? `<img src="${w.iconLink}">` : ''}
+                            <div class="flex-grow-1">
+                                <div class="fw-bold" style="color: var(--text-main);">${w.shortName}</div>
+                                <div class="ammo-stats">
+                                    <span class="stat-pen ${tierInfo.source.includes('ERGO') ? 'stat-highlight' : ''}">ERG ${w.ergonomics}</span>
+                                    <span class="stat-dmg ${tierInfo.source.includes('RECOIL') ? 'stat-highlight' : ''}">REC ${w.totalRecoil}</span>
+                                    ${w.sellPrice > 0 ? `<span class="stat-price">${w.sellPrice.toLocaleString()}</span>` : ''}
+                                </div>
+                            </div>
+                            <span class="tier-source ${sourceClass}">${tierInfo.source}</span>
+                            ${isOwned ? '<span class="badge-tarkov badge-active">OWNED</span>' : ''}
+                            <select class="tier-select-mini" onclick="event.stopPropagation()" onchange="setWeaponTierOverride('${w.id}', this.value)">
+                                <option value="" ${!isOverridden ? 'selected' : ''}>Auto</option>
+                                ${TIER_NAMES.map(t => `<option value="${t}" ${weaponTierOverrides[w.id] === t ? 'selected' : ''}>${t}</option>`).join('')}
+                            </select>
+                        </div>
+                    `;
+                });
+                
+                html += '</div></div>';
+            });
+            
+            container.innerHTML = html || '<div class="text-sub p-3">No weapons match your filter.</div>';
+            updateWeaponAnalysis();
+        }
+        
+        function getWeaponTier(weapon) {
+            if (weaponTierOverrides[weapon.id]) {
+                return { tier: weaponTierOverrides[weapon.id], source: 'CUSTOM' };
+            }
+            
+            const ergo = weapon.ergonomics;
+            const recoil = weapon.totalRecoil;
+            
+            for (const tier of ['S', 'A', 'B', 'C', 'D']) {
+                const ergoMet = ergo >= weaponTierThresholds.ergo[tier];
+                const recoilMet = recoil <= weaponTierThresholds.recoil[tier];
+                
+                if (ergoMet || recoilMet) {
+                    let source = '';
+                    if (ergoMet && recoilMet) source = 'ERGO+RECOIL';
+                    else if (ergoMet) source = 'ERGO';
+                    else source = 'RECOIL';
+                    return { tier, source };
+                }
+            }
+            return { tier: 'F', source: '-' };
+        }
+        
+        function filterWeapons() {
+            weaponTypeFilter = document.getElementById('weaponTypeFilter').value;
+            weaponSearchQuery = document.getElementById('weaponSearch').value;
+            renderWeaponsList();
+        }
+        
+        function toggleWeaponOwned(id) {
+            ownedWeapons.has(id) ? ownedWeapons.delete(id) : ownedWeapons.add(id);
+            saveOwnedWeapons();
+            renderWeaponsList();
+        }
+        
+        function setWeaponTierOverride(id, tier) {
+            if (tier === '') delete weaponTierOverrides[id];
+            else weaponTierOverrides[id] = tier;
+            saveWeaponTierOverrides();
+            renderWeaponsList();
+        }
+        
+        function updateWeaponTierConfig() {
+            weaponTierThresholds.ergo.S = parseInt(document.getElementById('weaponTierErgoS').value) || 70;
+            weaponTierThresholds.ergo.A = parseInt(document.getElementById('weaponTierErgoA').value) || 55;
+            weaponTierThresholds.ergo.B = parseInt(document.getElementById('weaponTierErgoB').value) || 40;
+            weaponTierThresholds.ergo.C = parseInt(document.getElementById('weaponTierErgoC').value) || 28;
+            weaponTierThresholds.ergo.D = parseInt(document.getElementById('weaponTierErgoD').value) || 15;
+            weaponTierThresholds.recoil.S = parseInt(document.getElementById('weaponTierRecoilS').value) || 50;
+            weaponTierThresholds.recoil.A = parseInt(document.getElementById('weaponTierRecoilA').value) || 80;
+            weaponTierThresholds.recoil.B = parseInt(document.getElementById('weaponTierRecoilB').value) || 120;
+            weaponTierThresholds.recoil.C = parseInt(document.getElementById('weaponTierRecoilC').value) || 180;
+            weaponTierThresholds.recoil.D = parseInt(document.getElementById('weaponTierRecoilD').value) || 250;
+            saveWeaponTierConfig();
+            renderWeaponsList();
+        }
+        
+        function resetWeaponTierConfig() {
+            weaponTierThresholds = JSON.parse(JSON.stringify(DEFAULT_WEAPON_TIER_THRESHOLDS));
+            document.getElementById('weaponTierErgoS').value = weaponTierThresholds.ergo.S;
+            document.getElementById('weaponTierErgoA').value = weaponTierThresholds.ergo.A;
+            document.getElementById('weaponTierErgoB').value = weaponTierThresholds.ergo.B;
+            document.getElementById('weaponTierErgoC').value = weaponTierThresholds.ergo.C;
+            document.getElementById('weaponTierErgoD').value = weaponTierThresholds.ergo.D;
+            document.getElementById('weaponTierRecoilS').value = weaponTierThresholds.recoil.S;
+            document.getElementById('weaponTierRecoilA').value = weaponTierThresholds.recoil.A;
+            document.getElementById('weaponTierRecoilB').value = weaponTierThresholds.recoil.B;
+            document.getElementById('weaponTierRecoilC').value = weaponTierThresholds.recoil.C;
+            document.getElementById('weaponTierRecoilD').value = weaponTierThresholds.recoil.D;
+            saveWeaponTierConfig();
+            renderWeaponsList();
+        }
+        
+        function clearWeaponOverrides() {
+            weaponTierOverrides = {};
+            saveWeaponTierOverrides();
+            renderWeaponsList();
+        }
+        
+        function updateWeaponTierThreshold() {
+            const val = parseInt(document.getElementById('weaponTierSlider').value);
+            currentWeaponTierThreshold = TIER_ORDER[val];
+            document.getElementById('weaponTierDisplay').textContent = `Keep ${currentWeaponTierThreshold}-Tier+`;
+            updateWeaponAnalysis();
+        }
+        
+        function updateWeaponAnalysis() {
+            if (!allWeaponsData) return;
+            
+            const tierIndex = TIER_ORDER.indexOf(currentWeaponTierThreshold);
+            const keepTiers = TIER_ORDER.slice(0, tierIndex + 1);
+            
+            const owned = allWeaponsData.all.filter(w => ownedWeapons.has(w.id));
+            const keep = owned.filter(w => keepTiers.includes(getWeaponTier(w).tier));
+            const sell = owned.filter(w => !keepTiers.includes(getWeaponTier(w).tier));
+            
+            document.getElementById('weapon-keep-count').textContent = keep.length;
+            document.getElementById('weapon-sell-count').textContent = sell.length;
+            
+            document.getElementById('weapon-keep-list').innerHTML = keep.length > 0
+                ? keep.map(w => renderEquipmentAnalysisItem(w, 'keep', getWeaponTier(w))).join('')
+                : '<div class="text-sub p-2 small">No weapons to keep marked.</div>';
+            
+            document.getElementById('weapon-sell-list').innerHTML = sell.length > 0
+                ? sell.map(w => renderEquipmentAnalysisItem(w, 'sell', getWeaponTier(w))).join('')
+                : '<div class="text-sub p-2 small">No weapons to sell.</div>';
+            
+            document.getElementById('weapon-total-sell-value').textContent = 
+                sell.reduce((sum, w) => sum + (w.sellPrice || 0), 0).toLocaleString() + ' RUB';
+        }
+        
+        function saveOwnedWeapons() { localStorage.setItem(STORAGE_KEY_WEAPONS, JSON.stringify([...ownedWeapons])); }
+        function loadOwnedWeapons() { const s = localStorage.getItem(STORAGE_KEY_WEAPONS); if (s) ownedWeapons = new Set(JSON.parse(s)); }
+        function saveWeaponTierConfig() { localStorage.setItem(STORAGE_KEY_WEAPONS_TIER, JSON.stringify(weaponTierThresholds)); }
+        function loadWeaponTierConfig() { 
+            const s = localStorage.getItem(STORAGE_KEY_WEAPONS_TIER); 
+            if (s) weaponTierThresholds = JSON.parse(s);
+            document.getElementById('weaponTierErgoS').value = weaponTierThresholds.ergo.S;
+            document.getElementById('weaponTierErgoA').value = weaponTierThresholds.ergo.A;
+            document.getElementById('weaponTierErgoB').value = weaponTierThresholds.ergo.B;
+            document.getElementById('weaponTierErgoC').value = weaponTierThresholds.ergo.C;
+            document.getElementById('weaponTierErgoD').value = weaponTierThresholds.ergo.D;
+            document.getElementById('weaponTierRecoilS').value = weaponTierThresholds.recoil.S;
+            document.getElementById('weaponTierRecoilA').value = weaponTierThresholds.recoil.A;
+            document.getElementById('weaponTierRecoilB').value = weaponTierThresholds.recoil.B;
+            document.getElementById('weaponTierRecoilC').value = weaponTierThresholds.recoil.C;
+            document.getElementById('weaponTierRecoilD').value = weaponTierThresholds.recoil.D;
+        }
+        function saveWeaponTierOverrides() { localStorage.setItem(STORAGE_KEY_WEAPONS_OVERRIDES, JSON.stringify(weaponTierOverrides)); }
+        function loadWeaponTierOverrides() { const s = localStorage.getItem(STORAGE_KEY_WEAPONS_OVERRIDES); if (s) weaponTierOverrides = JSON.parse(s); }
+        
+        // ============================================================================
+        // GEAR MANAGER
+        // ============================================================================
+        
+        async function loadGearData() {
+            const loading = document.getElementById('gear-loading');
+            const content = document.getElementById('gear-content');
+            const error = document.getElementById('gear-error');
+            const btn = document.getElementById('btn-load-gear');
+            
+            loading.classList.remove('d-none');
+            content.classList.add('d-none');
+            error.classList.add('d-none');
+            btn.disabled = true;
+            btn.textContent = 'Loading...';
+            
+            try {
+                const query = `{
+                    items(types: [armor, helmet, rig, backpack, headphones]) {
+                        id
+                        name
+                        shortName
+                        iconLink
+                        avg24hPrice
+                        sellFor { price vendor { name } }
+                        types
+                        properties {
+                            ... on ItemPropertiesArmor {
+                                class
+                                durability
+                                material { name }
+                                zones
+                                ergoPenalty
+                                speedPenalty
+                                turnPenalty
+                            }
+                            ... on ItemPropertiesHelmet {
+                                class
+                                durability
+                                material { name }
+                                zones
+                                ergoPenalty
+                                speedPenalty
+                                turnPenalty
+                                ricochetY
+                            }
+                            ... on ItemPropertiesChestRig {
+                                class
+                                durability
+                                material { name }
+                                zones
+                                capacity
+                            }
+                            ... on ItemPropertiesBackpack {
+                                capacity
+                                speedPenalty
+                            }
+                            ... on ItemPropertiesHeadphone {
+                                ambientVolume
+                                distortion
+                            }
+                        }
+                    }
+                }`;
+                
+                const response = await fetch('https://api.tarkov.dev/graphql', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query })
+                });
+                
+                const data = await response.json();
+                if (data.errors) throw new Error(data.errors[0].message);
+                
+                const gear = data.data.items.map(g => {
+                    const props = g.properties || {};
+                    const bestSell = g.sellFor?.reduce((best, s) => s.price > best.price ? s : best, { price: 0 }) || { price: 0 };
+                    
+                    // Determine gear type
+                    let gearType = 'other';
+                    if (g.types?.includes('armor')) gearType = 'armor';
+                    else if (g.types?.includes('helmet')) gearType = 'helmet';
+                    else if (g.types?.includes('backpack')) gearType = 'backpack';
+                    else if (g.types?.includes('rig')) gearType = 'rig';
+                    else if (g.types?.includes('headphones')) gearType = 'headphones';
+                    
+                    return {
+                        id: g.id,
+                        name: g.name,
+                        shortName: g.shortName,
+                        iconLink: g.iconLink,
+                        gearType,
+                        armorClass: props.class || 0,
+                        durability: props.durability || 0,
+                        material: props.material?.name || '',
+                        capacity: props.capacity || 0,
+                        ergoPenalty: props.ergoPenalty || 0,
+                        speedPenalty: props.speedPenalty || 0,
+                        ambientVolume: props.ambientVolume || 0,
+                        sellPrice: bestSell.price,
+                        sellTo: bestSell.vendor?.name || 'Fence'
+                    };
+                });
+                
+                // Group by type
+                const byType = {};
+                gear.forEach(g => {
+                    if (!byType[g.gearType]) byType[g.gearType] = [];
+                    byType[g.gearType].push(g);
+                });
+                
+                // Sort by tier
+                Object.values(byType).forEach(arr => {
+                    arr.sort((a, b) => TIER_ORDER.indexOf(getGearTier(a).tier) - TIER_ORDER.indexOf(getGearTier(b).tier));
+                });
+                
+                allGearData = { all: gear, byType };
+                document.getElementById('gear-count').textContent = gear.length;
+                
+                loading.classList.add('d-none');
+                content.classList.remove('d-none');
+                btn.textContent = 'Reload';
+                btn.disabled = false;
+                
+                loadOwnedGear();
+                loadGearTierConfig();
+                loadGearTierOverrides();
+                renderGearList();
+                
+            } catch (err) {
+                loading.classList.add('d-none');
+                error.classList.remove('d-none');
+                error.textContent = 'Error loading gear: ' + err.message;
+                btn.textContent = 'Retry';
+                btn.disabled = false;
+            }
+        }
+        
+        function renderGearList() {
+            if (!allGearData) return;
+            
+            const container = document.getElementById('gear-list');
+            let html = '';
+            
+            const typeLabels = { armor: 'Body Armor', helmet: 'Helmets', rig: 'Tactical Rigs', backpack: 'Backpacks', headphones: 'Headsets' };
+            const types = gearTypeFilter === 'ALL' ? Object.keys(allGearData.byType) : [gearTypeFilter];
+            
+            types.forEach(type => {
+                let items = allGearData.byType[type] || [];
+                
+                if (gearSearchQuery) {
+                    const q = gearSearchQuery.toLowerCase();
+                    items = items.filter(g => g.name.toLowerCase().includes(q) || g.shortName.toLowerCase().includes(q));
+                }
+                
+                if (items.length === 0) return;
+                
+                html += `<div class="caliber-group mb-3">
+                    <div class="caliber-header">${typeLabels[type] || type} (${items.length})</div>
+                    <div class="ammo-grid">`;
+                
+                items.forEach(g => {
+                    const isOwned = ownedGear.has(g.id);
+                    const tierInfo = getGearTier(g);
+                    const isOverridden = gearTierOverrides[g.id] !== undefined;
+                    const sourceClass = tierInfo.source === 'CLASS' ? 'source-pen' : tierInfo.source === 'DUR' ? 'source-dmg' : tierInfo.source === 'CLASS+DUR' ? 'source-both' : '';
+                    
+                    // Show relevant stats based on type
+                    let statsHtml = '';
+                    if (g.armorClass > 0) {
+                        statsHtml += `<span class="stat-pen ${tierInfo.source.includes('CLASS') ? 'stat-highlight' : ''}">CL ${g.armorClass}</span>`;
+                        statsHtml += `<span class="stat-dmg ${tierInfo.source.includes('DUR') ? 'stat-highlight' : ''}">DUR ${g.durability}</span>`;
+                    } else if (g.gearType === 'backpack') {
+                        statsHtml += `<span class="stat-pen">CAP ${g.capacity}</span>`;
+                    } else if (g.gearType === 'headphones') {
+                        statsHtml += `<span class="stat-pen">VOL ${g.ambientVolume}</span>`;
+                    }
+                    if (g.sellPrice > 0) statsHtml += `<span class="stat-price">${g.sellPrice.toLocaleString()}</span>`;
+                    
+                    html += `
+                        <div class="ammo-card ${isOwned ? 'owned' : ''} ${isOverridden ? 'overridden' : ''}" onclick="toggleGearOwned('${g.id}')">
+                            <span class="tier-badge tier-${tierInfo.tier}">${tierInfo.tier}</span>
+                            ${g.iconLink ? `<img src="${g.iconLink}">` : ''}
+                            <div class="flex-grow-1">
+                                <div class="fw-bold" style="color: var(--text-main);">${g.shortName}</div>
+                                <div class="ammo-stats">${statsHtml}</div>
+                            </div>
+                            <span class="tier-source ${sourceClass}">${tierInfo.source}</span>
+                            ${isOwned ? '<span class="badge-tarkov badge-active">OWNED</span>' : ''}
+                            <select class="tier-select-mini" onclick="event.stopPropagation()" onchange="setGearTierOverride('${g.id}', this.value)">
+                                <option value="" ${!isOverridden ? 'selected' : ''}>Auto</option>
+                                ${TIER_NAMES.map(t => `<option value="${t}" ${gearTierOverrides[g.id] === t ? 'selected' : ''}>${t}</option>`).join('')}
+                            </select>
+                        </div>
+                    `;
+                });
+                
+                html += '</div></div>';
+            });
+            
+            container.innerHTML = html || '<div class="text-sub p-3">No gear matches your filter.</div>';
+            updateGearAnalysis();
+        }
+        
+        function getGearTier(gear) {
+            if (gearTierOverrides[gear.id]) return { tier: gearTierOverrides[gear.id], source: 'CUSTOM' };
+            
+            // For non-armor items, use simple tier based on sell value or capacity
+            if (gear.armorClass === 0) {
+                if (gear.gearType === 'backpack') {
+                    if (gear.capacity >= 50) return { tier: 'S', source: 'CAP' };
+                    if (gear.capacity >= 35) return { tier: 'A', source: 'CAP' };
+                    if (gear.capacity >= 25) return { tier: 'B', source: 'CAP' };
+                    if (gear.capacity >= 15) return { tier: 'C', source: 'CAP' };
+                    if (gear.capacity >= 8) return { tier: 'D', source: 'CAP' };
+                    return { tier: 'F', source: '-' };
+                }
+                if (gear.gearType === 'headphones') {
+                    // Higher ambient volume = better sound quality generally
+                    if (gear.sellPrice >= 50000) return { tier: 'S', source: 'VALUE' };
+                    if (gear.sellPrice >= 30000) return { tier: 'A', source: 'VALUE' };
+                    if (gear.sellPrice >= 15000) return { tier: 'B', source: 'VALUE' };
+                    return { tier: 'C', source: 'VALUE' };
+                }
+                return { tier: 'C', source: '-' };
+            }
+            
+            const armorClass = gear.armorClass;
+            const dur = gear.durability;
+            
+            for (const tier of ['S', 'A', 'B', 'C', 'D']) {
+                const classMet = armorClass >= gearTierThresholds.armorClass[tier];
+                const durMet = dur >= gearTierThresholds.durability[tier];
+                
+                if (classMet || durMet) {
+                    let source = '';
+                    if (classMet && durMet) source = 'CLASS+DUR';
+                    else if (classMet) source = 'CLASS';
+                    else source = 'DUR';
+                    return { tier, source };
+                }
+            }
+            return { tier: 'F', source: '-' };
+        }
+        
+        function filterGear() {
+            gearTypeFilter = document.getElementById('gearTypeFilter').value;
+            gearSearchQuery = document.getElementById('gearSearch').value;
+            renderGearList();
+        }
+        
+        function toggleGearOwned(id) {
+            ownedGear.has(id) ? ownedGear.delete(id) : ownedGear.add(id);
+            saveOwnedGear();
+            renderGearList();
+        }
+        
+        function setGearTierOverride(id, tier) {
+            if (tier === '') delete gearTierOverrides[id];
+            else gearTierOverrides[id] = tier;
+            saveGearTierOverrides();
+            renderGearList();
+        }
+        
+        function updateGearTierConfig() {
+            gearTierThresholds.armorClass.S = parseInt(document.getElementById('gearTierClassS').value) || 6;
+            gearTierThresholds.armorClass.A = parseInt(document.getElementById('gearTierClassA').value) || 5;
+            gearTierThresholds.armorClass.B = parseInt(document.getElementById('gearTierClassB').value) || 4;
+            gearTierThresholds.armorClass.C = parseInt(document.getElementById('gearTierClassC').value) || 3;
+            gearTierThresholds.armorClass.D = parseInt(document.getElementById('gearTierClassD').value) || 2;
+            gearTierThresholds.durability.S = parseInt(document.getElementById('gearTierDurS').value) || 70;
+            gearTierThresholds.durability.A = parseInt(document.getElementById('gearTierDurA').value) || 55;
+            gearTierThresholds.durability.B = parseInt(document.getElementById('gearTierDurB').value) || 40;
+            gearTierThresholds.durability.C = parseInt(document.getElementById('gearTierDurC').value) || 30;
+            gearTierThresholds.durability.D = parseInt(document.getElementById('gearTierDurD').value) || 20;
+            saveGearTierConfig();
+            renderGearList();
+        }
+        
+        function resetGearTierConfig() {
+            gearTierThresholds = JSON.parse(JSON.stringify(DEFAULT_GEAR_TIER_THRESHOLDS));
+            document.getElementById('gearTierClassS').value = gearTierThresholds.armorClass.S;
+            document.getElementById('gearTierClassA').value = gearTierThresholds.armorClass.A;
+            document.getElementById('gearTierClassB').value = gearTierThresholds.armorClass.B;
+            document.getElementById('gearTierClassC').value = gearTierThresholds.armorClass.C;
+            document.getElementById('gearTierClassD').value = gearTierThresholds.armorClass.D;
+            document.getElementById('gearTierDurS').value = gearTierThresholds.durability.S;
+            document.getElementById('gearTierDurA').value = gearTierThresholds.durability.A;
+            document.getElementById('gearTierDurB').value = gearTierThresholds.durability.B;
+            document.getElementById('gearTierDurC').value = gearTierThresholds.durability.C;
+            document.getElementById('gearTierDurD').value = gearTierThresholds.durability.D;
+            saveGearTierConfig();
+            renderGearList();
+        }
+        
+        function clearGearOverrides() {
+            gearTierOverrides = {};
+            saveGearTierOverrides();
+            renderGearList();
+        }
+        
+        function updateGearTierThreshold() {
+            const val = parseInt(document.getElementById('gearTierSlider').value);
+            currentGearTierThreshold = TIER_ORDER[val];
+            document.getElementById('gearTierDisplay').textContent = `Keep ${currentGearTierThreshold}-Tier+`;
+            updateGearAnalysis();
+        }
+        
+        function updateGearAnalysis() {
+            if (!allGearData) return;
+            
+            const tierIndex = TIER_ORDER.indexOf(currentGearTierThreshold);
+            const keepTiers = TIER_ORDER.slice(0, tierIndex + 1);
+            
+            const owned = allGearData.all.filter(g => ownedGear.has(g.id));
+            const keep = owned.filter(g => keepTiers.includes(getGearTier(g).tier));
+            const sell = owned.filter(g => !keepTiers.includes(getGearTier(g).tier));
+            
+            document.getElementById('gear-keep-count').textContent = keep.length;
+            document.getElementById('gear-sell-count').textContent = sell.length;
+            
+            document.getElementById('gear-keep-list').innerHTML = keep.length > 0
+                ? keep.map(g => renderEquipmentAnalysisItem(g, 'keep', getGearTier(g))).join('')
+                : '<div class="text-sub p-2 small">No gear to keep marked.</div>';
+            
+            document.getElementById('gear-sell-list').innerHTML = sell.length > 0
+                ? sell.map(g => renderEquipmentAnalysisItem(g, 'sell', getGearTier(g))).join('')
+                : '<div class="text-sub p-2 small">No gear to sell.</div>';
+            
+            document.getElementById('gear-total-sell-value').textContent =
+                sell.reduce((sum, g) => sum + (g.sellPrice || 0), 0).toLocaleString() + ' RUB';
+        }
+        
+        function saveOwnedGear() { localStorage.setItem(STORAGE_KEY_GEAR, JSON.stringify([...ownedGear])); }
+        function loadOwnedGear() { const s = localStorage.getItem(STORAGE_KEY_GEAR); if (s) ownedGear = new Set(JSON.parse(s)); }
+        function saveGearTierConfig() { localStorage.setItem(STORAGE_KEY_GEAR_TIER, JSON.stringify(gearTierThresholds)); }
+        function loadGearTierConfig() {
+            const s = localStorage.getItem(STORAGE_KEY_GEAR_TIER);
+            if (s) gearTierThresholds = JSON.parse(s);
+            document.getElementById('gearTierClassS').value = gearTierThresholds.armorClass.S;
+            document.getElementById('gearTierClassA').value = gearTierThresholds.armorClass.A;
+            document.getElementById('gearTierClassB').value = gearTierThresholds.armorClass.B;
+            document.getElementById('gearTierClassC').value = gearTierThresholds.armorClass.C;
+            document.getElementById('gearTierClassD').value = gearTierThresholds.armorClass.D;
+            document.getElementById('gearTierDurS').value = gearTierThresholds.durability.S;
+            document.getElementById('gearTierDurA').value = gearTierThresholds.durability.A;
+            document.getElementById('gearTierDurB').value = gearTierThresholds.durability.B;
+            document.getElementById('gearTierDurC').value = gearTierThresholds.durability.C;
+            document.getElementById('gearTierDurD').value = gearTierThresholds.durability.D;
+        }
+        function saveGearTierOverrides() { localStorage.setItem(STORAGE_KEY_GEAR_OVERRIDES, JSON.stringify(gearTierOverrides)); }
+        function loadGearTierOverrides() { const s = localStorage.getItem(STORAGE_KEY_GEAR_OVERRIDES); if (s) gearTierOverrides = JSON.parse(s); }
+        
+        // ============================================================================
+        // ATTACHMENTS MANAGER
+        // ============================================================================
+        
+        async function loadAttachmentsData() {
+            const loading = document.getElementById('attachments-loading');
+            const content = document.getElementById('attachments-content');
+            const error = document.getElementById('attachments-error');
+            const btn = document.getElementById('btn-load-attachments');
+            
+            loading.classList.remove('d-none');
+            content.classList.add('d-none');
+            error.classList.add('d-none');
+            btn.disabled = true;
+            btn.textContent = 'Loading...';
+            
+            try {
+                const query = `{
+                    items(types: [mods]) {
+                        id
+                        name
+                        shortName
+                        iconLink
+                        avg24hPrice
+                        sellFor { price vendor { name } }
+                        types
+                        properties {
+                            ... on ItemPropertiesMagazine {
+                                capacity
+                                ergonomics
+                            }
+                            ... on ItemPropertiesBarrel {
+                                ergonomics
+                                recoilModifier
+                                accuracyModifier
+                            }
+                            ... on ItemPropertiesScope {
+                                ergonomics
+                                recoilModifier
+                                zoomLevels
+                            }
+                            ... on ItemPropertiesWeaponMod {
+                                ergonomics
+                                recoilModifier
+                                accuracyModifier
+                            }
+                        }
+                    }
+                }`;
+                
+                const response = await fetch('https://api.tarkov.dev/graphql', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query })
+                });
+                
+                const data = await response.json();
+                if (data.errors) throw new Error(data.errors[0].message);
+                
+                const attachments = data.data.items.map(a => {
+                    const props = a.properties || {};
+                    const bestSell = a.sellFor?.reduce((best, s) => s.price > best.price ? s : best, { price: 0 }) || { price: 0 };
+                    
+                    // Determine attachment type from types array
+                    let attachType = 'other';
+                    const typeMap = {
+                        'scope': 'Scopes', 'sights': 'Sights', 'barrel': 'Barrels',
+                        'muzzle': 'Muzzle', 'grip': 'Grips', 'stock': 'Stocks',
+                        'handguard': 'Handguards', 'mount': 'Mounts', 'magazine': 'Magazines',
+                        'foregrip': 'Foregrips', 'flashlight': 'Flashlights', 'laser': 'Lasers',
+                        'suppressor': 'Suppressors', 'rail': 'Rails', 'receiver': 'Receivers'
+                    };
+                    
+                    for (const [key, label] of Object.entries(typeMap)) {
+                        if (a.types?.some(t => t.toLowerCase().includes(key))) {
+                            attachType = label;
+                            break;
+                        }
+                    }
+                    if (attachType === 'other' && a.types?.length > 0) {
+                        attachType = a.types[0];
+                    }
+                    
+                    return {
+                        id: a.id,
+                        name: a.name,
+                        shortName: a.shortName,
+                        iconLink: a.iconLink,
+                        attachType,
+                        ergonomics: props.ergonomics || 0,
+                        recoilModifier: props.recoilModifier || 0,
+                        accuracyModifier: props.accuracyModifier || 0,
+                        capacity: props.capacity || 0,
+                        zoomLevels: props.zoomLevels || [],
+                        sellPrice: bestSell.price,
+                        sellTo: bestSell.vendor?.name || 'Fence'
+                    };
+                });
+                
+                // Group by type
+                const byType = {};
+                attachments.forEach(a => {
+                    if (!byType[a.attachType]) byType[a.attachType] = [];
+                    byType[a.attachType].push(a);
+                });
+                
+                // Sort by tier
+                Object.values(byType).forEach(arr => {
+                    arr.sort((a, b) => TIER_ORDER.indexOf(getAttachmentTier(a).tier) - TIER_ORDER.indexOf(getAttachmentTier(b).tier));
+                });
+                
+                allAttachmentsData = { all: attachments, byType };
+                
+                // Populate type filter
+                const typeFilter = document.getElementById('attachmentTypeFilter');
+                const types = Object.keys(byType).sort();
+                typeFilter.innerHTML = '<option value="ALL">All Types (' + attachments.length + ')</option>' +
+                    types.map(t => `<option value="${t}">${t} (${byType[t].length})</option>`).join('');
+                
+                document.getElementById('attachment-count').textContent = attachments.length;
+                
+                loading.classList.add('d-none');
+                content.classList.remove('d-none');
+                btn.textContent = 'Reload';
+                btn.disabled = false;
+                
+                loadOwnedAttachments();
+                loadAttachmentTierConfig();
+                loadAttachmentTierOverrides();
+                renderAttachmentsList();
+                
+            } catch (err) {
+                loading.classList.add('d-none');
+                error.classList.remove('d-none');
+                error.textContent = 'Error loading attachments: ' + err.message;
+                btn.textContent = 'Retry';
+                btn.disabled = false;
+            }
+        }
+        
+        function renderAttachmentsList() {
+            if (!allAttachmentsData) return;
+            
+            const container = document.getElementById('attachments-list');
+            let html = '';
+            
+            const types = attachmentTypeFilter === 'ALL'
+                ? Object.keys(allAttachmentsData.byType).sort()
+                : [attachmentTypeFilter];
+            
+            types.forEach(type => {
+                let items = allAttachmentsData.byType[type] || [];
+                
+                if (attachmentSearchQuery) {
+                    const q = attachmentSearchQuery.toLowerCase();
+                    items = items.filter(a => a.name.toLowerCase().includes(q) || a.shortName.toLowerCase().includes(q));
+                }
+                
+                if (items.length === 0) return;
+                
+                html += `<div class="caliber-group mb-3">
+                    <div class="caliber-header">${type} (${items.length})</div>
+                    <div class="ammo-grid">`;
+                
+                items.forEach(a => {
+                    const isOwned = ownedAttachments.has(a.id);
+                    const tierInfo = getAttachmentTier(a);
+                    const isOverridden = attachmentTierOverrides[a.id] !== undefined;
+                    const sourceClass = tierInfo.source === 'ERGO' ? 'source-pen' : tierInfo.source === 'RECOIL' ? 'source-dmg' : tierInfo.source === 'ERGO+RECOIL' ? 'source-both' : '';
+                    
+                    const ergoDisplay = a.ergonomics >= 0 ? `+${a.ergonomics}` : a.ergonomics;
+                    const recoilDisplay = a.recoilModifier >= 0 ? `+${a.recoilModifier}%` : `${a.recoilModifier}%`;
+                    
+                    html += `
+                        <div class="ammo-card ${isOwned ? 'owned' : ''} ${isOverridden ? 'overridden' : ''}" onclick="toggleAttachmentOwned('${a.id}')">
+                            <span class="tier-badge tier-${tierInfo.tier}">${tierInfo.tier}</span>
+                            ${a.iconLink ? `<img src="${a.iconLink}">` : ''}
+                            <div class="flex-grow-1">
+                                <div class="fw-bold" style="color: var(--text-main);">${a.shortName}</div>
+                                <div class="ammo-stats">
+                                    <span class="stat-pen ${tierInfo.source.includes('ERGO') ? 'stat-highlight' : ''}">ERG ${ergoDisplay}</span>
+                                    <span class="stat-dmg ${tierInfo.source.includes('RECOIL') ? 'stat-highlight' : ''}">REC ${recoilDisplay}</span>
+                                    ${a.sellPrice > 0 ? `<span class="stat-price">${a.sellPrice.toLocaleString()}</span>` : ''}
+                                </div>
+                            </div>
+                            <span class="tier-source ${sourceClass}">${tierInfo.source}</span>
+                            ${isOwned ? '<span class="badge-tarkov badge-active">OWNED</span>' : ''}
+                            <select class="tier-select-mini" onclick="event.stopPropagation()" onchange="setAttachmentTierOverride('${a.id}', this.value)">
+                                <option value="" ${!isOverridden ? 'selected' : ''}>Auto</option>
+                                ${TIER_NAMES.map(t => `<option value="${t}" ${attachmentTierOverrides[a.id] === t ? 'selected' : ''}>${t}</option>`).join('')}
+                            </select>
+                        </div>
+                    `;
+                });
+                
+                html += '</div></div>';
+            });
+            
+            container.innerHTML = html || '<div class="text-sub p-3">No attachments match your filter.</div>';
+            updateAttachmentAnalysis();
+        }
+        
+        function getAttachmentTier(attach) {
+            if (attachmentTierOverrides[attach.id]) return { tier: attachmentTierOverrides[attach.id], source: 'CUSTOM' };
+            
+            const ergo = attach.ergonomics;
+            const recoil = attach.recoilModifier;
+            
+            for (const tier of ['S', 'A', 'B', 'C', 'D']) {
+                const ergoMet = ergo >= attachmentTierThresholds.ergoMod[tier];
+                const recoilMet = recoil <= attachmentTierThresholds.recoilMod[tier];
+                
+                if (ergoMet || recoilMet) {
+                    let source = '';
+                    if (ergoMet && recoilMet) source = 'ERGO+RECOIL';
+                    else if (ergoMet) source = 'ERGO';
+                    else source = 'RECOIL';
+                    return { tier, source };
+                }
+            }
+            return { tier: 'F', source: '-' };
+        }
+        
+        function filterAttachments() {
+            attachmentTypeFilter = document.getElementById('attachmentTypeFilter').value;
+            attachmentSearchQuery = document.getElementById('attachmentSearch').value;
+            renderAttachmentsList();
+        }
+        
+        function toggleAttachmentOwned(id) {
+            ownedAttachments.has(id) ? ownedAttachments.delete(id) : ownedAttachments.add(id);
+            saveOwnedAttachments();
+            renderAttachmentsList();
+        }
+        
+        function setAttachmentTierOverride(id, tier) {
+            if (tier === '') delete attachmentTierOverrides[id];
+            else attachmentTierOverrides[id] = tier;
+            saveAttachmentTierOverrides();
+            renderAttachmentsList();
+        }
+        
+        function updateAttachmentTierConfig() {
+            attachmentTierThresholds.ergoMod.S = parseInt(document.getElementById('attachTierErgoS').value) || 15;
+            attachmentTierThresholds.ergoMod.A = parseInt(document.getElementById('attachTierErgoA').value) || 10;
+            attachmentTierThresholds.ergoMod.B = parseInt(document.getElementById('attachTierErgoB').value) || 5;
+            attachmentTierThresholds.ergoMod.C = parseInt(document.getElementById('attachTierErgoC').value) || 2;
+            attachmentTierThresholds.ergoMod.D = parseInt(document.getElementById('attachTierErgoD').value) || 0;
+            attachmentTierThresholds.recoilMod.S = parseInt(document.getElementById('attachTierRecoilS').value) || -5;
+            attachmentTierThresholds.recoilMod.A = parseInt(document.getElementById('attachTierRecoilA').value) || -3;
+            attachmentTierThresholds.recoilMod.B = parseInt(document.getElementById('attachTierRecoilB').value) || -1;
+            attachmentTierThresholds.recoilMod.C = parseInt(document.getElementById('attachTierRecoilC').value) || 0;
+            attachmentTierThresholds.recoilMod.D = parseInt(document.getElementById('attachTierRecoilD').value) || 2;
+            saveAttachmentTierConfig();
+            renderAttachmentsList();
+        }
+        
+        function resetAttachmentTierConfig() {
+            attachmentTierThresholds = JSON.parse(JSON.stringify(DEFAULT_ATTACHMENT_TIER_THRESHOLDS));
+            document.getElementById('attachTierErgoS').value = attachmentTierThresholds.ergoMod.S;
+            document.getElementById('attachTierErgoA').value = attachmentTierThresholds.ergoMod.A;
+            document.getElementById('attachTierErgoB').value = attachmentTierThresholds.ergoMod.B;
+            document.getElementById('attachTierErgoC').value = attachmentTierThresholds.ergoMod.C;
+            document.getElementById('attachTierErgoD').value = attachmentTierThresholds.ergoMod.D;
+            document.getElementById('attachTierRecoilS').value = attachmentTierThresholds.recoilMod.S;
+            document.getElementById('attachTierRecoilA').value = attachmentTierThresholds.recoilMod.A;
+            document.getElementById('attachTierRecoilB').value = attachmentTierThresholds.recoilMod.B;
+            document.getElementById('attachTierRecoilC').value = attachmentTierThresholds.recoilMod.C;
+            document.getElementById('attachTierRecoilD').value = attachmentTierThresholds.recoilMod.D;
+            saveAttachmentTierConfig();
+            renderAttachmentsList();
+        }
+        
+        function clearAttachmentOverrides() {
+            attachmentTierOverrides = {};
+            saveAttachmentTierOverrides();
+            renderAttachmentsList();
+        }
+        
+        function updateAttachmentTierThreshold() {
+            const val = parseInt(document.getElementById('attachmentTierSlider').value);
+            currentAttachmentTierThreshold = TIER_ORDER[val];
+            document.getElementById('attachmentTierDisplay').textContent = `Keep ${currentAttachmentTierThreshold}-Tier+`;
+            updateAttachmentAnalysis();
+        }
+        
+        function updateAttachmentAnalysis() {
+            if (!allAttachmentsData) return;
+            
+            const tierIndex = TIER_ORDER.indexOf(currentAttachmentTierThreshold);
+            const keepTiers = TIER_ORDER.slice(0, tierIndex + 1);
+            
+            const owned = allAttachmentsData.all.filter(a => ownedAttachments.has(a.id));
+            const keep = owned.filter(a => keepTiers.includes(getAttachmentTier(a).tier));
+            const sell = owned.filter(a => !keepTiers.includes(getAttachmentTier(a).tier));
+            
+            document.getElementById('attachment-keep-count').textContent = keep.length;
+            document.getElementById('attachment-sell-count').textContent = sell.length;
+            
+            document.getElementById('attachment-keep-list').innerHTML = keep.length > 0
+                ? keep.map(a => renderEquipmentAnalysisItem(a, 'keep', getAttachmentTier(a))).join('')
+                : '<div class="text-sub p-2 small">No attachments to keep marked.</div>';
+            
+            document.getElementById('attachment-sell-list').innerHTML = sell.length > 0
+                ? sell.map(a => renderEquipmentAnalysisItem(a, 'sell', getAttachmentTier(a))).join('')
+                : '<div class="text-sub p-2 small">No attachments to sell.</div>';
+            
+            document.getElementById('attachment-total-sell-value').textContent =
+                sell.reduce((sum, a) => sum + (a.sellPrice || 0), 0).toLocaleString() + ' RUB';
+        }
+        
+        function saveOwnedAttachments() { localStorage.setItem(STORAGE_KEY_ATTACHMENTS, JSON.stringify([...ownedAttachments])); }
+        function loadOwnedAttachments() { const s = localStorage.getItem(STORAGE_KEY_ATTACHMENTS); if (s) ownedAttachments = new Set(JSON.parse(s)); }
+        function saveAttachmentTierConfig() { localStorage.setItem(STORAGE_KEY_ATTACHMENTS_TIER, JSON.stringify(attachmentTierThresholds)); }
+        function loadAttachmentTierConfig() {
+            const s = localStorage.getItem(STORAGE_KEY_ATTACHMENTS_TIER);
+            if (s) attachmentTierThresholds = JSON.parse(s);
+            document.getElementById('attachTierErgoS').value = attachmentTierThresholds.ergoMod.S;
+            document.getElementById('attachTierErgoA').value = attachmentTierThresholds.ergoMod.A;
+            document.getElementById('attachTierErgoB').value = attachmentTierThresholds.ergoMod.B;
+            document.getElementById('attachTierErgoC').value = attachmentTierThresholds.ergoMod.C;
+            document.getElementById('attachTierErgoD').value = attachmentTierThresholds.ergoMod.D;
+            document.getElementById('attachTierRecoilS').value = attachmentTierThresholds.recoilMod.S;
+            document.getElementById('attachTierRecoilA').value = attachmentTierThresholds.recoilMod.A;
+            document.getElementById('attachTierRecoilB').value = attachmentTierThresholds.recoilMod.B;
+            document.getElementById('attachTierRecoilC').value = attachmentTierThresholds.recoilMod.C;
+            document.getElementById('attachTierRecoilD').value = attachmentTierThresholds.recoilMod.D;
+        }
+        function saveAttachmentTierOverrides() { localStorage.setItem(STORAGE_KEY_ATTACHMENTS_OVERRIDES, JSON.stringify(attachmentTierOverrides)); }
+        function loadAttachmentTierOverrides() { const s = localStorage.getItem(STORAGE_KEY_ATTACHMENTS_OVERRIDES); if (s) attachmentTierOverrides = JSON.parse(s); }
+        
+        // ============================================================================
+        // SHARED EQUIPMENT ANALYSIS RENDERER
+        // ============================================================================
+        
+        function renderEquipmentAnalysisItem(item, type, tierInfo) {
+            return `
+                <div class="item-box ${type === 'keep' ? 'status-provided' : 'status-acquire'} w-100 mb-1">
+                    <span class="tier-badge tier-${tierInfo.tier}" style="width:24px;height:24px;line-height:24px;font-size:0.75rem;">${tierInfo.tier}</span>
+                    ${item.iconLink ? `<img src="${item.iconLink}" style="width:28px;height:28px;">` : ''}
+                    <div class="flex-grow-1">
+                        <div style="font-size:0.85rem;">${item.shortName}</div>
+                        <div style="font-size:0.7rem;color:var(--text-sub);">${item.caliber || item.gearType || item.attachType || ''}</div>
+                    </div>
+                    ${type === 'sell' && item.sellPrice > 0 ? `<span class="stat-price small">${item.sellPrice.toLocaleString()} RUB</span>` : ''}
                 </div>
             `;
         }
