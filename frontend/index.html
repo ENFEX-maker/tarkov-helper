@@ -270,9 +270,98 @@
         .spawn-marker.boss { background: #c94c4c; color: #fff; border: 2px solid #a33; }
         
         .spawn-marker-icon { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
+        
+        /* Global Loading Screen */
+        .global-loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+            z-index: 99999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.5s ease;
+        }
+        .global-loading-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .loading-content {
+            text-align: center;
+            max-width: 400px;
+            padding: 40px;
+        }
+        .loading-spinner-large {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        .spinner-large {
+            width: 60px;
+            height: 60px;
+            border: 4px solid var(--border-dark);
+            border-top: 4px solid var(--eft-gold);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        .loading-progress-container {
+            width: 100%;
+            height: 6px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border-dark);
+            border-radius: 3px;
+            margin-top: 20px;
+            overflow: hidden;
+        }
+        .loading-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--eft-gold) 0%, #d4a84b 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .loading-checkmark {
+            color: #4a8c4a;
+            margin-right: 5px;
+        }
+        .loading-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 3px 0;
+            color: var(--text-sub);
+            font-size: 0.8rem;
+        }
+        .loading-item.done {
+            color: var(--text-main);
+        }
+        .loading-item.active {
+            color: var(--eft-gold);
+        }
+        .loading-item.error {
+            color: var(--eft-red);
+        }
     </style>
 </head>
 <body>
+    <!-- Global Loading Screen -->
+    <div id="globalLoadingScreen" class="global-loading-screen">
+        <div class="loading-content">
+            <h1 style="color: var(--eft-gold); margin-bottom: 20px; font-family: 'Rajdhani', sans-serif;">TARKOV RAID PLANNER</h1>
+            <div class="loading-spinner-large">
+                <div class="spinner-large"></div>
+            </div>
+            <div id="loadingStatus" style="color: var(--text-main); margin-top: 20px; font-size: 0.9rem;">Initializing...</div>
+            <div class="loading-progress-container">
+                <div class="loading-progress-bar" id="loadingProgressBar"></div>
+            </div>
+            <div id="loadingDetails" style="color: var(--text-sub); margin-top: 10px; font-size: 0.75rem;"></div>
+        </div>
+    </div>
+    
     <div class="container">
         <div class="header-row">
             <h1>Tarkov Raid Planner</h1>
@@ -391,7 +480,13 @@
                         </div>
                         <div class="quest-list-controls" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; margin-bottom: 8px; border-bottom: 1px solid var(--border-dark);">
                             <span class="text-sub small"><span id="selectedQuestCount">0</span> quests selected</span>
-                            <button class="btn-tarkov" onclick="deselectAllQuests()" style="padding: 4px 10px; font-size: 0.75rem;">Deselect All</button>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <div class="group-toggle" style="display: flex; background: var(--bg-dark); border: 1px solid var(--border-dark); border-radius: 3px; overflow: hidden;">
+                                    <button id="groupByTrader" class="group-toggle-btn active" onclick="setQuestGrouping('trader')" style="padding: 3px 8px; font-size: 0.7rem; border: none; background: var(--eft-gold); color: #000; cursor: pointer;">Trader</button>
+                                    <button id="groupByMap" class="group-toggle-btn" onclick="setQuestGrouping('map')" style="padding: 3px 8px; font-size: 0.7rem; border: none; background: transparent; color: var(--text-sub); cursor: pointer;">Map</button>
+                                </div>
+                                <button class="btn-tarkov" onclick="deselectAllQuests()" style="padding: 4px 10px; font-size: 0.75rem;">Deselect All</button>
+                            </div>
                         </div>
                         <div id="quest-loading" class="loading-spinner">
                             <div class="spinner"></div>
@@ -521,7 +616,7 @@
                                 </div>
                             </div>
                             <div class="col-md-2">
-                                <button id="btn-load-ammo" class="btn-tarkov w-100" onclick="loadAmmoData()">Load Data</button>
+                                <button id="btn-load-ammo" class="btn-tarkov w-100" onclick="loadAmmoData()" style="display: none;">🔄 Refresh Data</button>
                             </div>
                             <div class="col-md-2">
                                 <button id="bulk-toggle-ammo" class="btn-tarkov w-100" onclick="toggleBulkMode('ammo')" style="font-size: 0.75rem;">Bulk Select</button>
@@ -656,7 +751,7 @@
                                 <input type="text" class="form-control-tarkov w-100" placeholder="Search weapons..." id="weaponSearch" oninput="filterWeapons()">
                             </div>
                             <div class="col-md-3">
-                                <button id="btn-load-weapons" class="btn-tarkov w-100" onclick="loadWeaponsData()">Load Data</button>
+                                <button id="btn-load-weapons" class="btn-tarkov w-100" onclick="loadWeaponsData()" style="display: none;">🔄 Refresh Data</button>
                             </div>
                             <div class="col-md-2">
                                 <button id="bulk-toggle-weapons" class="btn-tarkov w-100" onclick="toggleBulkMode('weapons')" style="font-size: 0.75rem;">Bulk Select</button>
@@ -750,7 +845,7 @@
                                 <input type="text" class="form-control-tarkov w-100" placeholder="Search gear..." id="gearSearch" oninput="filterGear()">
                             </div>
                             <div class="col-md-3">
-                                <button id="btn-load-gear" class="btn-tarkov w-100" onclick="loadGearData()">Load Data</button>
+                                <button id="btn-load-gear" class="btn-tarkov w-100" onclick="loadGearData()" style="display: none;">🔄 Refresh Data</button>
                             </div>
                             <div class="col-md-2">
                                 <button id="bulk-toggle-gear" class="btn-tarkov w-100" onclick="toggleBulkMode('gear')" style="font-size: 0.75rem;">Bulk Select</button>
@@ -839,7 +934,7 @@
                                 <input type="text" class="form-control-tarkov w-100" placeholder="Search attachments..." id="attachmentSearch" oninput="filterAttachments()">
                             </div>
                             <div class="col-md-3">
-                                <button id="btn-load-attachments" class="btn-tarkov w-100" onclick="loadAttachmentsData()">Load Data</button>
+                                <button id="btn-load-attachments" class="btn-tarkov w-100" onclick="loadAttachmentsData()" style="display: none;">🔄 Refresh Data</button>
                             </div>
                             <div class="col-md-2">
                                 <button id="bulk-toggle-attachments" class="btn-tarkov w-100" onclick="toggleBulkMode('attachments')" style="font-size: 0.75rem;">Bulk Select</button>
@@ -1108,6 +1203,7 @@
         let currentMapOffsetX = 0; // viewBox minX offset
         let currentMapOffsetY = 0; // viewBox minY offset
         let selectedQuestNamesForMarkers = [];
+        let currentQuestGrouping = 'trader'; // 'trader' or 'map'
         let selectedQuestsForMarkers = []; // Full quest objects for marker drawing
         let requiredMapsForQuests = new Set();
         
@@ -1526,11 +1622,49 @@
                 
                 // Handle both array and object response
                 allQuestsGlobal = Array.isArray(data) ? data : (data.quests || []);
-                const savedQuests = getSavedQuests();
                 
                 // Update connection status
                 updateStatus(true, '1.0β');
                 
+                // Render quest list
+                renderQuestList();
+                
+                list.classList.remove('d-none');
+                loading.classList.add('d-none');
+                
+            } catch (err) {
+                updateStatus(false);
+                error.innerHTML = `<strong>ERROR:</strong> ${err.message}<br><small>Make sure the backend is running</small>`;
+                error.classList.remove('d-none');
+                loading.classList.add('d-none');
+            }
+        }
+        
+        function setQuestGrouping(grouping) {
+            currentQuestGrouping = grouping;
+            
+            // Update button states
+            document.getElementById('groupByTrader').style.background = grouping === 'trader' ? 'var(--eft-gold)' : 'transparent';
+            document.getElementById('groupByTrader').style.color = grouping === 'trader' ? '#000' : 'var(--text-sub)';
+            document.getElementById('groupByMap').style.background = grouping === 'map' ? 'var(--eft-gold)' : 'transparent';
+            document.getElementById('groupByMap').style.color = grouping === 'map' ? '#000' : 'var(--text-sub)';
+            
+            // Re-render quest list
+            renderQuestList();
+        }
+        
+        function renderQuestList() {
+            const list = document.getElementById('quest-list');
+            const savedQuests = getSavedQuests();
+            
+            if (!allQuestsGlobal || allQuestsGlobal.length === 0) {
+                list.innerHTML = '<div class="text-sub text-center p-3">No quests loaded</div>';
+                return;
+            }
+            
+            let html = '';
+            
+            if (currentQuestGrouping === 'trader') {
                 // Group by trader
                 const byTrader = {};
                 allQuestsGlobal.forEach(q => {
@@ -1539,7 +1673,6 @@
                     byTrader[trader].quests.push(q);
                 });
                 
-                let html = '';
                 for (const [trader, data] of Object.entries(byTrader)) {
                     const groupId = 'trader-' + trader.replace(/\s+/g, '-');
                     html += `
@@ -1574,23 +1707,84 @@
                 }
                 
                 list.innerHTML = html;
-                list.classList.remove('d-none');
-                loading.classList.add('d-none');
                 
-                // Update selected quest count
-                updateSelectedQuestCount();
-                
-                for (const [trader, data] of Object.entries(byTrader)) {
+                // Update badges
+                for (const trader of Object.keys(byTrader)) {
                     const groupId = 'trader-' + trader.replace(/\s+/g, '-');
                     updateTraderBadge(groupId);
                 }
                 
-            } catch (err) {
-                updateStatus(false);
-                error.innerHTML = `<strong>ERROR:</strong> ${err.message}<br><small>Make sure the backend is running</small>`;
-                error.classList.remove('d-none');
-                loading.classList.add('d-none');
+            } else {
+                // Group by map
+                const byMap = {};
+                allQuestsGlobal.forEach(q => {
+                    const mapName = q.map?.name || 'Any';
+                    if (!byMap[mapName]) byMap[mapName] = [];
+                    byMap[mapName].push(q);
+                });
+                
+                // Sort maps alphabetically, but put "Any" at the end
+                const mapNames = Object.keys(byMap).sort((a, b) => {
+                    if (a === 'Any') return 1;
+                    if (b === 'Any') return -1;
+                    return a.localeCompare(b);
+                });
+                
+                for (const mapName of mapNames) {
+                    const quests = byMap[mapName];
+                    const groupId = 'map-' + mapName.replace(/\s+/g, '-');
+                    const mapKey = mapNameToKey(mapName);
+                    
+                    // Map icons
+                    const mapIcons = {
+                        'Customs': '🏭', 'Woods': '🌲', 'Shoreline': '🏖️', 'Interchange': '🛒',
+                        'Reserve': '🏰', 'Lighthouse': '🗼', 'Streets of Tarkov': '🏙️',
+                        'Ground Zero': '☢️', 'Factory': '🏗️', 'The Lab': '🔬', 'Any': '🌍'
+                    };
+                    const icon = mapIcons[mapName] || '📍';
+                    
+                    html += `
+                        <div class="trader-group">
+                            <div class="trader-header" onclick="toggleTrader('${groupId}')" id="btn-${groupId}" data-total="${quests.length}">
+                                <span style="font-size: 1.5rem; margin-right: 8px;">${icon}</span>
+                                <h6>${mapName}</h6>
+                                <span class="badge-tarkov">${quests.length} Tasks</span>
+                            </div>
+                            <div class="trader-quests" id="${groupId}">
+                    `;
+                    
+                    quests.forEach(q => {
+                        const isSelected = savedQuests.has(q.id);
+                        html += `
+                            <div class="quest-row ${isSelected ? 'selected' : ''}" onclick="toggleSelection('${q.id}', this, event)">
+                                <input type="checkbox" id="cb-${q.id}" ${isSelected ? 'checked' : ''} data-parent-group="${groupId}" data-quest-name="${q.name}">
+                                <div class="quest-info">
+                                    <div class="quest-name">
+                                        <a href="${getWikiUrl(q.name)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">${q.name}</a>
+                                    </div>
+                                    <div class="quest-meta">
+                                        <span>${q.trader?.name || 'Unknown'}</span>
+                                        <span>Lvl ${q.minPlayerLevel || '?'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    html += '</div></div>';
+                }
+                
+                list.innerHTML = html;
+                
+                // Update badges
+                for (const mapName of mapNames) {
+                    const groupId = 'map-' + mapName.replace(/\s+/g, '-');
+                    updateTraderBadge(groupId);
+                }
             }
+            
+            // Update selected quest count
+            updateSelectedQuestCount();
         }
         
         function toggleTrader(groupId) {
@@ -2065,14 +2259,17 @@
                 renderAmmoList();
                 
                 content.classList.remove('d-none');
-                btn.innerHTML = 'Refresh Data';
-                btn.classList.add('btn-secondary');
+                btn.textContent = '🔄 Refresh Data';
+                btn.style.display = 'block';
                 
             } catch (err) {
                 error.innerHTML = `<strong>ERROR:</strong> ${err.message}`;
                 error.classList.remove('d-none');
+                btn.textContent = '🔄 Retry';
+                btn.style.display = 'block';
             } finally {
                 loading.classList.add('d-none');
+                btn.disabled = false;
             }
         }
         
@@ -2779,7 +2976,8 @@
                 
                 loading.classList.add('d-none');
                 content.classList.remove('d-none');
-                btn.textContent = 'Reload';
+                btn.textContent = '🔄 Refresh Data';
+                btn.style.display = 'block';
                 btn.disabled = false;
                 
                 loadOwnedWeapons();
@@ -2789,7 +2987,8 @@
                 loading.classList.add('d-none');
                 error.classList.remove('d-none');
                 error.textContent = 'Error loading weapons: ' + err.message;
-                btn.textContent = 'Retry';
+                btn.textContent = '🔄 Retry';
+                btn.style.display = 'block';
                 btn.disabled = false;
             }
         }
@@ -3043,7 +3242,8 @@
                 
                 loading.classList.add('d-none');
                 content.classList.remove('d-none');
-                btn.textContent = 'Reload';
+                btn.textContent = '🔄 Refresh Data';
+                btn.style.display = 'block';
                 btn.disabled = false;
                 
                 loadOwnedGear();
@@ -3053,7 +3253,8 @@
                 loading.classList.add('d-none');
                 error.classList.remove('d-none');
                 error.textContent = 'Error loading gear: ' + err.message;
-                btn.textContent = 'Retry';
+                btn.textContent = '🔄 Retry';
+                btn.style.display = 'block';
                 btn.disabled = false;
             }
         }
@@ -3382,7 +3583,8 @@
                 
                 loading.classList.add('d-none');
                 content.classList.remove('d-none');
-                btn.textContent = 'Reload';
+                btn.textContent = '🔄 Refresh Data';
+                btn.style.display = 'block';
                 btn.disabled = false;
                 
                 loadOwnedAttachments();
@@ -3392,7 +3594,8 @@
                 loading.classList.add('d-none');
                 error.classList.remove('d-none');
                 error.textContent = 'Error loading attachments: ' + err.message;
-                btn.textContent = 'Retry';
+                btn.textContent = '🔄 Retry';
+                btn.style.display = 'block';
                 btn.disabled = false;
             }
         }
@@ -4646,34 +4849,78 @@
         // INITIALIZATION
         // ============================================================================
         
-        document.addEventListener('DOMContentLoaded', async () => {
-            // Load tier configuration for all categories
-            loadTierData();
-            initTierConfigUI();
+        // ============================================================================
+        // APP INITIALIZATION WITH LOADING SCREEN
+        // ============================================================================
+        
+        async function initApp() {
+            const loadingScreen = document.getElementById('globalLoadingScreen');
+            const loadingStatus = document.getElementById('loadingStatus');
+            const loadingProgress = document.getElementById('loadingProgressBar');
+            const loadingDetails = document.getElementById('loadingDetails');
             
-            // Initialize keyboard shortcuts
-            initKeyboardShortcuts();
-            initShortcutsHelp();
+            const tasks = [
+                { name: 'Configuration', fn: async () => { loadTierData(); initTierConfigUI(); } },
+                { name: 'Shortcuts', fn: async () => { initKeyboardShortcuts(); initShortcutsHelp(); } },
+                { name: 'Local Data', fn: async () => { loadSavedAmmo(); loadCollectedQuestItems(); } },
+                { name: 'Quest Locations', fn: loadQuestLocationsData },
+                { name: 'Quests', fn: loadQuests },
+                { name: 'Ammo Database', fn: loadAmmoData },
+                { name: 'Weapons Database', fn: loadWeaponsData },
+                { name: 'Gear Database', fn: loadGearData },
+                { name: 'Attachments Database', fn: loadAttachmentsData },
+            ];
             
-            // Load saved data
-            loadSavedAmmo();
-            loadCollectedQuestItems();
+            let completed = 0;
+            const total = tasks.length;
             
-            // Load quest locations from tarkovdata
-            await loadQuestLocationsData();
+            for (const task of tasks) {
+                try {
+                    loadingStatus.textContent = `Loading ${task.name}...`;
+                    loadingDetails.innerHTML = `<span class="loading-item active">⏳ ${task.name}</span>`;
+                    
+                    await task.fn();
+                    
+                    completed++;
+                    const progress = Math.round((completed / total) * 100);
+                    loadingProgress.style.width = progress + '%';
+                    
+                    loadingDetails.innerHTML = `<span class="loading-item done">✓ ${task.name}</span>`;
+                } catch (err) {
+                    console.error(`Error loading ${task.name}:`, err);
+                    loadingDetails.innerHTML = `<span class="loading-item error">✗ ${task.name} (failed)</span>`;
+                    // Continue with other tasks even if one fails
+                    completed++;
+                    const progress = Math.round((completed / total) * 100);
+                    loadingProgress.style.width = progress + '%';
+                }
+            }
             
-            // Load quests from backend
-            await loadQuests();
-            
-            // Update map selection based on any saved quest selections
+            // Final setup
+            loadingStatus.textContent = 'Initializing map...';
             updateMapSelection();
-            
-            // Initialize map without markers (markers appear after Plan Raid)
-            initMap('customs', []);
-            
-            // Initial dashboard update
+            await initMap('customs', []);
             updateDashboard();
-        });
+            
+            // Show refresh buttons
+            document.getElementById('btn-load-ammo').style.display = 'block';
+            document.getElementById('btn-load-weapons').style.display = 'block';
+            document.getElementById('btn-load-gear').style.display = 'block';
+            document.getElementById('btn-load-attachments').style.display = 'block';
+            
+            // Hide loading screen
+            loadingProgress.style.width = '100%';
+            loadingStatus.textContent = 'Ready!';
+            
+            setTimeout(() => {
+                loadingScreen.classList.add('hidden');
+                setTimeout(() => {
+                    loadingScreen.style.display = 'none';
+                }, 500);
+            }, 300);
+        }
+        
+        document.addEventListener('DOMContentLoaded', initApp);
     </script>
 </body>
 </html>
