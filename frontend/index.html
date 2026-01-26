@@ -936,7 +936,7 @@
         // invertLeafletY: if false, don't do (height - pixelY) for Leaflet
         const MAP_CONFIG = {
             customs:     { file: 'maps/Customs.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
-            woods:       { file: 'maps/Woods.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: false },
+            woods:       { file: 'maps/Woods.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: true, invertLeafletY: true },
             shoreline:   { file: 'maps/Shoreline.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
             interchange: { file: 'maps/Interchange.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
             reserve:     { file: 'maps/Reserve.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
@@ -3765,7 +3765,7 @@
                                 spawnChance
                                 spawnLocations {
                                     name
-                                    spawnChance
+                                    chance
                                 }
                             }
                         }
