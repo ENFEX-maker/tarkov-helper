@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tarkov Raid Planner v4.1</title>
+    <title>Tarkov Raid Planner v4.2</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
@@ -185,8 +186,8 @@
         <div id="importModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 9999; justify-content: center; align-items: center;">
             <div style="background: var(--bg-panel); border: 2px solid var(--border-gold); padding: 25px; max-width: 500px; width: 90%;">
                 <h5 style="color: var(--text-beige); margin-bottom: 15px;">Import Configuration</h5>
-                <p style="color: var(--text-sub); font-size: 0.85rem; margin-bottom: 15px;">Paste your configuration JSON below or upload a file:</p>
-                <textarea id="importTextarea" style="width: 100%; height: 150px; background: var(--bg-dark); border: 1px solid var(--border-dark); color: var(--text-main); padding: 10px; font-family: monospace; font-size: 0.8rem; resize: vertical;" placeholder="Paste JSON here..."></textarea>
+                <p style="color: var(--text-sub); font-size: 0.85rem; margin-bottom: 15px;">Paste your share code or JSON below, or upload a file:</p>
+                <textarea id="importTextarea" style="width: 100%; height: 150px; background: var(--bg-dark); border: 1px solid var(--border-dark); color: var(--text-main); padding: 10px; font-family: monospace; font-size: 0.8rem; resize: vertical;" placeholder="Paste share code or JSON here..."></textarea>
                 <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
                     <label class="btn-tarkov" style="padding: 8px 15px; cursor: pointer;">
                         📁 Upload File
@@ -194,6 +195,29 @@
                     </label>
                     <button class="btn-tarkov" onclick="importFromText()" style="padding: 8px 15px;">✓ Apply</button>
                     <button class="btn-tarkov" onclick="hideImportModal()" style="padding: 8px 15px; background: var(--bg-dark);">Cancel</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Export Modal -->
+        <div id="exportModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 9999; justify-content: center; align-items: center;">
+            <div style="background: var(--bg-panel); border: 2px solid var(--border-gold); padding: 25px; max-width: 500px; width: 90%;">
+                <h5 style="color: var(--text-beige); margin-bottom: 15px;">Export Configuration</h5>
+                <p style="color: var(--text-sub); font-size: 0.85rem; margin-bottom: 10px;">Choose how to export your configuration:</p>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="color: var(--text-beige); font-size: 0.85rem; display: block; margin-bottom: 8px;">📋 Share Code (for Discord, etc.):</label>
+                    <textarea id="exportCode" readonly style="width: 100%; height: 80px; background: var(--bg-dark); border: 1px solid var(--border-dark); color: var(--text-main); padding: 10px; font-family: monospace; font-size: 0.75rem; resize: none;"></textarea>
+                    <button class="btn-tarkov" onclick="copyExportCode()" style="margin-top: 8px; padding: 6px 15px; font-size: 0.85rem;">📋 Copy Code</button>
+                </div>
+                
+                <div style="border-top: 1px solid var(--border-dark); padding-top: 15px; margin-top: 10px;">
+                    <label style="color: var(--text-beige); font-size: 0.85rem; display: block; margin-bottom: 8px;">💾 Download as file:</label>
+                    <button class="btn-tarkov" onclick="downloadExportFile()" style="padding: 8px 15px;">📥 Download .json</button>
+                </div>
+                
+                <div style="margin-top: 20px; text-align: right;">
+                    <button class="btn-tarkov" onclick="hideExportModal()" style="padding: 8px 15px; background: var(--bg-dark);">Close</button>
                 </div>
             </div>
         </div>
@@ -786,6 +810,7 @@
         let currentMapHeight = 0;
         let currentMapWidth = 0;
         let selectedQuestNamesForMarkers = [];
+        let selectedQuestsForMarkers = []; // Full quest objects for marker drawing
         let requiredMapsForQuests = new Set();
         
         // Unified tier system state
@@ -821,7 +846,7 @@
         // STATUS INDICATOR
         // ============================================================================
         
-        function updateStatus(connected, version = '4.1') {
+        function updateStatus(connected, version = '4.2') {
             const dot = document.getElementById('statusDot');
             const text = document.getElementById('statusText');
             if (connected) {
@@ -951,7 +976,7 @@
         
         let currentQuestColors = {};
         
-        function drawQuestMarkers(mapKey, mapWidth, mapHeight, questNames = []) {
+        function drawQuestMarkers(mapKey, mapWidth, mapHeight, questNames = [], selectedQuests = []) {
             if (!questMarkersLayer) {
                 questMarkersLayer = L.layerGroup();
             }
@@ -966,6 +991,15 @@
                 legend.style.display = 'none';
                 return;
             }
+            
+            // Build a map of quest name -> API map key for validation
+            const questApiMaps = {};
+            selectedQuests.forEach(q => {
+                const normalizedName = q.name.toLowerCase().trim();
+                if (q.map?.name && q.map.name.toLowerCase() !== 'any') {
+                    questApiMaps[normalizedName] = mapNameToKey(q.map.name);
+                }
+            });
             
             // Assign colors to quests
             currentQuestColors = {};
@@ -991,9 +1025,24 @@
                 const locations = questLocationsData.byQuestName[normalizedName] || [];
                 const color = QUEST_COLORS[questIndex % QUEST_COLORS.length];
                 
+                // Get the authoritative API map for this quest (if any)
+                const apiMapKey = questApiMaps[normalizedName];
+                
                 locations.forEach(loc => {
-                    // Only draw if this location is on the current map
-                    if (loc.mapKey !== mapKey) return;
+                    // Determine if we should draw this marker:
+                    // 1. If quest has a specific API map, draw ALL its locations on that map (trust API over tarkovdata location IDs)
+                    // 2. If quest is "any" map, use the tarkovdata location ID
+                    let shouldDraw = false;
+                    
+                    if (apiMapKey) {
+                        // Quest has specific map from API - draw all locations if we're on that map
+                        shouldDraw = (mapKey === apiMapKey);
+                    } else {
+                        // Quest is "any" - use tarkovdata location ID
+                        shouldDraw = (loc.mapKey === mapKey);
+                    }
+                    
+                    if (!shouldDraw) return;
                     
                     // Direct percent to pixel conversion (no offset needed for tarkovdata SVG maps)
                     const pixelX = (loc.leftPercent / 100) * mapWidth;
@@ -1309,7 +1358,7 @@
         // MAP MANAGEMENT
         // ============================================================================
         
-        async function initMap(mapName, questNames = []) {
+        async function initMap(mapName, questNames = [], selectedQuests = []) {
             const cfg = MAP_CONFIG[mapName];
             if (!cfg) return;
             
@@ -1380,7 +1429,7 @@
             questMarkersLayer = L.layerGroup().addTo(mapInstance);
             
             // Draw quest markers only for selected quests
-            drawQuestMarkers(mapName, currentMapWidth, currentMapHeight, questNames);
+            drawQuestMarkers(mapName, currentMapWidth, currentMapHeight, questNames, selectedQuests);
             
             setTimeout(() => mapInstance.invalidateSize(), 200);
         }
@@ -1394,7 +1443,7 @@
         function onMapChange() {
             const mapName = document.getElementById('mapSelect').value;
             // Redraw with currently selected quests (if any)
-            initMap(mapName, selectedQuestNamesForMarkers);
+            initMap(mapName, selectedQuestNamesForMarkers, selectedQuestsForMarkers);
         }
 
         // ============================================================================
@@ -1413,14 +1462,15 @@
             
             const selectedQuests = allQuestsGlobal.filter(q => savedQuests.has(q.id));
             
-            // Store selected quest names for markers
+            // Store selected quest names and full objects for markers
             selectedQuestNamesForMarkers = selectedQuests.map(q => q.name);
+            selectedQuestsForMarkers = selectedQuests;
             
             resultBox.style.display = 'block';
             resultBox.scrollIntoView({ behavior: 'smooth' });
             
             // Initialize map with selected quest markers
-            await initMap(mapName, selectedQuestNamesForMarkers);
+            await initMap(mapName, selectedQuestNamesForMarkers, selectedQuestsForMarkers);
             
             // Collect items provided by quest starts
             const providedItemIds = new Set();
@@ -1774,19 +1824,46 @@
             const select = document.getElementById(`${category}StatSelect`);
             const stats = STAT_DEFINITIONS[category];
             
-            // Checkboxes
+            // Get the current filter for this category to determine applicable stats
+            let currentFilterType = null;
+            if (category === 'gear') {
+                const filterValue = document.getElementById('gearTypeFilter')?.value;
+                if (filterValue && filterValue !== 'ALL') {
+                    // Map filter value to ITEM_TYPE_STATS key
+                    const filterMap = { 'armor': 'armor', 'helmet': 'helmet', 'rig': 'rig', 'backpack': 'backpack', 'headphones': 'headphones' };
+                    currentFilterType = filterMap[filterValue];
+                }
+            } else if (category === 'attachments') {
+                const filterValue = document.getElementById('attachmentTypeFilter')?.value;
+                if (filterValue && filterValue !== 'ALL') {
+                    currentFilterType = filterValue; // Already matches ITEM_TYPE_STATS keys
+                }
+            }
+            
+            // Get applicable stats for the current filter
+            const applicableStats = currentFilterType ? getApplicableStats(category, currentFilterType) : null;
+            
+            // Checkboxes - grey out non-applicable stats
             container.innerHTML = Object.entries(stats).map(([key, def]) => {
                 const isActive = activeStats[category].includes(key);
-                return `<div class="stat-checkbox ${isActive ? 'active' : ''}" onclick="toggleStatActive('${category}', '${key}')">
-                    <input type="checkbox" ${isActive ? 'checked' : ''}>
+                const isApplicable = !applicableStats || applicableStats.includes(key);
+                const disabledClass = !isApplicable ? 'disabled' : '';
+                const disabledAttr = !isApplicable ? 'style="opacity: 0.4; pointer-events: none;"' : '';
+                
+                return `<div class="stat-checkbox ${isActive ? 'active' : ''} ${disabledClass}" 
+                    ${isApplicable ? `onclick="toggleStatActive('${category}', '${key}')"` : ''}
+                    ${disabledAttr}
+                    title="${!isApplicable ? 'Not applicable for selected type' : def.label}">
+                    <input type="checkbox" ${isActive ? 'checked' : ''} ${!isApplicable ? 'disabled' : ''}>
                     ${def.label}
                 </div>`;
             }).join('');
             
-            // Dropdown
-            select.innerHTML = Object.entries(stats).map(([key, def]) => 
-                `<option value="${key}">${def.label}</option>`
-            ).join('');
+            // Dropdown - also filter to applicable stats
+            select.innerHTML = Object.entries(stats).map(([key, def]) => {
+                const isApplicable = !applicableStats || applicableStats.includes(key);
+                return `<option value="${key}" ${!isApplicable ? 'disabled style="color: #666;"' : ''}>${def.label}${!isApplicable ? ' (N/A)' : ''}</option>`;
+            }).join('');
             
             renderThresholdEditor(category);
         }
@@ -1888,8 +1965,9 @@
         // ============================================================================
         
         function exportConfig() {
+            // Show export modal with options
             const config = {
-                version: '4.1',
+                version: '4.2',
                 exportDate: new Date().toISOString(),
                 tierThresholds: tierThresholds,
                 activeStats: activeStats,
@@ -1902,7 +1980,20 @@
                 }
             };
             
-            const json = JSON.stringify(config, null, 2);
+            const json = JSON.stringify(config);
+            const base64 = btoa(unescape(encodeURIComponent(json)));
+            
+            // Store for modal use
+            window._exportData = { json, base64, config };
+            
+            document.getElementById('exportModal').style.display = 'flex';
+            document.getElementById('exportCode').value = base64;
+        }
+        
+        function downloadExportFile() {
+            if (!window._exportData) return;
+            
+            const json = JSON.stringify(window._exportData.config, null, 2);
             const blob = new Blob([json], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             
@@ -1914,12 +2005,35 @@
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
             
-            // Also copy to clipboard
-            navigator.clipboard.writeText(json).then(() => {
-                alert('Configuration exported! File downloaded and copied to clipboard.');
-            }).catch(() => {
-                alert('Configuration exported! File downloaded.');
-            });
+            hideExportModal();
+        }
+        
+        function copyExportCode() {
+            const textarea = document.getElementById('exportCode');
+            textarea.select();
+            document.execCommand('copy');
+            
+            // Also try modern API
+            navigator.clipboard.writeText(textarea.value).catch(() => {});
+            
+            // Visual feedback
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = '✓ Copied!';
+            btn.style.background = 'var(--eft-green)';
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.style.background = '';
+            }, 2000);
+        }
+        
+        function showExportModal() {
+            exportConfig();
+        }
+        
+        function hideExportModal() {
+            document.getElementById('exportModal').style.display = 'none';
+            window._exportData = null;
         }
         
         function showImportModal() {
@@ -1951,8 +2065,19 @@
             reader.readAsText(file);
         }
         
-        function applyImportedConfig(jsonString) {
+        function applyImportedConfig(input) {
             try {
+                let jsonString = input;
+                
+                // Check if input is Base64 encoded (no whitespace, no braces at start)
+                if (!input.startsWith('{') && !input.includes(' ') && !input.includes('\n')) {
+                    try {
+                        jsonString = decodeURIComponent(escape(atob(input)));
+                    } catch (e) {
+                        // Not valid Base64, treat as JSON
+                    }
+                }
+                
                 const config = JSON.parse(jsonString);
                 
                 // Validate basic structure
@@ -2561,6 +2686,8 @@
             gearTypeFilter = document.getElementById('gearTypeFilter').value;
             gearSearchQuery = document.getElementById('gearSearch').value;
             renderGearList();
+            // Update stat checkboxes to reflect applicable stats for filtered type
+            renderStatCheckboxes('gear');
         }
         
         function toggleGearOwned(id) {
@@ -2825,6 +2952,8 @@
             attachmentTypeFilter = document.getElementById('attachmentTypeFilter').value;
             attachmentSearchQuery = document.getElementById('attachmentSearch').value;
             renderAttachmentsList();
+            // Update stat checkboxes to reflect applicable stats for filtered type
+            renderStatCheckboxes('attachments');
         }
         
         function toggleAttachmentOwned(id) {
