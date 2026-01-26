@@ -3599,6 +3599,7 @@
         
         // Spawn data cache per map
         let mapSpawnData = {};
+        let allMapsCache = null; // Cache for all maps API response
         let spawnLayers = {
             scav: { enabled: false, markers: [] },
             sniper: { enabled: false, markers: [] },
@@ -3617,6 +3618,7 @@
         async function loadMapSpawnData(mapName) {
             // Check cache first
             if (mapSpawnData[mapName]) {
+                console.log('Using cached spawn data for:', mapName);
                 return mapSpawnData[mapName];
             }
             
@@ -3635,101 +3637,121 @@
             };
             
             const apiMapName = apiMapNames[mapName] || mapName;
+            const normalizedName = mapName;
             console.log('Loading spawn data for:', mapName, '-> API name:', apiMapName);
             
             try {
-                const query = `{
-                    maps(name: "${apiMapName}") {
-                        name
-                        normalizedName
-                        spawns {
-                            zoneName
-                            position { x y z }
-                            sides
-                            categories
-                        }
-                        bosses {
-                            boss { name normalizedName }
-                            spawnChance
-                            spawnLocations {
-                                name
+                // Use cached all-maps data or fetch new
+                let allMaps;
+                if (allMapsCache) {
+                    allMaps = allMapsCache;
+                    console.log('Using cached all-maps data');
+                } else {
+                    const query = `{
+                        maps {
+                            name
+                            normalizedName
+                            spawns {
+                                zoneName
                                 position { x y z }
+                                sides
+                                categories
                             }
-                        }
-                    }
-                }`;
-                
-                const response = await fetch('https://api.tarkov.dev/graphql', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ query })
-                });
-                
-                const data = await response.json();
-                const mapData = data?.data?.maps?.[0];
-                
-                if (mapData) {
-                    // Process spawn data
-                    const processed = {
-                        scav: [],
-                        sniper: [],
-                        pmc: [],
-                        boss: []
-                    };
-                    
-                    // Process regular spawns
-                    if (mapData.spawns) {
-                        mapData.spawns.forEach(spawn => {
-                            if (!spawn.position) return;
-                            
-                            const spawnInfo = {
-                                zone: spawn.zoneName,
-                                x: spawn.position.x,
-                                y: spawn.position.z, // Note: y and z are often swapped in game coords
-                                sides: spawn.sides || [],
-                                categories: spawn.categories || []
-                            };
-                            
-                            // Categorize spawn
-                            if (spawn.sides?.includes('scav')) {
-                                if (spawn.categories?.includes('sniper')) {
-                                    processed.sniper.push(spawnInfo);
-                                } else {
-                                    processed.scav.push(spawnInfo);
+                            bosses {
+                                boss { name normalizedName }
+                                spawnChance
+                                spawnLocations {
+                                    name
+                                    position { x y z }
                                 }
                             }
-                            if (spawn.sides?.includes('pmc')) {
-                                processed.pmc.push(spawnInfo);
-                            }
-                        });
-                    }
+                        }
+                    }`;
                     
-                    // Process boss spawns
-                    if (mapData.bosses) {
-                        mapData.bosses.forEach(bossSpawn => {
-                            if (bossSpawn.spawnLocations) {
-                                bossSpawn.spawnLocations.forEach(loc => {
-                                    if (loc.position) {
-                                        processed.boss.push({
-                                            name: bossSpawn.boss?.name || 'Boss',
-                                            zone: loc.name,
-                                            x: loc.position.x,
-                                            y: loc.position.z,
-                                            spawnChance: bossSpawn.spawnChance
-                                        });
-                                    }
-                                });
-                            }
-                        });
-                    }
+                    console.log('Fetching all maps spawn data from API...');
+                    const response = await fetch('https://api.tarkov.dev/graphql', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ query })
+                    });
                     
-                    mapSpawnData[mapName] = processed;
-                    console.log('Spawn data loaded:', mapName, processed);
-                    console.log('Scav spawns:', processed.scav.length, 'PMC:', processed.pmc.length, 'Boss:', processed.boss.length);
-                    return processed;
-                } else {
-                    console.warn('No map data returned for:', apiMapName, data);
+                    const data = await response.json();
+                    allMaps = data?.data?.maps || [];
+                    allMapsCache = allMaps;
+                    console.log('Loaded', allMaps.length, 'maps from API');
+                    console.log('Available maps:', allMaps.map(m => `${m.name} (${m.normalizedName})`).join(', '));
                 }
+                
+                // Find the correct map
+                const mapData = allMaps.find(m => 
+                    m.normalizedName === normalizedName || 
+                    m.name.toLowerCase() === apiMapName.toLowerCase()
+                );
+                
+                if (!mapData) {
+                    console.warn('Map not found:', mapName, '- tried:', normalizedName, 'and', apiMapName);
+                    return null;
+                }
+                
+                console.log('Found map:', mapData.name, '- Spawns:', mapData.spawns?.length || 0, '- Bosses:', mapData.bosses?.length || 0);
+                    // Process spawn data
+                const processed = {
+                    scav: [],
+                    sniper: [],
+                    pmc: [],
+                    boss: []
+                };
+                
+                // Process regular spawns
+                if (mapData.spawns) {
+                    mapData.spawns.forEach(spawn => {
+                        if (!spawn.position) return;
+                        
+                        const spawnInfo = {
+                            zone: spawn.zoneName,
+                            x: spawn.position.x,
+                            y: spawn.position.z, // Note: y and z are often swapped in game coords
+                            sides: spawn.sides || [],
+                            categories: spawn.categories || []
+                        };
+                        
+                        // Categorize spawn
+                        if (spawn.sides?.includes('scav')) {
+                            if (spawn.categories?.includes('sniper')) {
+                                processed.sniper.push(spawnInfo);
+                            } else {
+                                processed.scav.push(spawnInfo);
+                            }
+                        }
+                        if (spawn.sides?.includes('pmc')) {
+                            processed.pmc.push(spawnInfo);
+                        }
+                    });
+                }
+                
+                // Process boss spawns
+                if (mapData.bosses) {
+                    mapData.bosses.forEach(bossSpawn => {
+                        if (bossSpawn.spawnLocations) {
+                            bossSpawn.spawnLocations.forEach(loc => {
+                                if (loc.position) {
+                                    processed.boss.push({
+                                        name: bossSpawn.boss?.name || 'Boss',
+                                        zone: loc.name,
+                                        x: loc.position.x,
+                                        y: loc.position.z,
+                                        spawnChance: bossSpawn.spawnChance
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
+                
+                mapSpawnData[mapName] = processed;
+                console.log('Spawn data processed for', mapName, '- Scav:', processed.scav.length, 'Sniper:', processed.sniper.length, 'PMC:', processed.pmc.length, 'Boss:', processed.boss.length);
+                return processed;
+                
             } catch (err) {
                 console.error('Error loading spawn data:', err);
             }
@@ -3737,8 +3759,12 @@
             return null;
         }
         
-        function toggleSpawnLayer(layerType) {
-            spawnLayers[layerType].enabled = !spawnLayers[layerType].enabled;
+        async function toggleSpawnLayer(layerType) {
+            // Read checkbox state directly
+            const checkbox = document.querySelector(`.spawn-toggle[data-layer="${layerType}"] input`);
+            spawnLayers[layerType].enabled = checkbox?.checked || false;
+            
+            console.log(`toggleSpawnLayer: ${layerType} = ${spawnLayers[layerType].enabled}`);
             
             // Save to per-map settings if in multi-map mode
             if (multiMapMode && activeMapTab) {
@@ -3754,7 +3780,7 @@
                 applyAllBtn.style.display = 'inline-block';
             }
             
-            renderSpawnMarkers();
+            await renderSpawnMarkers();
         }
         
         function applySpawnLayersToAllMaps() {
