@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tarkov Raid Planner v5.0</title>
+    <title>Tarkov Raid Planner v1.0 Beta</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
@@ -206,6 +206,40 @@
         /* Keyboard Shortcuts Help */
         .shortcuts-help { position: fixed; bottom: 15px; right: 15px; background: var(--bg-panel); border: 1px solid var(--border-dark); padding: 8px 12px; font-size: 0.75rem; color: var(--text-sub); z-index: 100; }
         .shortcuts-help kbd { background: var(--bg-dark); padding: 2px 6px; border-radius: 3px; margin: 0 2px; color: var(--text-beige); }
+        
+        /* Quest Item Tracker */
+        .item-tracker-progress { display: flex; align-items: center; gap: 10px; }
+        .progress-text { font-size: 0.85rem; color: var(--text-beige); font-weight: 600; }
+        .progress-bar-mini { width: 80px; height: 6px; background: var(--bg-dark); border: 1px solid var(--border-dark); }
+        .progress-fill { height: 100%; background: var(--eft-green); transition: width 0.3s ease; }
+        
+        .quest-items-group { background: var(--bg-dark); border: 1px solid var(--border-dark); margin-bottom: 10px; }
+        .quest-items-header { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--bg-element); border-bottom: 1px solid var(--border-dark); cursor: pointer; }
+        .quest-items-header:hover { background: rgba(158, 143, 107, 0.1); }
+        .quest-items-header .quest-color { width: 12px; height: 12px; border-radius: 50%; border: 2px solid; }
+        .quest-items-header .quest-name { flex: 1; font-weight: 600; color: var(--text-beige); font-size: 0.85rem; }
+        .quest-items-header .quest-item-count { font-size: 0.75rem; color: var(--text-sub); }
+        .quest-items-list { padding: 8px; }
+        .quest-items-list.collapsed { display: none; }
+        
+        .tracker-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: var(--bg-panel); border: 1px solid var(--border-dark); margin-bottom: 4px; transition: all 0.2s; }
+        .tracker-item:hover { border-color: var(--border-gold); }
+        .tracker-item.collected { opacity: 0.6; background: rgba(74, 140, 74, 0.1); border-color: var(--eft-green); }
+        .tracker-item.collected .item-name { text-decoration: line-through; }
+        .tracker-item img { width: 32px; height: 32px; object-fit: contain; }
+        .tracker-item .item-checkbox { accent-color: var(--eft-green); width: 18px; height: 18px; cursor: pointer; }
+        .tracker-item .item-info { flex: 1; }
+        .tracker-item .item-name { color: var(--text-main); font-size: 0.85rem; }
+        .tracker-item .item-meta { font-size: 0.7rem; color: var(--text-sub); display: flex; gap: 8px; margin-top: 2px; }
+        .tracker-item .item-count { font-weight: 600; color: var(--eft-gold); }
+        .tracker-item .fir-badge { background: var(--eft-green); color: #000; padding: 1px 5px; font-size: 0.65rem; font-weight: 600; }
+        .tracker-item .handover-badge { background: var(--eft-gold); color: #000; padding: 1px 5px; font-size: 0.65rem; font-weight: 600; }
+        .tracker-item .given-badge { background: #4a8c4a; color: #fff; padding: 1px 5px; font-size: 0.65rem; font-weight: 600; }
+        
+        .tracker-item .collected-input { display: flex; align-items: center; gap: 5px; }
+        .tracker-item .collected-input input { width: 40px; background: var(--bg-dark); border: 1px solid var(--border-dark); color: var(--text-main); text-align: center; padding: 2px; font-size: 0.8rem; }
+        .tracker-item .collected-input input:focus { border-color: var(--eft-gold); outline: none; }
+        .tracker-item .collected-input span { color: var(--text-sub); font-size: 0.8rem; }
     </style>
 </head>
 <body>
@@ -216,6 +250,7 @@
                 <div class="config-buttons" style="display: flex; gap: 8px;">
                     <button class="btn-tarkov" onclick="exportConfig()" style="padding: 6px 12px; font-size: 0.75rem;" title="Export configuration">📥 Export</button>
                     <button class="btn-tarkov" onclick="showImportModal()" style="padding: 6px 12px; font-size: 0.75rem;" title="Import configuration">📤 Import</button>
+                    <button class="btn-tarkov" onclick="toggleShortcutsHelp()" style="padding: 6px 12px; font-size: 0.75rem;" title="Keyboard shortcuts (?)">⌨️</button>
                 </div>
                 <div class="status-indicator">
                     <div class="status-dot" id="statusDot"></div>
@@ -266,8 +301,8 @@
         
         <div class="nav-tabs-tarkov">
             <div class="nav-tab active" onclick="switchTab('planner')">Mission Planner</div>
-            <div class="nav-tab" onclick="switchTab('ammo')">Ammo</div>
             <div class="nav-tab" onclick="switchTab('penetration')">Pen Chart</div>
+            <div class="nav-tab" onclick="switchTab('ammo')">Ammo</div>
             <div class="nav-tab" onclick="switchTab('weapons')">Weapons</div>
             <div class="nav-tab" onclick="switchTab('gear')">Gear</div>
             <div class="nav-tab" onclick="switchTab('attachments')">Attachments</div>
@@ -376,17 +411,29 @@
                         <h6 class="text-beige mb-3">Required Keys</h6>
                         <div id="required-keys"></div>
                     </div>
-                    <div class="col-md-4">
-                        <h6 class="text-beige mb-3">Required Items</h6>
-                        <div id="required-items"></div>
+                    <div class="col-md-8">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="text-beige mb-0">Quest Item Tracker</h6>
+                            <div class="item-tracker-progress">
+                                <span class="progress-text" id="tracker-progress">0/0</span>
+                                <div class="progress-bar-mini">
+                                    <div class="progress-fill" id="tracker-progress-bar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="quest-item-tracker"></div>
                     </div>
-                    <div class="col-md-4">
+                </div>
+                <div class="row mt-4">
+                    <div class="col-md-6">
                         <h6 class="text-beige mb-3">Unlocks</h6>
                         <div id="progression-list"></div>
                     </div>
+                    <div class="col-md-6">
+                        <h6 class="text-beige mb-3">Objectives</h6>
+                        <ul id="mission-steps" class="list-group list-group-flush" style="max-height: 200px; overflow-y: auto;"></ul>
+                    </div>
                 </div>
-                <h6 class="text-beige mt-4 mb-3">Objectives</h6>
-                <ul id="mission-steps" class="list-group list-group-flush" style="max-height: 250px; overflow-y: auto;"></ul>
             </div>
         </div>
 
@@ -811,6 +858,7 @@
         const API_BASE = '/api';
         const STORAGE_KEY_QUESTS = 'tarkov_planner_quests_v3';
         const STORAGE_KEY_AMMO = 'tarkov_planner_ammo_v3';
+        const STORAGE_KEY_QUEST_ITEMS = 'tarkov_planner_quest_items_v1';
         
         // Map configuration - using tarkovdata SVG maps (coordinates match 1:1)
         const MAP_CONFIG = {
@@ -1011,7 +1059,7 @@
         // STATUS INDICATOR
         // ============================================================================
         
-        function updateStatus(connected, version = '5.0') {
+        function updateStatus(connected, version = '1.0β') {
             const dot = document.getElementById('statusDot');
             const text = document.getElementById('statusText');
             if (connected) {
@@ -1278,7 +1326,7 @@
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             
             // Find and activate the correct tab button
-            const tabIndex = ['planner', 'ammo', 'penetration', 'weapons', 'gear', 'attachments'].indexOf(tabId);
+            const tabIndex = ['planner', 'penetration', 'ammo', 'weapons', 'gear', 'attachments'].indexOf(tabId);
             if (tabIndex >= 0) {
                 const tabButtons = document.querySelectorAll('.nav-tab');
                 if (tabButtons[tabIndex]) tabButtons[tabIndex].classList.add('active');
@@ -1674,6 +1722,9 @@
             const objectives = [];
             const unlocks = [];
             
+            // NEW: Quest Item Tracker - collect items grouped by quest with more details
+            const questItemsData = [];
+            
             selectedQuests.forEach(q => {
                 if (q.neededKeys) {
                     q.neededKeys.forEach(g => {
@@ -1682,6 +1733,9 @@
                         }
                     });
                 }
+                
+                // Track items for this quest
+                const questItems = [];
                 
                 if (q.objectives) {
                     q.objectives.forEach(o => {
@@ -1695,7 +1749,29 @@
                             }
                             itemsMap.get(item.id).count += (o.count || 1);
                             if (isProvided) itemsMap.get(item.id).isProvided = true;
+                            
+                            // Add to quest-specific items
+                            questItems.push({
+                                id: item.id,
+                                name: item.name,
+                                shortName: item.shortName || item.name,
+                                icon: item.iconLink,
+                                count: o.count || 1,
+                                type: o.type || 'giveItem', // giveItem, findItem, mark, etc.
+                                foundInRaid: o.foundInRaid !== false, // Default true for quest items
+                                isProvided: isProvided,
+                                description: o.description
+                            });
                         }
+                    });
+                }
+                
+                if (questItems.length > 0) {
+                    questItemsData.push({
+                        questId: q.id,
+                        questName: q.name,
+                        trader: q.trader?.name || 'Unknown',
+                        items: questItems
                     });
                 }
                 
@@ -1714,20 +1790,8 @@
                 `).join('') 
                 : '<span class="text-sub p-2">None required.</span>';
             
-            const itemsArray = Array.from(itemsMap.values())
-                .sort((a, b) => (b.isProvided ? 1 : 0) - (a.isProvided ? 1 : 0));
-            
-            document.getElementById('required-items').innerHTML = itemsArray.length > 0 
-                ? itemsArray.map(i => `
-                    <div class="item-box ${i.isProvided ? 'status-provided' : 'status-acquire'}">
-                        ${i.icon ? `<img src="${i.icon}">` : ''}
-                        <div>${i.count}x ${i.name}</div>
-                        <span class="item-label ${i.isProvided ? 'label-given' : 'label-find'}">
-                            ${i.isProvided ? 'GIVEN' : 'FIND'}
-                        </span>
-                    </div>
-                `).join('') 
-                : '<span class="text-sub p-2">None required.</span>';
+            // NEW: Render Quest Item Tracker instead of simple required-items
+            renderQuestItemTracker(questItemsData);
             
             // Group objectives by quest for better readability
             const objectivesByQuest = {};
@@ -2157,7 +2221,7 @@
         function exportConfig() {
             // Show export modal with options
             const config = {
-                version: '5.0',
+                version: '1.0-beta',
                 exportDate: new Date().toISOString(),
                 tierThresholds: tierThresholds,
                 activeStats: activeStats,
@@ -2167,7 +2231,8 @@
                     weapons: [...ownedWeapons],
                     gear: [...ownedGear],
                     attachments: [...ownedAttachments]
-                }
+                },
+                collectedQuestItems: collectedQuestItems
             };
             
             const json = JSON.stringify(config);
@@ -2320,6 +2385,12 @@
                         ownedAttachments = new Set(config.ownedItems.attachments);
                         saveOwnedAttachments();
                     }
+                }
+                
+                // Apply collected quest items
+                if (config.collectedQuestItems) {
+                    collectedQuestItems = config.collectedQuestItems;
+                    saveCollectedQuestItems();
                 }
                 
                 // Save and refresh UI
@@ -3376,6 +3447,203 @@
         }
 
         // ============================================================================
+        // QUEST ITEM TRACKER
+        // ============================================================================
+        
+        // Storage for collected quest items: { "questId:itemId": collectedCount }
+        let collectedQuestItems = {};
+        
+        function loadCollectedQuestItems() {
+            const saved = localStorage.getItem(STORAGE_KEY_QUEST_ITEMS);
+            collectedQuestItems = saved ? JSON.parse(saved) : {};
+        }
+        
+        function saveCollectedQuestItems() {
+            localStorage.setItem(STORAGE_KEY_QUEST_ITEMS, JSON.stringify(collectedQuestItems));
+        }
+        
+        function getCollectedCount(questId, itemId) {
+            const key = `${questId}:${itemId}`;
+            return collectedQuestItems[key] || 0;
+        }
+        
+        function setCollectedCount(questId, itemId, count, maxCount) {
+            const key = `${questId}:${itemId}`;
+            const clampedCount = Math.max(0, Math.min(count, maxCount));
+            collectedQuestItems[key] = clampedCount;
+            saveCollectedQuestItems();
+            return clampedCount;
+        }
+        
+        function toggleItemCollected(questId, itemId, maxCount) {
+            const current = getCollectedCount(questId, itemId);
+            const newCount = current >= maxCount ? 0 : maxCount;
+            setCollectedCount(questId, itemId, newCount, maxCount);
+            updateTrackerItem(questId, itemId, newCount, maxCount);
+            updateTrackerProgress();
+        }
+        
+        function updateCollectedInput(questId, itemId, value, maxCount) {
+            const newCount = setCollectedCount(questId, itemId, parseInt(value) || 0, maxCount);
+            updateTrackerItem(questId, itemId, newCount, maxCount);
+            updateTrackerProgress();
+        }
+        
+        function updateTrackerItem(questId, itemId, collected, maxCount) {
+            const itemEl = document.querySelector(`[data-tracker-item="${questId}:${itemId}"]`);
+            if (itemEl) {
+                const isComplete = collected >= maxCount;
+                itemEl.classList.toggle('collected', isComplete);
+                
+                const checkbox = itemEl.querySelector('.item-checkbox');
+                if (checkbox) checkbox.checked = isComplete;
+                
+                const input = itemEl.querySelector('.collected-input input');
+                if (input) input.value = collected;
+            }
+            
+            // Update quest group header count
+            updateQuestGroupProgress(questId);
+        }
+        
+        function updateQuestGroupProgress(questId) {
+            const groupEl = document.querySelector(`[data-quest-group="${questId}"]`);
+            if (!groupEl) return;
+            
+            const items = groupEl.querySelectorAll('.tracker-item');
+            let completed = 0;
+            let total = items.length;
+            
+            items.forEach(item => {
+                if (item.classList.contains('collected')) completed++;
+            });
+            
+            const countEl = groupEl.querySelector('.quest-item-count');
+            if (countEl) {
+                countEl.textContent = `${completed}/${total}`;
+                countEl.style.color = completed === total ? 'var(--eft-green)' : 'var(--text-sub)';
+            }
+        }
+        
+        function updateTrackerProgress() {
+            const container = document.getElementById('quest-item-tracker');
+            if (!container) return;
+            
+            const allItems = container.querySelectorAll('.tracker-item');
+            let completed = 0;
+            let total = allItems.length;
+            
+            allItems.forEach(item => {
+                if (item.classList.contains('collected')) completed++;
+            });
+            
+            document.getElementById('tracker-progress').textContent = `${completed}/${total}`;
+            document.getElementById('tracker-progress-bar').style.width = total > 0 ? `${(completed / total) * 100}%` : '0%';
+        }
+        
+        function toggleQuestItemsGroup(questId) {
+            const groupEl = document.querySelector(`[data-quest-group="${questId}"]`);
+            if (!groupEl) return;
+            
+            const listEl = groupEl.querySelector('.quest-items-list');
+            if (listEl) {
+                listEl.classList.toggle('collapsed');
+            }
+        }
+        
+        function renderQuestItemTracker(questItemsData) {
+            const container = document.getElementById('quest-item-tracker');
+            
+            // Load saved progress
+            loadCollectedQuestItems();
+            
+            if (!questItemsData || questItemsData.length === 0) {
+                container.innerHTML = '<span class="text-sub p-2">No items required for selected quests.</span>';
+                document.getElementById('tracker-progress').textContent = '0/0';
+                document.getElementById('tracker-progress-bar').style.width = '0%';
+                return;
+            }
+            
+            let html = '';
+            let totalItems = 0;
+            let totalCompleted = 0;
+            
+            questItemsData.forEach((quest, qIndex) => {
+                const color = QUEST_COLORS[qIndex % QUEST_COLORS.length];
+                
+                // Calculate quest completion
+                let questCompleted = 0;
+                quest.items.forEach(item => {
+                    const collected = getCollectedCount(quest.questId, item.id);
+                    if (collected >= item.count) questCompleted++;
+                });
+                
+                totalItems += quest.items.length;
+                totalCompleted += questCompleted;
+                
+                html += `
+                    <div class="quest-items-group" data-quest-group="${quest.questId}">
+                        <div class="quest-items-header" onclick="toggleQuestItemsGroup('${quest.questId}')">
+                            <div class="quest-color" style="background: ${color.fill}; border-color: ${color.border};"></div>
+                            <span class="quest-name">${quest.questName}</span>
+                            <span class="quest-item-count" style="color: ${questCompleted === quest.items.length ? 'var(--eft-green)' : 'var(--text-sub)'}">
+                                ${questCompleted}/${quest.items.length}
+                            </span>
+                        </div>
+                        <div class="quest-items-list">
+                `;
+                
+                quest.items.forEach(item => {
+                    const collected = getCollectedCount(quest.questId, item.id);
+                    const isComplete = collected >= item.count;
+                    
+                    // Determine badge type
+                    let badgeHtml = '';
+                    if (item.isProvided) {
+                        badgeHtml = '<span class="given-badge">GIVEN</span>';
+                    } else if (item.foundInRaid) {
+                        badgeHtml = '<span class="fir-badge">FIR</span>';
+                    } else {
+                        badgeHtml = '<span class="handover-badge">HAND-OVER</span>';
+                    }
+                    
+                    html += `
+                        <div class="tracker-item ${isComplete ? 'collected' : ''}" data-tracker-item="${quest.questId}:${item.id}">
+                            <input type="checkbox" class="item-checkbox" 
+                                ${isComplete ? 'checked' : ''} 
+                                ${item.isProvided ? 'disabled' : ''}
+                                onchange="toggleItemCollected('${quest.questId}', '${item.id}', ${item.count})">
+                            ${item.icon ? `<img src="${item.icon}" alt="${item.shortName}">` : ''}
+                            <div class="item-info">
+                                <div class="item-name">${item.shortName}</div>
+                                <div class="item-meta">
+                                    ${badgeHtml}
+                                    <span class="item-count">${item.count}x needed</span>
+                                </div>
+                            </div>
+                            ${!item.isProvided ? `
+                                <div class="collected-input">
+                                    <input type="number" min="0" max="${item.count}" value="${collected}" 
+                                        onchange="updateCollectedInput('${quest.questId}', '${item.id}', this.value, ${item.count})"
+                                        onclick="event.stopPropagation()">
+                                    <span>/ ${item.count}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+                
+                html += '</div></div>';
+            });
+            
+            container.innerHTML = html;
+            
+            // Update global progress
+            document.getElementById('tracker-progress').textContent = `${totalCompleted}/${totalItems}`;
+            document.getElementById('tracker-progress-bar').style.width = totalItems > 0 ? `${(totalCompleted / totalItems) * 100}%` : '0%';
+        }
+
+        // ============================================================================
         // KEYBOARD SHORTCUTS
         // ============================================================================
         
@@ -3388,7 +3656,7 @@
                 
                 // Tab switching: 1-6
                 if (e.key >= '1' && e.key <= '6' && !e.ctrlKey && !e.altKey) {
-                    const tabs = ['planner', 'ammo', 'penetration', 'weapons', 'gear', 'attachments'];
+                    const tabs = ['planner', 'penetration', 'ammo', 'weapons', 'gear', 'attachments'];
                     const tabIndex = parseInt(e.key) - 1;
                     if (tabIndex < tabs.length) {
                         switchTab(tabs[tabIndex]);
@@ -3440,18 +3708,25 @@
                 help.id = 'shortcutsHelp';
                 help.className = 'shortcuts-help';
                 help.innerHTML = `
-                    <div style="margin-bottom: 5px; color: var(--text-beige);">⌨️ Keyboard Shortcuts</div>
+                    <div style="margin-bottom: 5px; color: var(--text-beige); display: flex; justify-content: space-between; align-items: center;">
+                        <span>⌨️ Shortcuts</span>
+                        <span onclick="toggleShortcutsHelp()" style="cursor: pointer; opacity: 0.6; font-size: 1rem;">✕</span>
+                    </div>
                     <div><kbd>1</kbd>-<kbd>6</kbd> Switch tabs</div>
                     <div><kbd>Ctrl</kbd>+<kbd>E</kbd> Export</div>
                     <div><kbd>Ctrl</kbd>+<kbd>I</kbd> Import</div>
                     <div><kbd>Ctrl</kbd>+<kbd>F</kbd> Search</div>
                     <div><kbd>?</kbd> Toggle this help</div>
-                    <div><kbd>Esc</kbd> Close dialogs</div>
                 `;
                 document.body.appendChild(help);
             }
             shortcutsHelpVisible = !shortcutsHelpVisible;
             help.style.display = shortcutsHelpVisible ? 'block' : 'none';
+        }
+        
+        function initShortcutsHelp() {
+            // Create and show shortcuts help on load
+            toggleShortcutsHelp();
         }
         
         function hideShortcutsHelp() {
@@ -3568,9 +3843,11 @@
             
             // Initialize keyboard shortcuts
             initKeyboardShortcuts();
+            initShortcutsHelp();
             
-            // Load saved ammo data
+            // Load saved data
             loadSavedAmmo();
+            loadCollectedQuestItems();
             
             // Load quest locations from tarkovdata
             await loadQuestLocationsData();
