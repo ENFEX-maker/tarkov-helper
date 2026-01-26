@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -170,9 +169,32 @@
     <div class="container">
         <div class="header-row">
             <h1>Tarkov Raid Planner</h1>
-            <div class="status-indicator">
-                <div class="status-dot" id="statusDot"></div>
-                <span id="statusText">Connecting...</span>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <div class="config-buttons" style="display: flex; gap: 8px;">
+                    <button class="btn-tarkov" onclick="exportConfig()" style="padding: 6px 12px; font-size: 0.75rem;" title="Export configuration">📥 Export</button>
+                    <button class="btn-tarkov" onclick="showImportModal()" style="padding: 6px 12px; font-size: 0.75rem;" title="Import configuration">📤 Import</button>
+                </div>
+                <div class="status-indicator">
+                    <div class="status-dot" id="statusDot"></div>
+                    <span id="statusText">Connecting...</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Import Modal -->
+        <div id="importModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 9999; justify-content: center; align-items: center;">
+            <div style="background: var(--bg-panel); border: 2px solid var(--border-gold); padding: 25px; max-width: 500px; width: 90%;">
+                <h5 style="color: var(--text-beige); margin-bottom: 15px;">Import Configuration</h5>
+                <p style="color: var(--text-sub); font-size: 0.85rem; margin-bottom: 15px;">Paste your configuration JSON below or upload a file:</p>
+                <textarea id="importTextarea" style="width: 100%; height: 150px; background: var(--bg-dark); border: 1px solid var(--border-dark); color: var(--text-main); padding: 10px; font-family: monospace; font-size: 0.8rem; resize: vertical;" placeholder="Paste JSON here..."></textarea>
+                <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+                    <label class="btn-tarkov" style="padding: 8px 15px; cursor: pointer;">
+                        📁 Upload File
+                        <input type="file" accept=".json" onchange="importFromFile(event)" style="display: none;">
+                    </label>
+                    <button class="btn-tarkov" onclick="importFromText()" style="padding: 8px 15px;">✓ Apply</button>
+                    <button class="btn-tarkov" onclick="hideImportModal()" style="padding: 8px 15px; background: var(--bg-dark);">Cancel</button>
+                </div>
             </div>
         </div>
         
@@ -661,11 +683,8 @@
                 recoilMod:    { label: 'Recoil Mod %',      direction: 'lower',  defaults: { S: -5, A: -3, B: -1, C: 0, D: 2 } },
                 accMod:       { label: 'Accuracy Mod %',    direction: 'lower',  defaults: { S: -5, A: -2, B: 0, C: 2, D: 5 } },
                 magCapacity:  { label: 'Mag Capacity',      direction: 'higher', defaults: { S: 60, A: 45, B: 30, C: 20, D: 10 } },
-                checkTime:    { label: 'Check Time Mod %',  direction: 'lower',  defaults: { S: -30, A: -20, B: -10, C: 0, D: 15 } },
-                loadTime:     { label: 'Load Time Mod %',   direction: 'lower',  defaults: { S: -20, A: -10, B: 0, C: 10, D: 25 } },
                 sightingRange:{ label: 'Sighting Range',    direction: 'higher', defaults: { S: 1000, A: 600, B: 300, C: 150, D: 50 } },
                 zoomLevel:    { label: 'Max Zoom',          direction: 'higher', defaults: { S: 6, A: 4, B: 2.5, C: 1.5, D: 1 } },
-                loudness:     { label: 'Loudness dB',       direction: 'lower',  defaults: { S: -35, A: -25, B: -15, C: -5, D: 0 } },
             }
         };
         
@@ -676,6 +695,65 @@
             gear: ['armorClass', 'durability'],
             attachments: ['ergoMod', 'recoilMod']
         };
+        
+        // Item-type specific stat configuration
+        // Defines which stats are APPLICABLE (relevant) and which are DEFAULT ACTIVE for each item type
+        const ITEM_TYPE_STATS = {
+            gear: {
+                armor:       { applicable: ['armorClass', 'durability', 'ergoPenalty', 'speedPenalty', 'turnPenalty'], defaultActive: ['armorClass', 'durability'] },
+                helmet:      { applicable: ['armorClass', 'durability', 'ergoPenalty', 'speedPenalty', 'turnPenalty', 'ricochetY'], defaultActive: ['armorClass', 'ricochetY'] },
+                rig:         { applicable: ['capacity', 'ergoPenalty', 'speedPenalty'], defaultActive: ['capacity'] },
+                armored_rig: { applicable: ['armorClass', 'durability', 'capacity', 'ergoPenalty', 'speedPenalty'], defaultActive: ['armorClass', 'capacity'] },
+                backpack:    { applicable: ['capacity', 'speedPenalty'], defaultActive: ['capacity'] },
+                headphones:  { applicable: ['ambientVol', 'distortion'], defaultActive: ['ambientVol'] },
+            },
+            attachments: {
+                Magazines:   { applicable: ['magCapacity', 'ergoMod'], defaultActive: ['magCapacity'] },
+                Scopes:      { applicable: ['zoomLevel', 'sightingRange', 'ergoMod'], defaultActive: ['zoomLevel'] },
+                Sights:      { applicable: ['ergoMod', 'recoilMod'], defaultActive: ['ergoMod'] },
+                Suppressors: { applicable: ['recoilMod', 'ergoMod'], defaultActive: ['recoilMod'] },
+                Barrels:     { applicable: ['ergoMod', 'recoilMod', 'accMod'], defaultActive: ['ergoMod', 'recoilMod'] },
+                Muzzle:      { applicable: ['ergoMod', 'recoilMod', 'accMod'], defaultActive: ['recoilMod'] },
+                Grips:       { applicable: ['ergoMod', 'recoilMod'], defaultActive: ['ergoMod'] },
+                Stocks:      { applicable: ['ergoMod', 'recoilMod'], defaultActive: ['ergoMod', 'recoilMod'] },
+                Handguards:  { applicable: ['ergoMod', 'recoilMod'], defaultActive: ['ergoMod'] },
+                Foregrips:   { applicable: ['ergoMod', 'recoilMod'], defaultActive: ['ergoMod', 'recoilMod'] },
+                Mounts:      { applicable: ['ergoMod', 'recoilMod'], defaultActive: ['ergoMod'] },
+                Flashlights: { applicable: ['ergoMod'], defaultActive: ['ergoMod'] },
+                Lasers:      { applicable: ['ergoMod'], defaultActive: ['ergoMod'] },
+                Rails:       { applicable: ['ergoMod'], defaultActive: ['ergoMod'] },
+                Receivers:   { applicable: ['ergoMod', 'recoilMod'], defaultActive: ['ergoMod'] },
+                _default:    { applicable: ['ergoMod', 'recoilMod', 'accMod'], defaultActive: ['ergoMod', 'recoilMod'] }
+            },
+            // Ammo and weapons don't need type-specific handling (all stats apply)
+            ammo: {
+                _default: { applicable: null, defaultActive: ['pen', 'dmg'] } // null = all stats applicable
+            },
+            weapons: {
+                _default: { applicable: null, defaultActive: ['ergo', 'recoilVert'] }
+            }
+        };
+        
+        // Get applicable stats for an item type
+        function getApplicableStats(category, itemType) {
+            const typeConfig = ITEM_TYPE_STATS[category];
+            if (!typeConfig) return Object.keys(STAT_DEFINITIONS[category]);
+            
+            const config = typeConfig[itemType] || typeConfig._default;
+            if (!config || config.applicable === null) {
+                return Object.keys(STAT_DEFINITIONS[category]);
+            }
+            return config.applicable;
+        }
+        
+        // Get default active stats for an item type
+        function getDefaultActiveStats(category, itemType) {
+            const typeConfig = ITEM_TYPE_STATS[category];
+            if (!typeConfig) return DEFAULT_ACTIVE_STATS[category];
+            
+            const config = typeConfig[itemType] || typeConfig._default;
+            return config?.defaultActive || DEFAULT_ACTIVE_STATS[category];
+        }
         
         // Build default thresholds from stat definitions
         function buildDefaultThresholds(category) {
@@ -1119,18 +1197,34 @@
             requiredMapsForQuests = new Set();
             
             selectedQuests.forEach(q => {
-                // From API quest map field
-                if (q.map?.name && q.map.name.toLowerCase() !== 'any') {
-                    const mapKey = mapNameToKey(q.map.name);
-                    if (mapKey) requiredMapsForQuests.add(mapKey);
+                // Get the authoritative map from API (if specific, not "any")
+                const apiMapKey = (q.map?.name && q.map.name.toLowerCase() !== 'any') 
+                    ? mapNameToKey(q.map.name) 
+                    : null;
+                
+                // If API specifies a map, that's the primary source
+                if (apiMapKey) {
+                    requiredMapsForQuests.add(apiMapKey);
                 }
                 
-                // From tarkovdata GPS locations
+                // From tarkovdata GPS locations - but validate against API map
                 if (questLocationsData) {
                     const questTitle = q.name.toLowerCase().trim();
                     const locations = questLocationsData.byQuestName[questTitle] || [];
                     locations.forEach(loc => {
-                        if (loc.mapKey) requiredMapsForQuests.add(loc.mapKey);
+                        if (loc.mapKey) {
+                            // If quest has specific API map, only add GPS locations that match
+                            // This filters out erroneous location IDs in tarkovdata
+                            if (apiMapKey) {
+                                if (loc.mapKey === apiMapKey) {
+                                    requiredMapsForQuests.add(loc.mapKey);
+                                }
+                                // Silently ignore mismatched GPS locations (data error in tarkovdata)
+                            } else {
+                                // Quest is "any" map - trust GPS locations
+                                requiredMapsForQuests.add(loc.mapKey);
+                            }
+                        }
                     });
                 }
             });
@@ -1592,7 +1686,7 @@
         // GENERIC TIER SYSTEM
         // ============================================================================
         
-        function getItemTier(category, itemId, statValues) {
+        function getItemTier(category, itemId, statValues, itemType = null) {
             // Check for manual override first
             if (tierOverrides[category][itemId]) {
                 return { tier: tierOverrides[category][itemId], source: 'CUSTOM' };
@@ -1600,13 +1694,27 @@
             
             const categoryStats = STAT_DEFINITIONS[category];
             const categoryThresholds = tierThresholds[category];
-            const categoryActiveStats = activeStats[category];
+            
+            // Use item-type-specific stats if itemType provided, otherwise global activeStats
+            let statsToCheck;
+            if (itemType && ITEM_TYPE_STATS[category]) {
+                // Get the applicable stats for this item type
+                const applicable = getApplicableStats(category, itemType);
+                // Intersect with user's active stats selection
+                statsToCheck = activeStats[category].filter(s => applicable.includes(s));
+                // If no intersection, use the default active stats for this type
+                if (statsToCheck.length === 0) {
+                    statsToCheck = getDefaultActiveStats(category, itemType);
+                }
+            } else {
+                statsToCheck = activeStats[category];
+            }
             
             // Check each tier level
             for (const tier of ['S', 'A', 'B', 'C', 'D']) {
                 const metStats = [];
                 
-                for (const statKey of categoryActiveStats) {
+                for (const statKey of statsToCheck) {
                     const statDef = categoryStats[statKey];
                     const threshold = categoryThresholds[statKey]?.[tier];
                     const value = statValues[statKey];
@@ -1772,6 +1880,148 @@
                 for (const cat of ['ammo', 'weapons', 'gear', 'attachments']) {
                     if (parsed[cat]) activeStats[cat] = parsed[cat];
                 }
+            }
+        }
+        
+        // ============================================================================
+        // EXPORT/IMPORT CONFIGURATION
+        // ============================================================================
+        
+        function exportConfig() {
+            const config = {
+                version: '4.1',
+                exportDate: new Date().toISOString(),
+                tierThresholds: tierThresholds,
+                activeStats: activeStats,
+                tierOverrides: tierOverrides,
+                ownedItems: {
+                    ammo: [...ownedAmmo],
+                    weapons: [...ownedWeapons],
+                    gear: [...ownedGear],
+                    attachments: [...ownedAttachments]
+                }
+            };
+            
+            const json = JSON.stringify(config, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `tarkov-planner-config-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            // Also copy to clipboard
+            navigator.clipboard.writeText(json).then(() => {
+                alert('Configuration exported! File downloaded and copied to clipboard.');
+            }).catch(() => {
+                alert('Configuration exported! File downloaded.');
+            });
+        }
+        
+        function showImportModal() {
+            document.getElementById('importModal').style.display = 'flex';
+            document.getElementById('importTextarea').value = '';
+        }
+        
+        function hideImportModal() {
+            document.getElementById('importModal').style.display = 'none';
+        }
+        
+        function importFromText() {
+            const text = document.getElementById('importTextarea').value.trim();
+            if (!text) {
+                alert('Please paste configuration JSON first.');
+                return;
+            }
+            applyImportedConfig(text);
+        }
+        
+        function importFromFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                applyImportedConfig(e.target.result);
+            };
+            reader.readAsText(file);
+        }
+        
+        function applyImportedConfig(jsonString) {
+            try {
+                const config = JSON.parse(jsonString);
+                
+                // Validate basic structure
+                if (!config.tierThresholds && !config.activeStats && !config.tierOverrides && !config.ownedItems) {
+                    throw new Error('Invalid configuration format');
+                }
+                
+                // Apply tier thresholds
+                if (config.tierThresholds) {
+                    for (const cat of ['ammo', 'weapons', 'gear', 'attachments']) {
+                        if (config.tierThresholds[cat]) {
+                            tierThresholds[cat] = { ...buildDefaultThresholds(cat), ...config.tierThresholds[cat] };
+                        }
+                    }
+                }
+                
+                // Apply active stats
+                if (config.activeStats) {
+                    for (const cat of ['ammo', 'weapons', 'gear', 'attachments']) {
+                        if (config.activeStats[cat]) {
+                            activeStats[cat] = config.activeStats[cat];
+                        }
+                    }
+                }
+                
+                // Apply tier overrides
+                if (config.tierOverrides) {
+                    for (const cat of ['ammo', 'weapons', 'gear', 'attachments']) {
+                        if (config.tierOverrides[cat]) {
+                            tierOverrides[cat] = config.tierOverrides[cat];
+                        }
+                    }
+                }
+                
+                // Apply owned items
+                if (config.ownedItems) {
+                    if (config.ownedItems.ammo) {
+                        ownedAmmo = new Set(config.ownedItems.ammo);
+                        saveOwnedAmmo();
+                    }
+                    if (config.ownedItems.weapons) {
+                        ownedWeapons = new Set(config.ownedItems.weapons);
+                        saveOwnedWeapons();
+                    }
+                    if (config.ownedItems.gear) {
+                        ownedGear = new Set(config.ownedItems.gear);
+                        saveOwnedGear();
+                    }
+                    if (config.ownedItems.attachments) {
+                        ownedAttachments = new Set(config.ownedItems.attachments);
+                        saveOwnedAttachments();
+                    }
+                }
+                
+                // Save and refresh UI
+                saveTierData();
+                initTierConfigUI();
+                
+                // Refresh lists if data is loaded
+                if (allAmmoData) renderAmmoList();
+                if (allWeaponsData) renderWeaponsList();
+                if (allGearData) renderGearList();
+                if (allAttachmentsData) renderAttachmentsList();
+                
+                hideImportModal();
+                alert(`Configuration imported successfully!\nVersion: ${config.version || 'unknown'}\nExport date: ${config.exportDate || 'unknown'}`);
+                
+            } catch (e) {
+                alert('Error importing configuration: ' + e.message);
             }
         }
         
@@ -2288,6 +2538,12 @@
         }
         
         function getGearTier(gear) {
+            // For armored rigs, use special type
+            let effectiveType = gear.gearType;
+            if (gear.gearType === 'rig' && gear.armorClass > 0) {
+                effectiveType = 'armored_rig';
+            }
+            
             return getItemTier('gear', gear.id, {
                 armorClass: gear.armorClass,
                 durability: gear.durability,
@@ -2298,7 +2554,7 @@
                 capacity: gear.capacity,
                 ambientVol: gear.ambientVolume || 0,
                 distortion: gear.distortion || 0
-            });
+            }, effectiveType);
         }
         
         function filterGear() {
@@ -2377,22 +2633,16 @@
                                 capacity
                                 ergonomics
                                 recoilModifier
-                                checkTimeModifier
-                                loadModifier
                             }
                             ... on ItemPropertiesBarrel {
                                 ergonomics
                                 recoilModifier
                                 accuracyModifier
-                                centerOfImpact
-                                deviationCurve
-                                deviationMax
                             }
                             ... on ItemPropertiesScope {
                                 ergonomics
                                 recoilModifier
                                 zoomLevels
-                                sightModes
                                 sightingRange
                             }
                             ... on ItemPropertiesWeaponMod {
@@ -2566,12 +2816,9 @@
                 recoilMod: attach.recoilModifier,
                 accMod: attach.accuracyModifier || 0,
                 magCapacity: attach.capacity || 0,
-                checkTime: (attach.checkTimeModifier || 0) * 100,
-                loadTime: (attach.loadModifier || 0) * 100,
                 sightingRange: attach.sightingRange || 0,
-                zoomLevel: (attach.zoomLevels?.length > 0 ? Math.max(...attach.zoomLevels) : 1),
-                loudness: 0  // Not available in API
-            });
+                zoomLevel: (attach.zoomLevels?.length > 0 ? Math.max(...attach.zoomLevels) : 1)
+            }, attach.attachType);
         }
         
         function filterAttachments() {
