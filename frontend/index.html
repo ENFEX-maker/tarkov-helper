@@ -204,7 +204,7 @@
         .bulk-selected { background: rgba(158, 143, 107, 0.2) !important; border-color: var(--eft-gold) !important; }
         
         /* Keyboard Shortcuts Help */
-        .shortcuts-help { position: fixed; bottom: 15px; right: 15px; background: var(--bg-panel); border: 1px solid var(--border-dark); padding: 8px 12px; font-size: 0.75rem; color: var(--text-sub); z-index: 100; }
+        .shortcuts-help { position: fixed; bottom: 15px; right: 15px; background: var(--bg-panel); border: 1px solid var(--border-dark); padding: 8px 12px; font-size: 0.75rem; color: var(--text-sub); z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
         .shortcuts-help kbd { background: var(--bg-dark); padding: 2px 6px; border-radius: 3px; margin: 0 2px; color: var(--text-beige); }
         
         /* Quest Item Tracker */
@@ -1382,7 +1382,7 @@
                 const savedQuests = getSavedQuests();
                 
                 // Update connection status
-                updateStatus(true, '4.0');
+                updateStatus(true, '1.0β');
                 
                 // Group by trader
                 const byTrader = {};
@@ -1734,9 +1734,6 @@
                     });
                 }
                 
-                // Track items for this quest
-                const questItems = [];
-                
                 if (q.objectives) {
                     q.objectives.forEach(o => {
                         objectives.push({ quest: q.name, desc: o.description });
@@ -1749,22 +1746,42 @@
                             }
                             itemsMap.get(item.id).count += (o.count || 1);
                             if (isProvided) itemsMap.get(item.id).isProvided = true;
-                            
-                            // Add to quest-specific items
-                            questItems.push({
-                                id: item.id,
-                                name: item.name,
-                                shortName: item.shortName || item.name,
-                                icon: item.iconLink,
-                                count: o.count || 1,
-                                type: o.type || 'giveItem', // giveItem, findItem, mark, etc.
-                                foundInRaid: o.foundInRaid !== false, // Default true for quest items
-                                isProvided: isProvided,
-                                description: o.description
-                            });
                         }
                     });
                 }
+                
+                // Collect and GROUP items for this quest (combine same items)
+                const questItemsMap = new Map();
+                if (q.objectives) {
+                    q.objectives.forEach(o => {
+                        const item = o.item || o.markerItem;
+                        if (item) {
+                            const isProvided = providedItemIds.has(item.id);
+                            const itemCount = o.count || 1;
+                            
+                            if (questItemsMap.has(item.id)) {
+                                // Add to existing item count
+                                questItemsMap.get(item.id).count += itemCount;
+                            } else {
+                                // New item entry
+                                questItemsMap.set(item.id, {
+                                    id: item.id,
+                                    name: item.name,
+                                    shortName: item.shortName || item.name,
+                                    icon: item.iconLink,
+                                    count: itemCount,
+                                    type: o.type || 'giveItem',
+                                    // FIR only if EXPLICITLY true in API - markers etc. are NOT FIR
+                                    foundInRaid: o.foundInRaid === true,
+                                    isProvided: isProvided,
+                                    description: o.description
+                                });
+                            }
+                        }
+                    });
+                }
+                
+                const questItems = Array.from(questItemsMap.values());
                 
                 if (questItems.length > 0) {
                     questItemsData.push({
