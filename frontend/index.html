@@ -1023,15 +1023,15 @@
         
         // Map configuration - using tarkovdata SVG maps (coordinates match 1:1)
         // Map coordinate correction factors
-        // The tarkovdata GPS coordinates (leftPercent, topPercent) are designed for mapgenie.io
-        // Our SVG maps may have different coordinate systems, so we need per-map corrections
+        // The tarkovdata GPS coordinates (leftPercent, topPercent) are designed for tarkovdata SVG maps
+        // They should work 1:1 without offsets if using the original SVGs from the repo
         // scaleX/scaleY: multiply the percent value
-        // offsetX/offsetY: add after scaling (in percent)
+        // offsetX/offsetY: add after scaling (in percent) - should be 0 for original SVGs
         // flipY: if true, invert Y axis (100 - topPercent) BEFORE pixel conversion
         // invertLeafletY: if false, don't do (height - pixelY) for Leaflet
         const MAP_CONFIG = {
             customs:     { file: 'maps/Customs.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
-            woods:       { file: 'maps/Woods.svg', scaleX: 1, scaleY: 1, offsetX: 3, offsetY: 0, flipY: false, invertLeafletY: true },
+            woods:       { file: 'maps/Woods.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
             shoreline:   { file: 'maps/Shoreline.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
             interchange: { file: 'maps/Interchange.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
             reserve:     { file: 'maps/Reserve.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
