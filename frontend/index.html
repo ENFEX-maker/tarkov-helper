@@ -936,7 +936,7 @@
         // invertLeafletY: if false, don't do (height - pixelY) for Leaflet
         const MAP_CONFIG = {
             customs:     { file: 'maps/Customs.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
-            woods:       { file: 'maps/Woods.svg', scaleX: 1, scaleY: 1, offsetX: 8, offsetY: 0, flipY: false, invertLeafletY: true },
+            woods:       { file: 'maps/Woods.svg', scaleX: 1, scaleY: 1, offsetX: 4, offsetY: 0, flipY: false, invertLeafletY: true },
             shoreline:   { file: 'maps/Shoreline.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
             interchange: { file: 'maps/Interchange.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
             reserve:     { file: 'maps/Reserve.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
@@ -4041,9 +4041,10 @@
             const mapBounds = {
                 // { minX, maxX, minZ, maxZ } - game coordinate bounds
                 // Coordinates are in game units (meters)
-                shoreline: { minX: -400, maxX: 400, minZ: -650, maxZ: 200, flipX: false, flipZ: true },
+                // These need calibration based on actual spawn positions
+                shoreline: { minX: -1100, maxX: 600, minZ: -200, maxZ: 700, flipX: false, flipZ: true },
                 customs: { minX: -300, maxX: 500, minZ: -200, maxZ: 350, flipX: false, flipZ: true },
-                woods: { minX: -500, maxX: 400, minZ: -700, maxZ: 300, flipX: false, flipZ: true },
+                woods: { minX: -600, maxX: 600, minZ: -800, maxZ: 400, flipX: false, flipZ: true },
                 interchange: { minX: -200, maxX: 300, minZ: -300, maxZ: 200, flipX: false, flipZ: true },
                 reserve: { minX: -350, maxX: 250, minZ: -350, maxZ: 250, flipX: false, flipZ: true },
                 lighthouse: { minX: -300, maxX: 600, minZ: -500, maxZ: 200, flipX: false, flipZ: true },
