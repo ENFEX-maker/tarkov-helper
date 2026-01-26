@@ -927,17 +927,23 @@
         const STORAGE_KEY_QUEST_ITEMS = 'tarkov_planner_quest_items_v1';
         
         // Map configuration - using tarkovdata SVG maps (coordinates match 1:1)
+        // Map coordinate correction factors
+        // The tarkovdata GPS coordinates (leftPercent, topPercent) are designed for mapgenie.io
+        // Our SVG maps may have different coordinate systems, so we need per-map corrections
+        // scaleX/scaleY: multiply the percent value
+        // offsetX/offsetY: add after scaling (in percent)
+        // flipY: if true, invert Y axis (100 - topPercent)
         const MAP_CONFIG = {
-            customs:     { file: 'maps/Customs.svg' },
-            woods:       { file: 'maps/Woods.svg' },
-            shoreline:   { file: 'maps/Shoreline.svg' },
-            interchange: { file: 'maps/Interchange.svg' },
-            reserve:     { file: 'maps/Reserve.svg' },
-            lighthouse:  { file: 'maps/Lighthouse.svg' },
-            streets:     { file: 'maps/StreetsOfTarkov.svg' },
-            groundzero:  { file: 'maps/GroundZero.svg' },
-            factory:     { file: 'maps/Factory.svg' },
-            labs:        { file: 'maps/Labs.svg' }
+            customs:     { file: 'maps/Customs.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false },
+            woods:       { file: 'maps/Woods.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false },
+            shoreline:   { file: 'maps/Shoreline.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false },
+            interchange: { file: 'maps/Interchange.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false },
+            reserve:     { file: 'maps/Reserve.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false },
+            lighthouse:  { file: 'maps/Lighthouse.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false },
+            streets:     { file: 'maps/StreetsOfTarkov.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false },
+            groundzero:  { file: 'maps/GroundZero.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false },
+            factory:     { file: 'maps/Factory.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false },
+            labs:        { file: 'maps/Labs.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false }
         };
 
         // ============================================================================
@@ -1088,6 +1094,8 @@
         let questMarkersLayer = null;
         let currentMapHeight = 0;
         let currentMapWidth = 0;
+        let currentMapOffsetX = 0; // viewBox minX offset
+        let currentMapOffsetY = 0; // viewBox minY offset
         let selectedQuestNamesForMarkers = [];
         let selectedQuestsForMarkers = []; // Full quest objects for marker drawing
         let requiredMapsForQuests = new Set();
@@ -1264,6 +1272,9 @@
             const legend = document.getElementById('mapLegend');
             const legendItems = document.getElementById('legendItems');
             
+            // Get map config for coordinate corrections
+            const mapCfg = MAP_CONFIG[mapKey] || { scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false };
+            
             // Only draw markers if we have selected quests
             if (!questLocationsData || questNames.length === 0) {
                 updateMarkerCount(0);
@@ -1323,13 +1334,34 @@
                     
                     if (!shouldDraw) return;
                     
-                    // Direct percent to pixel conversion (no offset needed for tarkovdata SVG maps)
-                    const pixelX = (loc.leftPercent / 100) * mapWidth;
-                    const pixelY = (loc.topPercent / 100) * mapHeight;
+                    // Apply map-specific coordinate corrections
+                    let correctedLeftPct = loc.leftPercent * mapCfg.scaleX + mapCfg.offsetX;
+                    let correctedTopPct = loc.topPercent * mapCfg.scaleY + mapCfg.offsetY;
                     
-                    // Leaflet CRS.Simple: Y is inverted
+                    // Optional Y-axis flip
+                    if (mapCfg.flipY) {
+                        correctedTopPct = 100 - correctedTopPct;
+                    }
+                    
+                    // Convert percent to pixel coordinates
+                    const pixelX = (correctedLeftPct / 100) * mapWidth;
+                    const pixelY = (correctedTopPct / 100) * mapHeight;
+                    
+                    // Leaflet CRS.Simple: Y is inverted from top-left origin
                     const leafletY = mapHeight - pixelY;
                     const leafletX = pixelX;
+                    
+                    // Debug logging for coordinate issues
+                    if (markerCount < 3) {
+                        console.log(`Quest marker ${qName} #${markerCount+1}:`, {
+                            original: { leftPercent: loc.leftPercent, topPercent: loc.topPercent },
+                            corrected: { leftPct: correctedLeftPct, topPct: correctedTopPct },
+                            mapSize: { width: mapWidth, height: mapHeight },
+                            pixel: { x: pixelX, y: pixelY },
+                            leaflet: { x: leafletX, y: leafletY },
+                            mapCfg: mapCfg
+                        });
+                    }
                     
                     markerCount++;
                     
@@ -1721,14 +1753,19 @@
                     const viewBoxMatch = svgText.match(/viewBox=["']([^"']+)["']/);
                     if (viewBoxMatch) {
                         const [minX, minY, width, height] = viewBoxMatch[1].split(/\s+/).map(Number);
+                        currentMapOffsetX = minX || 0;
+                        currentMapOffsetY = minY || 0;
                         currentMapWidth = width;
                         currentMapHeight = height;
+                        console.log(`SVG viewBox: minX=${minX}, minY=${minY}, width=${width}, height=${height}`);
                     } else {
                         // Fallback: try width/height attributes
                         const widthMatch = svgText.match(/width=["'](\d+)/);
                         const heightMatch = svgText.match(/height=["'](\d+)/);
                         currentMapWidth = widthMatch ? parseInt(widthMatch[1]) : 1000;
                         currentMapHeight = heightMatch ? parseInt(heightMatch[1]) : 1000;
+                        currentMapOffsetX = 0;
+                        currentMapOffsetY = 0;
                     }
                 } else {
                     // For raster images: use Image object
@@ -3675,11 +3712,34 @@
                         body: JSON.stringify({ query })
                     });
                     
+                    if (!response.ok) {
+                        console.error('API response not OK:', response.status, response.statusText);
+                        return null;
+                    }
+                    
                     const data = await response.json();
+                    console.log('Raw API response:', JSON.stringify(data).substring(0, 500));
+                    
+                    if (data.errors) {
+                        console.error('GraphQL errors:', data.errors);
+                        return null;
+                    }
+                    
                     allMaps = data?.data?.maps || [];
+                    
+                    // Don't cache empty results - might be a temporary API issue
+                    if (allMaps.length === 0) {
+                        console.warn('API returned 0 maps - possible API issue or network problem');
+                        return null;
+                    }
+                    
                     allMapsCache = allMaps;
                     console.log('Loaded', allMaps.length, 'maps from API');
-                    console.log('Available maps:', allMaps.map(m => `${m.name} (${m.normalizedName})`).join(', '));
+                    
+                    if (allMaps.length > 0) {
+                        console.log('Available maps:', allMaps.map(m => `${m.name} (${m.normalizedName})`).join(', '));
+                        console.log('First map sample:', JSON.stringify(allMaps[0]).substring(0, 300));
+                    }
                 }
                 
                 // Find the correct map
