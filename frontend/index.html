@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tarkov Raid Planner v4.2</title>
+    <title>Tarkov Raid Planner v5.0</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
@@ -164,6 +164,48 @@
         .threshold-item .tier-badge { display: block; margin: 0 auto 4px; width: 28px; height: 28px; line-height: 28px; }
         .threshold-item input { width: 100%; background: var(--bg-element); border: 1px solid var(--border-dark); color: var(--text-main); padding: 4px; text-align: center; font-family: 'Rajdhani', sans-serif; font-size: 0.85rem; }
         .threshold-item input:focus { border-color: var(--eft-gold); outline: none; }
+        
+        /* Inventory Dashboard */
+        .inventory-dashboard { background: var(--bg-panel); border: 1px solid var(--border-dark); margin-bottom: 20px; }
+        .dashboard-toggle { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; cursor: pointer; color: var(--text-beige); font-size: 0.9rem; }
+        .dashboard-toggle:hover { background: var(--bg-element); }
+        .dashboard-content { padding: 0 15px 15px; }
+        .dashboard-content.collapsed { display: none; }
+        .dashboard-grid { display: flex; gap: 15px; flex-wrap: wrap; }
+        .dashboard-item { flex: 1; min-width: 120px; background: var(--bg-dark); padding: 10px; text-align: center; border: 1px solid var(--border-dark); }
+        .dashboard-item.dashboard-total { background: rgba(158, 143, 107, 0.15); border-color: var(--border-gold); }
+        .dash-label { display: block; font-size: 0.75rem; color: var(--text-sub); margin-bottom: 5px; }
+        .dash-value { display: block; font-size: 1rem; color: var(--text-beige); font-weight: 600; }
+        .dash-percent { display: block; font-size: 0.8rem; color: var(--eft-green); }
+        .dash-value-rub { display: block; font-size: 0.75rem; color: var(--eft-gold); margin-top: 3px; }
+        
+        /* Penetration Matrix */
+        .pen-matrix-container { overflow-x: auto; }
+        .pen-matrix { border-collapse: collapse; width: 100%; min-width: 600px; font-size: 0.8rem; }
+        .pen-matrix th, .pen-matrix td { border: 1px solid var(--border-dark); padding: 6px 8px; text-align: center; }
+        .pen-matrix th { background: var(--bg-element); color: var(--text-beige); font-weight: 600; position: sticky; top: 0; }
+        .pen-matrix th.caliber-header { background: var(--bg-dark); text-align: left; padding-left: 15px; }
+        .pen-matrix td.ammo-name { text-align: left; background: var(--bg-dark); color: var(--text-main); white-space: nowrap; position: sticky; left: 0; }
+        .pen-matrix td.ammo-pen { color: var(--text-sub); font-size: 0.75rem; }
+        .pen-cell { font-weight: 600; min-width: 50px; }
+        .pen-cell.pen-high { background: rgba(74, 140, 74, 0.4); color: #7fff7f; }
+        .pen-cell.pen-mid { background: rgba(180, 150, 50, 0.4); color: #ffd700; }
+        .pen-cell.pen-low { background: rgba(140, 60, 60, 0.4); color: #ff7f7f; }
+        .pen-cell.pen-none { background: rgba(60, 60, 60, 0.3); color: #666; }
+        .pen-legend { display: flex; gap: 20px; margin-bottom: 15px; font-size: 0.8rem; flex-wrap: wrap; }
+        .pen-legend-item { display: flex; align-items: center; gap: 6px; }
+        .pen-legend-color { width: 20px; height: 20px; border: 1px solid var(--border-dark); }
+        
+        /* Bulk Select */
+        .bulk-mode .item-checkbox { display: inline-block !important; }
+        .item-checkbox { display: none; margin-right: 8px; accent-color: var(--eft-gold); }
+        .bulk-controls { display: none; margin-bottom: 15px; padding: 10px; background: var(--bg-element); border: 1px solid var(--border-gold); }
+        .bulk-mode .bulk-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .bulk-selected { background: rgba(158, 143, 107, 0.2) !important; border-color: var(--eft-gold) !important; }
+        
+        /* Keyboard Shortcuts Help */
+        .shortcuts-help { position: fixed; bottom: 15px; right: 15px; background: var(--bg-panel); border: 1px solid var(--border-dark); padding: 8px 12px; font-size: 0.75rem; color: var(--text-sub); z-index: 100; }
+        .shortcuts-help kbd { background: var(--bg-dark); padding: 2px 6px; border-radius: 3px; margin: 0 2px; color: var(--text-beige); }
     </style>
 </head>
 <body>
@@ -225,9 +267,52 @@
         <div class="nav-tabs-tarkov">
             <div class="nav-tab active" onclick="switchTab('planner')">Mission Planner</div>
             <div class="nav-tab" onclick="switchTab('ammo')">Ammo</div>
+            <div class="nav-tab" onclick="switchTab('penetration')">Pen Chart</div>
             <div class="nav-tab" onclick="switchTab('weapons')">Weapons</div>
             <div class="nav-tab" onclick="switchTab('gear')">Gear</div>
             <div class="nav-tab" onclick="switchTab('attachments')">Attachments</div>
+        </div>
+        
+        <!-- INVENTORY DASHBOARD -->
+        <div id="inventoryDashboard" class="inventory-dashboard" style="display: none;">
+            <div class="dashboard-toggle" onclick="toggleDashboard()">
+                <span>📊 Inventory Overview</span>
+                <span id="dashboardArrow">▼</span>
+            </div>
+            <div id="dashboardContent" class="dashboard-content">
+                <div class="dashboard-grid">
+                    <div class="dashboard-item">
+                        <span class="dash-label">Ammo</span>
+                        <span class="dash-value" id="dash-ammo-count">0/0</span>
+                        <span class="dash-percent" id="dash-ammo-pct">0%</span>
+                        <span class="dash-value-rub" id="dash-ammo-value">0 ₽</span>
+                    </div>
+                    <div class="dashboard-item">
+                        <span class="dash-label">Weapons</span>
+                        <span class="dash-value" id="dash-weapons-count">0/0</span>
+                        <span class="dash-percent" id="dash-weapons-pct">0%</span>
+                        <span class="dash-value-rub" id="dash-weapons-value">0 ₽</span>
+                    </div>
+                    <div class="dashboard-item">
+                        <span class="dash-label">Gear</span>
+                        <span class="dash-value" id="dash-gear-count">0/0</span>
+                        <span class="dash-percent" id="dash-gear-pct">0%</span>
+                        <span class="dash-value-rub" id="dash-gear-value">0 ₽</span>
+                    </div>
+                    <div class="dashboard-item">
+                        <span class="dash-label">Attachments</span>
+                        <span class="dash-value" id="dash-attachments-count">0/0</span>
+                        <span class="dash-percent" id="dash-attachments-pct">0%</span>
+                        <span class="dash-value-rub" id="dash-attachments-value">0 ₽</span>
+                    </div>
+                    <div class="dashboard-item dashboard-total">
+                        <span class="dash-label">TOTAL</span>
+                        <span class="dash-value" id="dash-total-count">0</span>
+                        <span class="dash-percent" id="dash-total-pct">0%</span>
+                        <span class="dash-value-rub" id="dash-total-value">0 ₽</span>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- MISSION PLANNER TAB -->
@@ -317,14 +402,24 @@
                                     <option value="ALL">All Calibers</option>
                                 </select>
                             </div>
-                            <div class="col-md-5">
+                            <div class="col-md-4">
                                 <div class="search-box">
                                     <input type="text" class="form-control-tarkov w-100" placeholder="Search ammo..." id="ammoSearch" oninput="filterAmmoBySearch()">
                                 </div>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <button id="btn-load-ammo" class="btn-tarkov w-100" onclick="loadAmmoData()">Load Data</button>
                             </div>
+                            <div class="col-md-2">
+                                <button id="bulk-toggle-ammo" class="btn-tarkov w-100" onclick="toggleBulkMode('ammo')" style="font-size: 0.75rem;">Bulk Select</button>
+                            </div>
+                        </div>
+                        <div class="bulk-controls" id="bulk-controls-ammo">
+                            <span id="bulk-count-ammo" class="text-beige">0 selected</span>
+                            <button class="btn-tarkov" onclick="bulkMarkOwned('ammo')" style="padding: 4px 10px; font-size: 0.75rem;">✓ Mark Owned</button>
+                            <button class="btn-tarkov" onclick="bulkUnmarkOwned('ammo')" style="padding: 4px 10px; font-size: 0.75rem;">✗ Unmark</button>
+                            <button class="btn-tarkov" onclick="bulkSelectAll('ammo')" style="padding: 4px 10px; font-size: 0.75rem; background: var(--bg-dark);">Select All</button>
+                            <button class="btn-tarkov" onclick="bulkDeselectAll('ammo')" style="padding: 4px 10px; font-size: 0.75rem; background: var(--bg-dark);">Deselect All</button>
                         </div>
                         <div class="text-sub small mb-3">Click ammo to mark as owned | <span id="ammo-count">0</span> loaded</div>
                         <div id="ammo-loading" class="loading-spinner d-none">
@@ -392,6 +487,46 @@
             </div>
         </div>
 
+        <!-- PENETRATION CHART TAB -->
+        <div id="tab-penetration" class="tab-content">
+            <div class="tarkov-panel">
+                <h5>Ammo Penetration vs Armor Class</h5>
+                <p class="text-sub small mb-3">Shows effectiveness of ammunition against different armor classes. Data loaded from Ammo tab.</p>
+                
+                <div class="pen-legend">
+                    <div class="pen-legend-item"><div class="pen-legend-color" style="background: rgba(74, 140, 74, 0.4);"></div> High penetration (6+ shots effective)</div>
+                    <div class="pen-legend-item"><div class="pen-legend-color" style="background: rgba(180, 150, 50, 0.4);"></div> Medium (3-5 shots needed)</div>
+                    <div class="pen-legend-item"><div class="pen-legend-color" style="background: rgba(140, 60, 60, 0.4);"></div> Low (many shots needed)</div>
+                    <div class="pen-legend-item"><div class="pen-legend-color" style="background: rgba(60, 60, 60, 0.3);"></div> Ineffective</div>
+                </div>
+                
+                <div class="row g-3 mb-3">
+                    <div class="col-md-4">
+                        <select id="penCaliberFilter" class="form-select-tarkov w-100" onchange="renderPenMatrix()">
+                            <option value="ALL">All Calibers</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <select id="penSortBy" class="form-select-tarkov w-100" onchange="renderPenMatrix()">
+                            <option value="pen">Sort by Penetration</option>
+                            <option value="name">Sort by Name</option>
+                            <option value="damage">Sort by Damage</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-sub small d-flex align-items-center gap-2">
+                            <input type="checkbox" id="penShowOwned" onchange="renderPenMatrix()"> Show only owned
+                        </label>
+                    </div>
+                </div>
+                
+                <div id="pen-loading" class="text-sub text-center p-4">
+                    Load ammo data in the Ammo tab first to see the penetration chart.
+                </div>
+                <div id="pen-matrix-container" class="pen-matrix-container d-none"></div>
+            </div>
+        </div>
+
         <!-- WEAPONS TAB -->
         <div id="tab-weapons" class="tab-content">
             <div class="row">
@@ -399,17 +534,27 @@
                     <div class="tarkov-panel">
                         <h5>Weapons Database</h5>
                         <div class="row g-3 mb-3">
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <select id="weaponTypeFilter" class="form-select-tarkov w-100" onchange="filterWeapons()">
                                     <option value="ALL">All Types</option>
                                 </select>
                             </div>
-                            <div class="col-md-5">
+                            <div class="col-md-4">
                                 <input type="text" class="form-control-tarkov w-100" placeholder="Search weapons..." id="weaponSearch" oninput="filterWeapons()">
                             </div>
                             <div class="col-md-3">
                                 <button id="btn-load-weapons" class="btn-tarkov w-100" onclick="loadWeaponsData()">Load Data</button>
                             </div>
+                            <div class="col-md-2">
+                                <button id="bulk-toggle-weapons" class="btn-tarkov w-100" onclick="toggleBulkMode('weapons')" style="font-size: 0.75rem;">Bulk Select</button>
+                            </div>
+                        </div>
+                        <div class="bulk-controls" id="bulk-controls-weapons">
+                            <span id="bulk-count-weapons" class="text-beige">0 selected</span>
+                            <button class="btn-tarkov" onclick="bulkMarkOwned('weapons')" style="padding: 4px 10px; font-size: 0.75rem;">✓ Mark Owned</button>
+                            <button class="btn-tarkov" onclick="bulkUnmarkOwned('weapons')" style="padding: 4px 10px; font-size: 0.75rem;">✗ Unmark</button>
+                            <button class="btn-tarkov" onclick="bulkSelectAll('weapons')" style="padding: 4px 10px; font-size: 0.75rem; background: var(--bg-dark);">Select All</button>
+                            <button class="btn-tarkov" onclick="bulkDeselectAll('weapons')" style="padding: 4px 10px; font-size: 0.75rem; background: var(--bg-dark);">Deselect All</button>
                         </div>
                         <div class="text-sub small mb-3">Click weapon to mark as owned | <span id="weapon-count">0</span> loaded</div>
                         <div id="weapons-loading" class="loading-spinner d-none">
@@ -478,7 +623,7 @@
                     <div class="tarkov-panel">
                         <h5>Gear Database</h5>
                         <div class="row g-3 mb-3">
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <select id="gearTypeFilter" class="form-select-tarkov w-100" onchange="filterGear()">
                                     <option value="ALL">All Types</option>
                                     <option value="armor">Body Armor</option>
@@ -488,12 +633,22 @@
                                     <option value="headphones">Headsets</option>
                                 </select>
                             </div>
-                            <div class="col-md-5">
+                            <div class="col-md-4">
                                 <input type="text" class="form-control-tarkov w-100" placeholder="Search gear..." id="gearSearch" oninput="filterGear()">
                             </div>
                             <div class="col-md-3">
                                 <button id="btn-load-gear" class="btn-tarkov w-100" onclick="loadGearData()">Load Data</button>
                             </div>
+                            <div class="col-md-2">
+                                <button id="bulk-toggle-gear" class="btn-tarkov w-100" onclick="toggleBulkMode('gear')" style="font-size: 0.75rem;">Bulk Select</button>
+                            </div>
+                        </div>
+                        <div class="bulk-controls" id="bulk-controls-gear">
+                            <span id="bulk-count-gear" class="text-beige">0 selected</span>
+                            <button class="btn-tarkov" onclick="bulkMarkOwned('gear')" style="padding: 4px 10px; font-size: 0.75rem;">✓ Mark Owned</button>
+                            <button class="btn-tarkov" onclick="bulkUnmarkOwned('gear')" style="padding: 4px 10px; font-size: 0.75rem;">✗ Unmark</button>
+                            <button class="btn-tarkov" onclick="bulkSelectAll('gear')" style="padding: 4px 10px; font-size: 0.75rem; background: var(--bg-dark);">Select All</button>
+                            <button class="btn-tarkov" onclick="bulkDeselectAll('gear')" style="padding: 4px 10px; font-size: 0.75rem; background: var(--bg-dark);">Deselect All</button>
                         </div>
                         <div class="text-sub small mb-3">Click gear to mark as owned | <span id="gear-count">0</span> loaded</div>
                         <div id="gear-loading" class="loading-spinner d-none">
@@ -562,17 +717,27 @@
                     <div class="tarkov-panel">
                         <h5>Attachments Database</h5>
                         <div class="row g-3 mb-3">
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <select id="attachmentTypeFilter" class="form-select-tarkov w-100" onchange="filterAttachments()">
                                     <option value="ALL">All Types</option>
                                 </select>
                             </div>
-                            <div class="col-md-5">
+                            <div class="col-md-4">
                                 <input type="text" class="form-control-tarkov w-100" placeholder="Search attachments..." id="attachmentSearch" oninput="filterAttachments()">
                             </div>
                             <div class="col-md-3">
                                 <button id="btn-load-attachments" class="btn-tarkov w-100" onclick="loadAttachmentsData()">Load Data</button>
                             </div>
+                            <div class="col-md-2">
+                                <button id="bulk-toggle-attachments" class="btn-tarkov w-100" onclick="toggleBulkMode('attachments')" style="font-size: 0.75rem;">Bulk Select</button>
+                            </div>
+                        </div>
+                        <div class="bulk-controls" id="bulk-controls-attachments">
+                            <span id="bulk-count-attachments" class="text-beige">0 selected</span>
+                            <button class="btn-tarkov" onclick="bulkMarkOwned('attachments')" style="padding: 4px 10px; font-size: 0.75rem;">✓ Mark Owned</button>
+                            <button class="btn-tarkov" onclick="bulkUnmarkOwned('attachments')" style="padding: 4px 10px; font-size: 0.75rem;">✗ Unmark</button>
+                            <button class="btn-tarkov" onclick="bulkSelectAll('attachments')" style="padding: 4px 10px; font-size: 0.75rem; background: var(--bg-dark);">Select All</button>
+                            <button class="btn-tarkov" onclick="bulkDeselectAll('attachments')" style="padding: 4px 10px; font-size: 0.75rem; background: var(--bg-dark);">Deselect All</button>
                         </div>
                         <div class="text-sub small mb-3">Click attachment to mark as owned | <span id="attachment-count">0</span> loaded</div>
                         <div id="attachments-loading" class="loading-spinner d-none">
@@ -714,10 +879,10 @@
         
         // Default active stats per category
         const DEFAULT_ACTIVE_STATS = {
-            ammo: ['pen', 'dmg'],
-            weapons: ['ergo', 'recoilVert'],
-            gear: ['armorClass', 'durability'],
-            attachments: ['ergoMod', 'recoilMod']
+            ammo: [],
+            weapons: [],
+            gear: [],
+            attachments: []
         };
         
         // Item-type specific stat configuration
@@ -846,7 +1011,7 @@
         // STATUS INDICATOR
         // ============================================================================
         
-        function updateStatus(connected, version = '4.2') {
+        function updateStatus(connected, version = '5.0') {
             const dot = document.getElementById('statusDot');
             const text = document.getElementById('statusText');
             if (connected) {
@@ -1108,10 +1273,31 @@
         // ============================================================================
         
         function switchTab(tabId) {
+            // Remove active from all tabs
             document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            event.target.classList.add('active');
-            document.getElementById('tab-' + tabId).classList.add('active');
+            
+            // Find and activate the correct tab button
+            const tabIndex = ['planner', 'ammo', 'penetration', 'weapons', 'gear', 'attachments'].indexOf(tabId);
+            if (tabIndex >= 0) {
+                const tabButtons = document.querySelectorAll('.nav-tab');
+                if (tabButtons[tabIndex]) tabButtons[tabIndex].classList.add('active');
+            }
+            
+            // Activate tab content
+            const tabContent = document.getElementById('tab-' + tabId);
+            if (tabContent) tabContent.classList.add('active');
+            
+            // Special handling for penetration tab
+            if (tabId === 'penetration' && allAmmoData) {
+                renderPenMatrix();
+            }
+            
+            // Show/hide dashboard based on tab
+            const dashboard = document.getElementById('inventoryDashboard');
+            if (dashboard) {
+                dashboard.style.display = ['ammo', 'weapons', 'gear', 'attachments'].includes(tabId) ? 'block' : 'none';
+            }
         }
 
         // ============================================================================
@@ -1686,9 +1872,13 @@
                 const tierSource = tierInfo.source;
                 const isOverridden = tierOverrides.ammo[a.id] !== undefined;
                 const sourceClass = tierSource.includes('+') ? 'source-both' : 'source-pen';
+                const isBulkSelected = bulkSelected.ammo.has(a.id);
                 
                 html += `
-                    <div class="ammo-card ${isOwned ? 'owned' : ''} ${isOverridden ? 'overridden' : ''}" onclick="toggleAmmoOwned('${a.id}')">
+                    <div class="ammo-card ${isOwned ? 'owned' : ''} ${isOverridden ? 'overridden' : ''} ${isBulkSelected ? 'bulk-selected' : ''}" 
+                         data-id="${a.id}"
+                         onclick="${bulkMode.ammo ? `toggleBulkItem('ammo', '${a.id}', event)` : `toggleAmmoOwned('${a.id}')`}">
+                        <input type="checkbox" class="item-checkbox" ${isBulkSelected ? 'checked' : ''} onclick="event.stopPropagation(); toggleBulkItem('ammo', '${a.id}', event)">
                         <span class="tier-badge tier-${displayTier}">${displayTier}</span>
                         ${a.iconLink ? `<img src="${a.iconLink}">` : ''}
                         <div class="flex-grow-1">
@@ -1967,7 +2157,7 @@
         function exportConfig() {
             // Show export modal with options
             const config = {
-                version: '4.2',
+                version: '5.0',
                 exportDate: new Date().toISOString(),
                 tierThresholds: tierThresholds,
                 activeStats: activeStats,
@@ -2160,6 +2350,7 @@
             ownedAmmo.has(id) ? ownedAmmo.delete(id) : ownedAmmo.add(id);
             saveOwnedAmmo();
             renderAmmoList();
+            updateDashboard();
         }
         
         function updateAmmoAnalysis() {
@@ -2370,9 +2561,13 @@
                     const tierInfo = getWeaponTier(w);
                     const isOverridden = tierOverrides.weapons[w.id] !== undefined;
                     const sourceClass = tierInfo.source.includes('+') ? 'source-both' : 'source-pen';
+                    const isBulkSelected = bulkSelected.weapons.has(w.id);
                     
                     html += `
-                        <div class="ammo-card ${isOwned ? 'owned' : ''} ${isOverridden ? 'overridden' : ''}" onclick="toggleWeaponOwned('${w.id}')">
+                        <div class="ammo-card weapon-card ${isOwned ? 'owned' : ''} ${isOverridden ? 'overridden' : ''} ${isBulkSelected ? 'bulk-selected' : ''}" 
+                             data-id="${w.id}"
+                             onclick="${bulkMode.weapons ? `toggleBulkItem('weapons', '${w.id}', event)` : `toggleWeaponOwned('${w.id}')`}">
+                            <input type="checkbox" class="item-checkbox" ${isBulkSelected ? 'checked' : ''} onclick="event.stopPropagation(); toggleBulkItem('weapons', '${w.id}', event)">
                             <span class="tier-badge tier-${tierInfo.tier}">${tierInfo.tier}</span>
                             ${w.iconLink ? `<img src="${w.iconLink}">` : ''}
                             <div class="flex-grow-1">
@@ -2425,6 +2620,7 @@
             ownedWeapons.has(id) ? ownedWeapons.delete(id) : ownedWeapons.add(id);
             saveOwnedWeapons();
             renderWeaponsList();
+            updateDashboard();
         }
         
         function setWeaponTierOverride(id, tier) {
@@ -2624,6 +2820,7 @@
                     const tierInfo = getGearTier(g);
                     const isOverridden = tierOverrides.gear[g.id] !== undefined;
                     const sourceClass = tierInfo.source.includes('+') ? 'source-both' : 'source-pen';
+                    const isBulkSelected = bulkSelected.gear.has(g.id);
                     
                     // Show relevant stats based on type
                     let statsHtml = '';
@@ -2638,7 +2835,10 @@
                     if (g.sellPrice > 0) statsHtml += `<span class="stat-price">${g.sellPrice.toLocaleString()}</span>`;
                     
                     html += `
-                        <div class="ammo-card ${isOwned ? 'owned' : ''} ${isOverridden ? 'overridden' : ''}" onclick="toggleGearOwned('${g.id}')">
+                        <div class="ammo-card gear-card ${isOwned ? 'owned' : ''} ${isOverridden ? 'overridden' : ''} ${isBulkSelected ? 'bulk-selected' : ''}" 
+                             data-id="${g.id}"
+                             onclick="${bulkMode.gear ? `toggleBulkItem('gear', '${g.id}', event)` : `toggleGearOwned('${g.id}')`}">
+                            <input type="checkbox" class="item-checkbox" ${isBulkSelected ? 'checked' : ''} onclick="event.stopPropagation(); toggleBulkItem('gear', '${g.id}', event)">
                             <span class="tier-badge tier-${tierInfo.tier}">${tierInfo.tier}</span>
                             ${g.iconLink ? `<img src="${g.iconLink}">` : ''}
                             <div class="flex-grow-1">
@@ -2694,6 +2894,7 @@
             ownedGear.has(id) ? ownedGear.delete(id) : ownedGear.add(id);
             saveOwnedGear();
             renderGearList();
+            updateDashboard();
         }
         
         function setGearTierOverride(id, tier) {
@@ -2904,12 +3105,16 @@
                     const tierInfo = getAttachmentTier(a);
                     const isOverridden = tierOverrides.attachments[a.id] !== undefined;
                     const sourceClass = tierInfo.source.includes('+') ? 'source-both' : 'source-pen';
+                    const isBulkSelected = bulkSelected.attachments.has(a.id);
                     
                     const ergoDisplay = a.ergonomics >= 0 ? `+${a.ergonomics}` : a.ergonomics;
                     const recoilDisplay = a.recoilModifier >= 0 ? `+${a.recoilModifier}%` : `${a.recoilModifier}%`;
                     
                     html += `
-                        <div class="ammo-card ${isOwned ? 'owned' : ''} ${isOverridden ? 'overridden' : ''}" onclick="toggleAttachmentOwned('${a.id}')">
+                        <div class="ammo-card attachment-card ${isOwned ? 'owned' : ''} ${isOverridden ? 'overridden' : ''} ${isBulkSelected ? 'bulk-selected' : ''}" 
+                             data-id="${a.id}"
+                             onclick="${bulkMode.attachments ? `toggleBulkItem('attachments', '${a.id}', event)` : `toggleAttachmentOwned('${a.id}')`}">
+                            <input type="checkbox" class="item-checkbox" ${isBulkSelected ? 'checked' : ''} onclick="event.stopPropagation(); toggleBulkItem('attachments', '${a.id}', event)">
                             <span class="tier-badge tier-${tierInfo.tier}">${tierInfo.tier}</span>
                             ${a.iconLink ? `<img src="${a.iconLink}">` : ''}
                             <div class="flex-grow-1">
@@ -2960,6 +3165,7 @@
             ownedAttachments.has(id) ? ownedAttachments.delete(id) : ownedAttachments.add(id);
             saveOwnedAttachments();
             renderAttachmentsList();
+            updateDashboard();
         }
         
         function setAttachmentTierOverride(id, tier) {
@@ -3014,6 +3220,344 @@
         }
 
         // ============================================================================
+        // PENETRATION MATRIX
+        // ============================================================================
+        
+        function renderPenMatrix() {
+            if (!allAmmoData) {
+                document.getElementById('pen-loading').classList.remove('d-none');
+                document.getElementById('pen-matrix-container').classList.add('d-none');
+                return;
+            }
+            
+            document.getElementById('pen-loading').classList.add('d-none');
+            document.getElementById('pen-matrix-container').classList.remove('d-none');
+            
+            // Populate caliber filter if not done
+            const caliberSelect = document.getElementById('penCaliberFilter');
+            if (caliberSelect.options.length <= 1) {
+                allAmmoData.calibers.forEach(cal => {
+                    caliberSelect.innerHTML += `<option value="${cal}">${cal}</option>`;
+                });
+            }
+            
+            const caliberFilter = document.getElementById('penCaliberFilter').value;
+            const sortBy = document.getElementById('penSortBy').value;
+            const showOnlyOwned = document.getElementById('penShowOwned').checked;
+            
+            // Filter ammo
+            let ammoList = allAmmoData.all;
+            if (caliberFilter !== 'ALL') {
+                ammoList = ammoList.filter(a => a.caliber === caliberFilter);
+            }
+            if (showOnlyOwned) {
+                ammoList = ammoList.filter(a => ownedAmmo.has(a.id));
+            }
+            
+            // Sort
+            ammoList = [...ammoList].sort((a, b) => {
+                if (sortBy === 'pen') return b.penetration - a.penetration;
+                if (sortBy === 'damage') return b.damage - a.damage;
+                return a.name.localeCompare(b.name);
+            });
+            
+            // Build matrix
+            const armorClasses = [1, 2, 3, 4, 5, 6];
+            
+            let html = '<table class="pen-matrix"><thead><tr>';
+            html += '<th class="ammo-name">Ammo</th>';
+            html += '<th class="ammo-pen">PEN</th>';
+            armorClasses.forEach(ac => {
+                html += `<th>Class ${ac}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+            
+            // Group by caliber for better readability
+            const byCaliber = {};
+            ammoList.forEach(a => {
+                if (!byCaliber[a.caliber]) byCaliber[a.caliber] = [];
+                byCaliber[a.caliber].push(a);
+            });
+            
+            for (const [caliber, ammos] of Object.entries(byCaliber)) {
+                if (caliberFilter === 'ALL' && ammos.length > 0) {
+                    html += `<tr><td colspan="${armorClasses.length + 2}" class="caliber-header">${caliber}</td></tr>`;
+                }
+                
+                ammos.forEach(a => {
+                    html += '<tr>';
+                    html += `<td class="ammo-name">${a.shortName}</td>`;
+                    html += `<td class="ammo-pen">${a.penetration}</td>`;
+                    
+                    armorClasses.forEach(ac => {
+                        const pen = a.penetration;
+                        // Simplified penetration effectiveness calculation
+                        // Based on armor class thresholds
+                        const classThreshold = ac * 10;
+                        let penClass, penText;
+                        
+                        if (pen >= classThreshold + 10) {
+                            penClass = 'pen-high';
+                            penText = '✓✓✓';
+                        } else if (pen >= classThreshold) {
+                            penClass = 'pen-high';
+                            penText = '✓✓';
+                        } else if (pen >= classThreshold - 10) {
+                            penClass = 'pen-mid';
+                            penText = '✓';
+                        } else if (pen >= classThreshold - 20) {
+                            penClass = 'pen-low';
+                            penText = '~';
+                        } else {
+                            penClass = 'pen-none';
+                            penText = '✗';
+                        }
+                        
+                        html += `<td class="pen-cell ${penClass}">${penText}</td>`;
+                    });
+                    
+                    html += '</tr>';
+                });
+            }
+            
+            html += '</tbody></table>';
+            document.getElementById('pen-matrix-container').innerHTML = html;
+        }
+
+        // ============================================================================
+        // INVENTORY DASHBOARD
+        // ============================================================================
+        
+        let dashboardCollapsed = false;
+        
+        function toggleDashboard() {
+            dashboardCollapsed = !dashboardCollapsed;
+            document.getElementById('dashboardContent').classList.toggle('collapsed', dashboardCollapsed);
+            document.getElementById('dashboardArrow').textContent = dashboardCollapsed ? '▶' : '▼';
+        }
+        
+        function updateDashboard() {
+            const stats = {
+                ammo: { owned: ownedAmmo.size, total: allAmmoData?.all?.length || 0, value: 0 },
+                weapons: { owned: ownedWeapons.size, total: allWeaponsData?.all?.length || 0, value: 0 },
+                gear: { owned: ownedGear.size, total: allGearData?.all?.length || 0, value: 0 },
+                attachments: { owned: ownedAttachments.size, total: allAttachmentsData?.all?.length || 0, value: 0 }
+            };
+            
+            // Calculate values
+            if (allAmmoData) {
+                allAmmoData.all.filter(a => ownedAmmo.has(a.id)).forEach(a => stats.ammo.value += a.sellPrice || 0);
+            }
+            if (allWeaponsData) {
+                allWeaponsData.all.filter(w => ownedWeapons.has(w.id)).forEach(w => stats.weapons.value += w.sellPrice || 0);
+            }
+            if (allGearData) {
+                allGearData.all.filter(g => ownedGear.has(g.id)).forEach(g => stats.gear.value += g.sellPrice || 0);
+            }
+            if (allAttachmentsData) {
+                allAttachmentsData.all.filter(a => ownedAttachments.has(a.id)).forEach(a => stats.attachments.value += a.sellPrice || 0);
+            }
+            
+            // Update UI
+            for (const [cat, s] of Object.entries(stats)) {
+                document.getElementById(`dash-${cat}-count`).textContent = `${s.owned}/${s.total}`;
+                document.getElementById(`dash-${cat}-pct`).textContent = s.total > 0 ? `${Math.round(s.owned / s.total * 100)}%` : '-';
+                document.getElementById(`dash-${cat}-value`).textContent = s.value.toLocaleString() + ' ₽';
+            }
+            
+            // Totals
+            const totalOwned = stats.ammo.owned + stats.weapons.owned + stats.gear.owned + stats.attachments.owned;
+            const totalItems = stats.ammo.total + stats.weapons.total + stats.gear.total + stats.attachments.total;
+            const totalValue = stats.ammo.value + stats.weapons.value + stats.gear.value + stats.attachments.value;
+            
+            document.getElementById('dash-total-count').textContent = totalOwned;
+            document.getElementById('dash-total-pct').textContent = totalItems > 0 ? `${Math.round(totalOwned / totalItems * 100)}%` : '-';
+            document.getElementById('dash-total-value').textContent = totalValue.toLocaleString() + ' ₽';
+        }
+
+        // ============================================================================
+        // KEYBOARD SHORTCUTS
+        // ============================================================================
+        
+        let shortcutsHelpVisible = false;
+        
+        function initKeyboardShortcuts() {
+            document.addEventListener('keydown', (e) => {
+                // Don't trigger if typing in input/textarea
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+                
+                // Tab switching: 1-6
+                if (e.key >= '1' && e.key <= '6' && !e.ctrlKey && !e.altKey) {
+                    const tabs = ['planner', 'ammo', 'penetration', 'weapons', 'gear', 'attachments'];
+                    const tabIndex = parseInt(e.key) - 1;
+                    if (tabIndex < tabs.length) {
+                        switchTab(tabs[tabIndex]);
+                        e.preventDefault();
+                    }
+                }
+                
+                // Ctrl+E: Export
+                if (e.key === 'e' && e.ctrlKey) {
+                    exportConfig();
+                    e.preventDefault();
+                }
+                
+                // Ctrl+I: Import
+                if (e.key === 'i' && e.ctrlKey) {
+                    showImportModal();
+                    e.preventDefault();
+                }
+                
+                // Ctrl+F: Focus search
+                if (e.key === 'f' && e.ctrlKey) {
+                    const activeTab = document.querySelector('.tab-content.active');
+                    const searchInput = activeTab?.querySelector('input[type="text"][placeholder*="earch"]');
+                    if (searchInput) {
+                        searchInput.focus();
+                        e.preventDefault();
+                    }
+                }
+                
+                // ?: Toggle shortcuts help
+                if (e.key === '?' || (e.key === '/' && e.shiftKey)) {
+                    toggleShortcutsHelp();
+                    e.preventDefault();
+                }
+                
+                // Escape: Close modals
+                if (e.key === 'Escape') {
+                    hideExportModal();
+                    hideImportModal();
+                    hideShortcutsHelp();
+                }
+            });
+        }
+        
+        function toggleShortcutsHelp() {
+            let help = document.getElementById('shortcutsHelp');
+            if (!help) {
+                help = document.createElement('div');
+                help.id = 'shortcutsHelp';
+                help.className = 'shortcuts-help';
+                help.innerHTML = `
+                    <div style="margin-bottom: 5px; color: var(--text-beige);">⌨️ Keyboard Shortcuts</div>
+                    <div><kbd>1</kbd>-<kbd>6</kbd> Switch tabs</div>
+                    <div><kbd>Ctrl</kbd>+<kbd>E</kbd> Export</div>
+                    <div><kbd>Ctrl</kbd>+<kbd>I</kbd> Import</div>
+                    <div><kbd>Ctrl</kbd>+<kbd>F</kbd> Search</div>
+                    <div><kbd>?</kbd> Toggle this help</div>
+                    <div><kbd>Esc</kbd> Close dialogs</div>
+                `;
+                document.body.appendChild(help);
+            }
+            shortcutsHelpVisible = !shortcutsHelpVisible;
+            help.style.display = shortcutsHelpVisible ? 'block' : 'none';
+        }
+        
+        function hideShortcutsHelp() {
+            const help = document.getElementById('shortcutsHelp');
+            if (help) help.style.display = 'none';
+            shortcutsHelpVisible = false;
+        }
+
+        // ============================================================================
+        // BULK SELECT MODE
+        // ============================================================================
+        
+        let bulkMode = { ammo: false, weapons: false, gear: false, attachments: false };
+        let bulkSelected = { ammo: new Set(), weapons: new Set(), gear: new Set(), attachments: new Set() };
+        
+        function toggleBulkMode(category) {
+            bulkMode[category] = !bulkMode[category];
+            bulkSelected[category].clear();
+            
+            const container = document.getElementById(`tab-${category}`);
+            container.classList.toggle('bulk-mode', bulkMode[category]);
+            
+            // Update button text
+            const btn = document.getElementById(`bulk-toggle-${category}`);
+            if (btn) btn.textContent = bulkMode[category] ? 'Exit Bulk Select' : 'Bulk Select';
+            
+            renderCategoryList(category);
+        }
+        
+        function toggleBulkItem(category, id, event) {
+            if (event) event.stopPropagation();
+            
+            if (bulkSelected[category].has(id)) {
+                bulkSelected[category].delete(id);
+            } else {
+                bulkSelected[category].add(id);
+            }
+            
+            updateBulkCount(category);
+        }
+        
+        function updateBulkCount(category) {
+            const countEl = document.getElementById(`bulk-count-${category}`);
+            if (countEl) countEl.textContent = bulkSelected[category].size + ' selected';
+        }
+        
+        function bulkMarkOwned(category) {
+            const ownedSet = category === 'ammo' ? ownedAmmo : 
+                            category === 'weapons' ? ownedWeapons :
+                            category === 'gear' ? ownedGear : ownedAttachments;
+            
+            bulkSelected[category].forEach(id => ownedSet.add(id));
+            bulkSelected[category].clear();
+            
+            // Save
+            if (category === 'ammo') saveOwnedAmmo();
+            if (category === 'weapons') saveOwnedWeapons();
+            if (category === 'gear') saveOwnedGear();
+            if (category === 'attachments') saveOwnedAttachments();
+            
+            renderCategoryList(category);
+            updateDashboard();
+        }
+        
+        function bulkUnmarkOwned(category) {
+            const ownedSet = category === 'ammo' ? ownedAmmo : 
+                            category === 'weapons' ? ownedWeapons :
+                            category === 'gear' ? ownedGear : ownedAttachments;
+            
+            bulkSelected[category].forEach(id => ownedSet.delete(id));
+            bulkSelected[category].clear();
+            
+            // Save
+            if (category === 'ammo') saveOwnedAmmo();
+            if (category === 'weapons') saveOwnedWeapons();
+            if (category === 'gear') saveOwnedGear();
+            if (category === 'attachments') saveOwnedAttachments();
+            
+            renderCategoryList(category);
+            updateDashboard();
+        }
+        
+        function bulkSelectAll(category) {
+            const data = category === 'ammo' ? allAmmoData?.all :
+                        category === 'weapons' ? allWeaponsData?.all :
+                        category === 'gear' ? allGearData?.all : allAttachmentsData?.all;
+            
+            if (data) {
+                // Select all visible items (apply current filters)
+                const visibleItems = document.querySelectorAll(`#tab-${category} .ammo-card, #tab-${category} .weapon-card, #tab-${category} .gear-card, #tab-${category} .attachment-card`);
+                visibleItems.forEach(el => {
+                    const id = el.dataset.id || el.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
+                    if (id) bulkSelected[category].add(id);
+                });
+            }
+            updateBulkCount(category);
+            renderCategoryList(category);
+        }
+        
+        function bulkDeselectAll(category) {
+            bulkSelected[category].clear();
+            updateBulkCount(category);
+            renderCategoryList(category);
+        }
+
+        // ============================================================================
         // INITIALIZATION
         // ============================================================================
         
@@ -3021,6 +3565,9 @@
             // Load tier configuration for all categories
             loadTierData();
             initTierConfigUI();
+            
+            // Initialize keyboard shortcuts
+            initKeyboardShortcuts();
             
             // Load saved ammo data
             loadSavedAmmo();
@@ -3036,6 +3583,9 @@
             
             // Initialize map without markers (markers appear after Plan Raid)
             initMap('customs', []);
+            
+            // Initial dashboard update
+            updateDashboard();
         });
     </script>
 </body>
