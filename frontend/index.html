@@ -359,6 +359,10 @@
                         <div class="search-box">
                             <input type="text" class="form-control-tarkov w-100" placeholder="Search quests..." id="questSearch" oninput="filterQuests()">
                         </div>
+                        <div class="quest-list-controls" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; margin-bottom: 8px; border-bottom: 1px solid var(--border-dark);">
+                            <span class="text-sub small"><span id="selectedQuestCount">0</span> quests selected</span>
+                            <button class="btn-tarkov" onclick="deselectAllQuests()" style="padding: 4px 10px; font-size: 0.75rem;">Deselect All</button>
+                        </div>
                         <div id="quest-loading" class="loading-spinner">
                             <div class="spinner"></div>
                             <div>Loading intel from command...</div>
@@ -1361,6 +1365,31 @@
             const saved = getSavedQuests();
             isSelected ? saved.add(questId) : saved.delete(questId);
             localStorage.setItem(STORAGE_KEY_QUESTS, JSON.stringify([...saved]));
+            updateSelectedQuestCount();
+        }
+        
+        function deselectAllQuests() {
+            // Clear storage
+            localStorage.setItem(STORAGE_KEY_QUESTS, JSON.stringify([]));
+            
+            // Uncheck all checkboxes in UI
+            document.querySelectorAll('#quest-list input[type="checkbox"]').forEach(cb => {
+                cb.checked = false;
+                const row = cb.closest('.quest-row');
+                if (row) row.classList.remove('selected');
+            });
+            
+            // Update counter
+            updateSelectedQuestCount();
+            
+            // Update map selection hint
+            updateMapSelection();
+        }
+        
+        function updateSelectedQuestCount() {
+            const count = getSavedQuests().size;
+            const el = document.getElementById('selectedQuestCount');
+            if (el) el.textContent = count;
         }
         
         function getWikiUrl(questName) {
@@ -1429,6 +1458,9 @@
                 list.innerHTML = html;
                 list.classList.remove('d-none');
                 loading.classList.add('d-none');
+                
+                // Update selected quest count
+                updateSelectedQuestCount();
                 
                 for (const [trader, data] of Object.entries(byTrader)) {
                     const groupId = 'trader-' + trader.replace(/\s+/g, '-');
