@@ -3620,9 +3620,26 @@
                 return mapSpawnData[mapName];
             }
             
+            // Convert our map key to API-compatible name
+            const apiMapNames = {
+                customs: 'Customs',
+                woods: 'Woods',
+                shoreline: 'Shoreline',
+                interchange: 'Interchange',
+                reserve: 'Reserve',
+                lighthouse: 'Lighthouse',
+                streets: 'Streets of Tarkov',
+                groundzero: 'Ground Zero',
+                factory: 'Factory',
+                labs: 'The Lab'
+            };
+            
+            const apiMapName = apiMapNames[mapName] || mapName;
+            console.log('Loading spawn data for:', mapName, '-> API name:', apiMapName);
+            
             try {
                 const query = `{
-                    maps(name: "${mapName}") {
+                    maps(name: "${apiMapName}") {
                         name
                         normalizedName
                         spawns {
@@ -3707,7 +3724,11 @@
                     }
                     
                     mapSpawnData[mapName] = processed;
+                    console.log('Spawn data loaded:', mapName, processed);
+                    console.log('Scav spawns:', processed.scav.length, 'PMC:', processed.pmc.length, 'Boss:', processed.boss.length);
                     return processed;
+                } else {
+                    console.warn('No map data returned for:', apiMapName, data);
                 }
             } catch (err) {
                 console.error('Error loading spawn data:', err);
@@ -3755,6 +3776,7 @@
         
         async function renderSpawnMarkers() {
             const currentMap = activeMapTab || document.getElementById('mapSelect')?.value || 'customs';
+            console.log('renderSpawnMarkers for map:', currentMap);
             
             // Clear existing spawn markers
             Object.values(spawnLayers).forEach(layer => {
@@ -3762,26 +3784,47 @@
                 layer.markers = [];
             });
             
+            // Check if any layers are enabled
+            const anyEnabled = Object.values(spawnLayers).some(l => l.enabled);
+            if (!anyEnabled) {
+                console.log('No spawn layers enabled');
+                updateMarkerCount();
+                return;
+            }
+            
             // Load spawn data for current map
             const spawns = await loadMapSpawnData(currentMap);
-            if (!spawns) return;
+            if (!spawns) {
+                console.warn('No spawn data available for:', currentMap);
+                updateMarkerCount();
+                return;
+            }
             
             // Get map dimensions for coordinate conversion
             const mapContainer = document.getElementById('map');
-            if (!mapContainer || !map) return;
+            if (!mapContainer || !map) {
+                console.warn('Map container or map not ready');
+                return;
+            }
             
             const mapConfig = MAP_CONFIG[currentMap];
-            if (!mapConfig) return;
+            if (!mapConfig) {
+                console.warn('No map config for:', currentMap);
+                return;
+            }
+            
+            console.log('Rendering spawn markers, layers:', 
+                Object.entries(spawnLayers).filter(([k,v]) => v.enabled).map(([k]) => k));
             
             // Render each enabled layer
             for (const [layerType, layer] of Object.entries(spawnLayers)) {
                 if (!layer.enabled) continue;
                 
                 const spawnPoints = spawns[layerType] || [];
+                console.log(`${layerType}: ${spawnPoints.length} spawn points`);
                 
                 spawnPoints.forEach(spawn => {
                     // Convert game coordinates to map coordinates
-                    // This may need adjustment based on actual coordinate systems
                     const coords = convertGameCoordsToMap(spawn.x, spawn.y, currentMap);
                     if (!coords) return;
                     
@@ -3803,6 +3846,9 @@
                     layer.markers.push(marker);
                 });
             }
+            
+            const totalSpawnMarkers = Object.values(spawnLayers).reduce((sum, l) => sum + l.markers.length, 0);
+            console.log('Total spawn markers rendered:', totalSpawnMarkers);
             
             updateMarkerCount();
         }
@@ -3870,15 +3916,16 @@
             const questsByMap = {};
             
             selectedQuests.forEach(quest => {
-                // Check quest's main map
-                const questMap = quest.map?.normalizedName;
+                // Check quest's main map - use mapNameToKey to normalize
+                const questMapName = quest.map?.name;
+                const questMapKey = questMapName ? mapNameToKey(questMapName) : null;
                 
                 // Check objectives for specific map requirements
                 if (quest.objectives) {
                     quest.objectives.forEach(obj => {
                         if (obj.maps && obj.maps.length > 0) {
                             obj.maps.forEach(m => {
-                                const mapKey = m.normalizedName;
+                                const mapKey = m.normalizedName || mapNameToKey(m.name);
                                 if (mapKey && mapKey !== 'any') {
                                     mapSet.add(mapKey);
                                     if (!questsByMap[mapKey]) questsByMap[mapKey] = [];
@@ -3892,14 +3939,16 @@
                 }
                 
                 // If quest has a specific map (not "any"), add it
-                if (questMap && questMap !== 'any') {
-                    mapSet.add(questMap);
-                    if (!questsByMap[questMap]) questsByMap[questMap] = [];
-                    if (!questsByMap[questMap].includes(quest.name)) {
-                        questsByMap[questMap].push(quest.name);
+                if (questMapKey && questMapKey !== 'any') {
+                    mapSet.add(questMapKey);
+                    if (!questsByMap[questMapKey]) questsByMap[questMapKey] = [];
+                    if (!questsByMap[questMapKey].includes(quest.name)) {
+                        questsByMap[questMapKey].push(quest.name);
                     }
                 }
             });
+            
+            console.log('Map analysis:', { maps: Array.from(mapSet), questsByMap });
             
             return {
                 maps: Array.from(mapSet),
@@ -3911,11 +3960,15 @@
             const tabsContainer = document.getElementById('multiMapTabs');
             const tabsInner = document.getElementById('mapTabsContainer');
             const mapSelect = document.getElementById('mapSelect');
+            const mapHint = document.getElementById('mapHint');
+            
+            console.log('setupMultiMapTabs:', maps, questsByMap);
             
             if (maps.length <= 1) {
                 // Single map mode - hide tabs, show dropdown
                 tabsContainer.style.display = 'none';
-                mapSelect.closest('.row')?.style.setProperty('display', '');
+                mapSelect.closest('.col-md-6')?.style.setProperty('display', '');
+                if (mapHint) mapHint.style.display = 'block';
                 multiMapMode = false;
                 requiredMaps = [];
                 return;
@@ -3926,8 +3979,9 @@
             requiredMaps = maps;
             tabsContainer.style.display = 'block';
             
-            // Hide map dropdown in multi-map mode
+            // Hide map dropdown and mapHint in multi-map mode
             mapSelect.closest('.col-md-6')?.style.setProperty('display', 'none');
+            if (mapHint) mapHint.style.display = 'none';
             
             // Build tabs HTML
             const mapLabels = {
@@ -4005,6 +4059,14 @@
             
             const mapSelect = document.getElementById('mapSelect');
             mapSelect?.closest('.col-md-6')?.style.setProperty('display', '');
+            
+            // Show mapHint again in single-map mode
+            const mapHint = document.getElementById('mapHint');
+            if (mapHint) mapHint.style.display = 'block';
+            
+            // Hide "Apply to All" button
+            const applyAllBtn = document.querySelector('.btn-apply-all');
+            if (applyAllBtn) applyAllBtn.style.display = 'none';
             
             // Reset layer toggles
             Object.keys(spawnLayers).forEach(layer => {
