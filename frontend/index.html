@@ -932,18 +932,19 @@
         // Our SVG maps may have different coordinate systems, so we need per-map corrections
         // scaleX/scaleY: multiply the percent value
         // offsetX/offsetY: add after scaling (in percent)
-        // flipY: if true, invert Y axis (100 - topPercent)
+        // flipY: if true, invert Y axis (100 - topPercent) BEFORE pixel conversion
+        // invertLeafletY: if false, don't do (height - pixelY) for Leaflet
         const MAP_CONFIG = {
-            customs:     { file: 'maps/Customs.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false },
-            woods:       { file: 'maps/Woods.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false },
-            shoreline:   { file: 'maps/Shoreline.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false },
-            interchange: { file: 'maps/Interchange.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false },
-            reserve:     { file: 'maps/Reserve.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false },
-            lighthouse:  { file: 'maps/Lighthouse.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false },
-            streets:     { file: 'maps/StreetsOfTarkov.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false },
-            groundzero:  { file: 'maps/GroundZero.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false },
-            factory:     { file: 'maps/Factory.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false },
-            labs:        { file: 'maps/Labs.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false }
+            customs:     { file: 'maps/Customs.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
+            woods:       { file: 'maps/Woods.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: false },
+            shoreline:   { file: 'maps/Shoreline.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
+            interchange: { file: 'maps/Interchange.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
+            reserve:     { file: 'maps/Reserve.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
+            lighthouse:  { file: 'maps/Lighthouse.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
+            streets:     { file: 'maps/StreetsOfTarkov.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
+            groundzero:  { file: 'maps/GroundZero.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
+            factory:     { file: 'maps/Factory.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
+            labs:        { file: 'maps/Labs.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true }
         };
 
         // ============================================================================
@@ -1017,22 +1018,32 @@
                 headphones:  { applicable: ['ambientVol', 'distortion'], defaultActive: ['ambientVol'] },
             },
             attachments: {
-                Magazines:   { applicable: ['magCapacity', 'ergoMod'], defaultActive: ['magCapacity'] },
-                Scopes:      { applicable: ['zoomLevel', 'sightingRange', 'ergoMod'], defaultActive: ['zoomLevel'] },
-                Sights:      { applicable: ['ergoMod', 'recoilMod'], defaultActive: ['ergoMod'] },
-                Suppressors: { applicable: ['recoilMod', 'ergoMod'], defaultActive: ['recoilMod'] },
-                Barrels:     { applicable: ['ergoMod', 'recoilMod', 'accMod'], defaultActive: ['ergoMod', 'recoilMod'] },
-                Muzzle:      { applicable: ['ergoMod', 'recoilMod', 'accMod'], defaultActive: ['recoilMod'] },
-                Grips:       { applicable: ['ergoMod', 'recoilMod'], defaultActive: ['ergoMod'] },
-                Stocks:      { applicable: ['ergoMod', 'recoilMod'], defaultActive: ['ergoMod', 'recoilMod'] },
-                Handguards:  { applicable: ['ergoMod', 'recoilMod'], defaultActive: ['ergoMod'] },
-                Foregrips:   { applicable: ['ergoMod', 'recoilMod'], defaultActive: ['ergoMod', 'recoilMod'] },
-                Mounts:      { applicable: ['ergoMod', 'recoilMod'], defaultActive: ['ergoMod'] },
-                Flashlights: { applicable: ['ergoMod'], defaultActive: ['ergoMod'] },
-                Lasers:      { applicable: ['ergoMod'], defaultActive: ['ergoMod'] },
-                Rails:       { applicable: ['ergoMod'], defaultActive: ['ergoMod'] },
-                Receivers:   { applicable: ['ergoMod', 'recoilMod'], defaultActive: ['ergoMod'] },
-                _default:    { applicable: ['ergoMod', 'recoilMod', 'accMod'], defaultActive: ['ergoMod', 'recoilMod'] }
+                Magazines:        { applicable: ['magCapacity', 'ergoMod'], defaultActive: ['magCapacity'] },
+                Scopes:           { applicable: ['zoomLevel', 'sightingRange', 'ergoMod'], defaultActive: ['zoomLevel'] },
+                'Assault Scopes': { applicable: ['zoomLevel', 'sightingRange', 'ergoMod'], defaultActive: ['zoomLevel'] },
+                'Reflex Sights':  { applicable: ['ergoMod', 'recoilMod'], defaultActive: ['ergoMod'] },
+                'Iron Sights':    { applicable: ['ergoMod'], defaultActive: ['ergoMod'] },
+                'Thermal/NV':     { applicable: ['zoomLevel', 'ergoMod'], defaultActive: ['zoomLevel'] },
+                Suppressors:      { applicable: ['recoilMod', 'ergoMod'], defaultActive: ['recoilMod'] },
+                Barrels:          { applicable: ['ergoMod', 'recoilMod', 'accMod'], defaultActive: ['ergoMod', 'recoilMod'] },
+                'Muzzle Devices': { applicable: ['ergoMod', 'recoilMod', 'accMod'], defaultActive: ['recoilMod'] },
+                'Pistol Grips':   { applicable: ['ergoMod', 'recoilMod'], defaultActive: ['ergoMod'] },
+                Stocks:           { applicable: ['ergoMod', 'recoilMod'], defaultActive: ['ergoMod', 'recoilMod'] },
+                Handguards:       { applicable: ['ergoMod', 'recoilMod'], defaultActive: ['ergoMod'] },
+                Foregrips:        { applicable: ['ergoMod', 'recoilMod'], defaultActive: ['ergoMod', 'recoilMod'] },
+                Mounts:           { applicable: ['ergoMod', 'recoilMod'], defaultActive: ['ergoMod'] },
+                Flashlights:      { applicable: ['ergoMod'], defaultActive: ['ergoMod'] },
+                Lasers:           { applicable: ['ergoMod'], defaultActive: ['ergoMod'] },
+                'Light/Laser':    { applicable: ['ergoMod'], defaultActive: ['ergoMod'] },
+                'Tactical Devices': { applicable: ['ergoMod'], defaultActive: ['ergoMod'] },
+                Rails:            { applicable: ['ergoMod'], defaultActive: ['ergoMod'] },
+                Receivers:        { applicable: ['ergoMod', 'recoilMod'], defaultActive: ['ergoMod'] },
+                'Charging Handles': { applicable: ['ergoMod'], defaultActive: ['ergoMod'] },
+                'Gas Blocks':     { applicable: ['ergoMod', 'recoilMod'], defaultActive: ['ergoMod'] },
+                'Auxiliary Parts': { applicable: ['ergoMod', 'recoilMod'], defaultActive: ['ergoMod'] },
+                Bipods:           { applicable: ['ergoMod', 'recoilMod'], defaultActive: ['recoilMod'] },
+                Other:            { applicable: ['ergoMod', 'recoilMod', 'accMod'], defaultActive: ['ergoMod'] },
+                _default:         { applicable: ['ergoMod', 'recoilMod', 'accMod'], defaultActive: ['ergoMod', 'recoilMod'] }
             },
             // Ammo and weapons don't need type-specific handling (all stats apply)
             ammo: {
@@ -1338,7 +1349,7 @@
                     let correctedLeftPct = loc.leftPercent * mapCfg.scaleX + mapCfg.offsetX;
                     let correctedTopPct = loc.topPercent * mapCfg.scaleY + mapCfg.offsetY;
                     
-                    // Optional Y-axis flip
+                    // Optional Y-axis flip (before pixel conversion)
                     if (mapCfg.flipY) {
                         correctedTopPct = 100 - correctedTopPct;
                     }
@@ -1347,9 +1358,9 @@
                     const pixelX = (correctedLeftPct / 100) * mapWidth;
                     const pixelY = (correctedTopPct / 100) * mapHeight;
                     
-                    // Leaflet CRS.Simple: Y is inverted from top-left origin
-                    const leafletY = mapHeight - pixelY;
+                    // Leaflet CRS.Simple: optionally invert Y
                     const leafletX = pixelX;
+                    const leafletY = mapCfg.invertLeafletY !== false ? (mapHeight - pixelY) : pixelY;
                     
                     // Debug logging for coordinate issues
                     if (markerCount < 3) {
@@ -1359,7 +1370,7 @@
                             mapSize: { width: mapWidth, height: mapHeight },
                             pixel: { x: pixelX, y: pixelY },
                             leaflet: { x: leafletX, y: leafletY },
-                            mapCfg: mapCfg
+                            mapCfg: { flipY: mapCfg.flipY, invertLeafletY: mapCfg.invertLeafletY }
                         });
                     }
                     
@@ -3211,6 +3222,10 @@
                         avg24hPrice
                         sellFor { price vendor { name } }
                         types
+                        categories {
+                            name
+                            normalizedName
+                        }
                         properties {
                             ... on ItemPropertiesMagazine {
                                 capacity
@@ -3246,28 +3261,76 @@
                 const data = await response.json();
                 if (data.errors) throw new Error(data.errors[0].message);
                 
+                // Debug: Log first few items to see category structure
+                console.log('Sample attachment categories:', data.data.items.slice(0, 5).map(i => ({
+                    name: i.name,
+                    types: i.types,
+                    categories: i.categories?.map(c => c.normalizedName)
+                })));
+                
                 const attachments = data.data.items.map(a => {
                     const props = a.properties || {};
                     const bestSell = a.sellFor?.reduce((best, s) => s.price > best.price ? s : best, { price: 0 }) || { price: 0 };
                     
-                    // Determine attachment type from types array
-                    let attachType = 'other';
-                    const typeMap = {
-                        'scope': 'Scopes', 'sights': 'Sights', 'barrel': 'Barrels',
-                        'muzzle': 'Muzzle', 'grip': 'Grips', 'stock': 'Stocks',
-                        'handguard': 'Handguards', 'mount': 'Mounts', 'magazine': 'Magazines',
-                        'foregrip': 'Foregrips', 'flashlight': 'Flashlights', 'laser': 'Lasers',
-                        'suppressor': 'Suppressors', 'rail': 'Rails', 'receiver': 'Receivers'
+                    // Use categories (more detailed) to determine attachment type
+                    const categoryNames = a.categories?.map(c => c.normalizedName?.toLowerCase()) || [];
+                    const categoryLabels = a.categories?.map(c => c.name) || [];
+                    
+                    // Category mapping - order matters (more specific first)
+                    const categoryMap = {
+                        'compact-reflex-sights': 'Reflex Sights',
+                        'reflex-sights': 'Reflex Sights',
+                        'iron-sights': 'Iron Sights',
+                        'assault-scopes': 'Assault Scopes',
+                        'optic-scopes': 'Scopes',
+                        'special-scopes': 'Scopes',
+                        'scopes': 'Scopes',
+                        'night-vision-and-thermal-scopes': 'Thermal/NV',
+                        'thermal-vision': 'Thermal/NV',
+                        'night-vision': 'Thermal/NV',
+                        'stocks': 'Stocks',
+                        'pistol-grips': 'Pistol Grips',
+                        'foregrips': 'Foregrips',
+                        'muzzle-adapters': 'Muzzle Devices',
+                        'muzzle-devices': 'Muzzle Devices',
+                        'flash-hiders-and-muzzle-brakes': 'Muzzle Devices',
+                        'suppressors': 'Suppressors',
+                        'silencers': 'Suppressors',
+                        'barrels': 'Barrels',
+                        'handguards': 'Handguards',
+                        'magazines': 'Magazines',
+                        'mounts': 'Mounts',
+                        'auxiliary-parts': 'Auxiliary Parts',
+                        'bipods': 'Bipods',
+                        'flashlights': 'Flashlights',
+                        'tactical-combo-devices': 'Tactical Devices',
+                        'laser-target-pointers': 'Lasers',
+                        'charging-handles': 'Charging Handles',
+                        'receivers-and-slides': 'Receivers',
+                        'gas-blocks': 'Gas Blocks',
+                        'rails': 'Rails',
+                        'light-laser-devices': 'Light/Laser'
                     };
                     
-                    for (const [key, label] of Object.entries(typeMap)) {
-                        if (a.types?.some(t => t.toLowerCase().includes(key))) {
+                    let attachType = 'Other';
+                    
+                    // Check categories first (most reliable)
+                    for (const [catKey, label] of Object.entries(categoryMap)) {
+                        if (categoryNames.some(c => c && c.includes(catKey))) {
                             attachType = label;
                             break;
                         }
                     }
-                    if (attachType === 'other' && a.types?.length > 0) {
-                        attachType = a.types[0];
+                    
+                    // Fallback: use first category name if available
+                    if (attachType === 'Other' && categoryLabels.length > 0) {
+                        // Find the most specific (non-generic) category
+                        const specificCat = categoryLabels.find(c => 
+                            c && !['Mods', 'Weapon mods', 'Gear mods', 'Functional mods', 'Master mods'].includes(c)
+                        );
+                        if (specificCat) {
+                            attachType = specificCat;
+                        }
                     }
                     
                     return {
@@ -3298,6 +3361,9 @@
                     if (!byType[a.attachType]) byType[a.attachType] = [];
                     byType[a.attachType].push(a);
                 });
+                
+                // Log category distribution
+                console.log('Attachment categories:', Object.entries(byType).map(([k, v]) => `${k}: ${v.length}`).join(', '));
                 
                 // Sort by tier
                 Object.values(byType).forEach(arr => {
@@ -3699,7 +3765,7 @@
                                 spawnChance
                                 spawnLocations {
                                     name
-                                    position { x y z }
+                                    spawnChance
                                 }
                             }
                         }
@@ -3789,27 +3855,18 @@
                     });
                 }
                 
-                // Process boss spawns
+                // Process boss spawns (note: position data not available via API, just log names)
                 if (mapData.bosses) {
                     mapData.bosses.forEach(bossSpawn => {
-                        if (bossSpawn.spawnLocations) {
-                            bossSpawn.spawnLocations.forEach(loc => {
-                                if (loc.position) {
-                                    processed.boss.push({
-                                        name: bossSpawn.boss?.name || 'Boss',
-                                        zone: loc.name,
-                                        x: loc.position.x,
-                                        y: loc.position.z,
-                                        spawnChance: bossSpawn.spawnChance
-                                    });
-                                }
-                            });
-                        }
+                        // Boss spawn locations don't have position data in the API
+                        // We can only show the boss names and spawn chances
+                        console.log(`Boss on ${mapData.name}: ${bossSpawn.boss?.name} (${Math.round((bossSpawn.spawnChance || 0) * 100)}%)`);
+                        // TODO: Boss markers would need manual position data or different API source
                     });
                 }
                 
                 mapSpawnData[mapName] = processed;
-                console.log('Spawn data processed for', mapName, '- Scav:', processed.scav.length, 'Sniper:', processed.sniper.length, 'PMC:', processed.pmc.length, 'Boss:', processed.boss.length);
+                console.log('Spawn data processed for', mapName, '- Scav:', processed.scav.length, 'Sniper:', processed.sniper.length, 'PMC:', processed.pmc.length, 'Boss: (positions not available via API)');
                 return processed;
                 
             } catch (err) {
