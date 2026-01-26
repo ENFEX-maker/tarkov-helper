@@ -936,7 +936,7 @@
         // invertLeafletY: if false, don't do (height - pixelY) for Leaflet
         const MAP_CONFIG = {
             customs:     { file: 'maps/Customs.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
-            woods:       { file: 'maps/Woods.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: true, invertLeafletY: true },
+            woods:       { file: 'maps/Woods.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
             shoreline:   { file: 'maps/Shoreline.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
             interchange: { file: 'maps/Interchange.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
             reserve:     { file: 'maps/Reserve.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
@@ -3945,7 +3945,7 @@
             
             // Get map dimensions for coordinate conversion
             const mapContainer = document.getElementById('map');
-            if (!mapContainer || !map) {
+            if (!mapContainer || !mapInstance) {
                 console.warn('Map container or map not ready');
                 return;
             }
@@ -3975,7 +3975,7 @@
                     const icon = createSpawnIcon(layerType, spawn);
                     
                     const marker = L.marker([coords.y, coords.x], { icon })
-                        .addTo(map);
+                        .addTo(mapInstance);
                     
                     // Add tooltip
                     let tooltip = '';
