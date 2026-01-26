@@ -240,6 +240,36 @@
         .tracker-item .collected-input input { width: 40px; background: var(--bg-dark); border: 1px solid var(--border-dark); color: var(--text-main); text-align: center; padding: 2px; font-size: 0.8rem; }
         .tracker-item .collected-input input:focus { border-color: var(--eft-gold); outline: none; }
         .tracker-item .collected-input span { color: var(--text-sub); font-size: 0.8rem; }
+        
+        /* Multi-Map Tabs */
+        .multi-map-tabs { background: var(--bg-element); border: 1px solid var(--border-dark); border-bottom: none; }
+        .map-tabs-container { display: flex; gap: 0; }
+        .map-tab { padding: 10px 20px; background: var(--bg-dark); border-right: 1px solid var(--border-dark); cursor: pointer; font-size: 0.85rem; color: var(--text-sub); transition: all 0.2s; }
+        .map-tab:hover { background: var(--bg-element); color: var(--text-main); }
+        .map-tab.active { background: var(--bg-panel); color: var(--eft-gold); border-bottom: 2px solid var(--eft-gold); }
+        .map-tab .tab-quest-count { font-size: 0.7rem; margin-left: 6px; padding: 2px 6px; background: rgba(158, 143, 107, 0.3); border-radius: 3px; }
+        
+        /* Spawn Layer Controls */
+        .spawn-layer-controls { display: flex; align-items: center; gap: 15px; padding: 8px 15px; background: var(--bg-dark); border: 1px solid var(--border-dark); border-bottom: none; flex-wrap: wrap; }
+        .spawn-layer-title { font-size: 0.8rem; color: var(--text-sub); margin-right: 5px; }
+        .spawn-toggle { display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 0.8rem; color: var(--text-sub); padding: 4px 8px; background: var(--bg-element); border: 1px solid var(--border-dark); transition: all 0.2s; }
+        .spawn-toggle:hover { border-color: var(--border-gold); }
+        .spawn-toggle:has(input:checked) { background: rgba(158, 143, 107, 0.2); border-color: var(--eft-gold); color: var(--text-beige); }
+        .spawn-toggle input { display: none; }
+        .spawn-toggle-icon { font-size: 0.9rem; }
+        .scav-icon { color: #5c8dd6; }
+        .sniper-icon { color: #5c8dd6; }
+        .pmc-icon { color: #4a8c4a; }
+        .boss-icon { color: #c94c4c; }
+        
+        /* Spawn Markers on Map */
+        .spawn-marker { border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.5); cursor: pointer; }
+        .spawn-marker.scav { background: #5c8dd6; color: #fff; border: 2px solid #3a6db3; }
+        .spawn-marker.sniper { background: #4a7cc9; color: #fff; border: 2px solid #2d5a9e; }
+        .spawn-marker.pmc { background: #4a8c4a; color: #fff; border: 2px solid #2d6b2d; }
+        .spawn-marker.boss { background: #c94c4c; color: #fff; border: 2px solid #a33; }
+        
+        .spawn-marker-icon { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
@@ -394,6 +424,38 @@
                             </div>
                         </div>
                         <div id="mapHint" class="map-hint" style="display: none;"></div>
+                        
+                        <!-- Multi-Map Tabs (dynamisch generiert) -->
+                        <div id="multiMapTabs" class="multi-map-tabs" style="display: none;">
+                            <div id="mapTabsContainer" class="map-tabs-container"></div>
+                        </div>
+                        
+                        <!-- Spawn Layer Controls -->
+                        <div class="spawn-layer-controls">
+                            <span class="spawn-layer-title">Spawn Layers:</span>
+                            <label class="spawn-toggle" data-layer="scav">
+                                <input type="checkbox" onchange="toggleSpawnLayer('scav')">
+                                <span class="spawn-toggle-icon scav-icon">☠☠☠</span>
+                                <span>Scavs</span>
+                            </label>
+                            <label class="spawn-toggle" data-layer="sniper">
+                                <input type="checkbox" onchange="toggleSpawnLayer('sniper')">
+                                <span class="spawn-toggle-icon sniper-icon">⌖</span>
+                                <span>Sniper</span>
+                            </label>
+                            <label class="spawn-toggle" data-layer="pmc">
+                                <input type="checkbox" onchange="toggleSpawnLayer('pmc')">
+                                <span class="spawn-toggle-icon pmc-icon">⚔</span>
+                                <span>PMC</span>
+                            </label>
+                            <label class="spawn-toggle" data-layer="boss">
+                                <input type="checkbox" onchange="toggleSpawnLayer('boss')">
+                                <span class="spawn-toggle-icon boss-icon">💀</span>
+                                <span>Boss</span>
+                            </label>
+                            <button class="btn-tarkov btn-apply-all" onclick="applySpawnLayersToAllMaps()" style="display: none; margin-left: auto; padding: 3px 8px; font-size: 0.7rem;">Apply to All Maps</button>
+                        </div>
+                        
                         <div class="map-controls">
                             <span>Scroll to zoom | Drag to pan | Click markers for details</span>
                             <span class="marker-count" id="markerCount">0 markers</span>
@@ -415,7 +477,7 @@
                         <h6 class="text-beige mb-3">Required Keys</h6>
                         <div id="required-keys"></div>
                     </div>
-                    <div class="col-md-8">
+                    <div class="col-md-8" id="quest-item-tracker-section">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h6 class="text-beige mb-0">Quest Item Tracker</h6>
                             <div class="item-tracker-progress">
@@ -1316,8 +1378,15 @@
             updateMarkerCount(markerCount);
         }
         
-        function updateMarkerCount(count) {
-            document.getElementById('markerCount').textContent = count + ' marker' + (count !== 1 ? 's' : '');
+        function updateMarkerCount(questCount = null) {
+            // If no count provided, calculate quest markers from DOM
+            if (questCount === null) {
+                questCount = document.querySelectorAll('.leaflet-marker-icon:not(.spawn-marker)').length;
+            }
+            // Add spawn markers
+            const spawnCount = Object.values(spawnLayers).reduce((sum, layer) => sum + layer.markers.length, 0);
+            const total = questCount + spawnCount;
+            document.getElementById('markerCount').textContent = total + ' marker' + (total !== 1 ? 's' : '');
         }
 
         // ============================================================================
@@ -1377,6 +1446,12 @@
                 cb.checked = false;
                 const row = cb.closest('.quest-row');
                 if (row) row.classList.remove('selected');
+            });
+            
+            // Update all trader badges
+            document.querySelectorAll('.trader-header').forEach(header => {
+                const groupId = header.id?.replace('btn-', '');
+                if (groupId) updateTraderBadge(groupId);
             });
             
             // Update counter
@@ -1706,10 +1781,12 @@
             }
         }
         
-        function onMapChange() {
+        async function onMapChange() {
             const mapName = document.getElementById('mapSelect').value;
             // Redraw with currently selected quests (if any)
-            initMap(mapName, selectedQuestNamesForMarkers, selectedQuestsForMarkers);
+            await initMap(mapName, selectedQuestNamesForMarkers, selectedQuestsForMarkers);
+            // Also render spawn markers
+            await renderSpawnMarkers();
         }
 
         // ============================================================================
@@ -1718,7 +1795,7 @@
         
         async function planRaid() {
             const resultBox = document.getElementById('planning-result');
-            const mapName = document.getElementById('mapSelect').value;
+            const mapSelect = document.getElementById('mapSelect');
             const savedQuests = getSavedQuests();
             
             if (savedQuests.size === 0) {
@@ -1732,11 +1809,32 @@
             selectedQuestNamesForMarkers = selectedQuests.map(q => q.name);
             selectedQuestsForMarkers = selectedQuests;
             
+            // Analyze which maps are needed for selected quests
+            const mapAnalysis = analyzeQuestMaps(selectedQuests);
+            
+            // Setup multi-map tabs if multiple maps needed
+            if (mapAnalysis.maps.length > 1) {
+                setupMultiMapTabs(mapAnalysis.maps, mapAnalysis.questsByMap);
+            } else {
+                resetMultiMapMode();
+            }
+            
             resultBox.style.display = 'block';
             resultBox.scrollIntoView({ behavior: 'smooth' });
             
+            // Determine which map to show
+            let mapName;
+            if (multiMapMode && mapAnalysis.maps.length > 0) {
+                mapName = mapAnalysis.maps[0]; // First required map
+            } else {
+                mapName = mapSelect.value;
+            }
+            
             // Initialize map with selected quest markers
             await initMap(mapName, selectedQuestNamesForMarkers, selectedQuestsForMarkers);
+            
+            // Render spawn markers if any layers are enabled
+            await renderSpawnMarkers();
             
             // Collect items provided by quest starts
             const providedItemIds = new Set();
@@ -3496,6 +3594,427 @@
         }
 
         // ============================================================================
+        // SPAWN LAYER SYSTEM
+        // ============================================================================
+        
+        // Spawn data cache per map
+        let mapSpawnData = {};
+        let spawnLayers = {
+            scav: { enabled: false, markers: [] },
+            sniper: { enabled: false, markers: [] },
+            pmc: { enabled: false, markers: [] },
+            boss: { enabled: false, markers: [] }
+        };
+        
+        // Per-map layer settings for multi-map mode
+        let perMapLayerSettings = {};
+        
+        // Currently active map in multi-map mode
+        let activeMapTab = null;
+        let multiMapMode = false;
+        let requiredMaps = [];
+        
+        async function loadMapSpawnData(mapName) {
+            // Check cache first
+            if (mapSpawnData[mapName]) {
+                return mapSpawnData[mapName];
+            }
+            
+            try {
+                const query = `{
+                    maps(name: "${mapName}") {
+                        name
+                        normalizedName
+                        spawns {
+                            zoneName
+                            position { x y z }
+                            sides
+                            categories
+                        }
+                        bosses {
+                            boss { name normalizedName }
+                            spawnChance
+                            spawnLocations {
+                                name
+                                position { x y z }
+                            }
+                        }
+                    }
+                }`;
+                
+                const response = await fetch('https://api.tarkov.dev/graphql', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query })
+                });
+                
+                const data = await response.json();
+                const mapData = data?.data?.maps?.[0];
+                
+                if (mapData) {
+                    // Process spawn data
+                    const processed = {
+                        scav: [],
+                        sniper: [],
+                        pmc: [],
+                        boss: []
+                    };
+                    
+                    // Process regular spawns
+                    if (mapData.spawns) {
+                        mapData.spawns.forEach(spawn => {
+                            if (!spawn.position) return;
+                            
+                            const spawnInfo = {
+                                zone: spawn.zoneName,
+                                x: spawn.position.x,
+                                y: spawn.position.z, // Note: y and z are often swapped in game coords
+                                sides: spawn.sides || [],
+                                categories: spawn.categories || []
+                            };
+                            
+                            // Categorize spawn
+                            if (spawn.sides?.includes('scav')) {
+                                if (spawn.categories?.includes('sniper')) {
+                                    processed.sniper.push(spawnInfo);
+                                } else {
+                                    processed.scav.push(spawnInfo);
+                                }
+                            }
+                            if (spawn.sides?.includes('pmc')) {
+                                processed.pmc.push(spawnInfo);
+                            }
+                        });
+                    }
+                    
+                    // Process boss spawns
+                    if (mapData.bosses) {
+                        mapData.bosses.forEach(bossSpawn => {
+                            if (bossSpawn.spawnLocations) {
+                                bossSpawn.spawnLocations.forEach(loc => {
+                                    if (loc.position) {
+                                        processed.boss.push({
+                                            name: bossSpawn.boss?.name || 'Boss',
+                                            zone: loc.name,
+                                            x: loc.position.x,
+                                            y: loc.position.z,
+                                            spawnChance: bossSpawn.spawnChance
+                                        });
+                                    }
+                                });
+                            }
+                        });
+                    }
+                    
+                    mapSpawnData[mapName] = processed;
+                    return processed;
+                }
+            } catch (err) {
+                console.error('Error loading spawn data:', err);
+            }
+            
+            return null;
+        }
+        
+        function toggleSpawnLayer(layerType) {
+            spawnLayers[layerType].enabled = !spawnLayers[layerType].enabled;
+            
+            // Save to per-map settings if in multi-map mode
+            if (multiMapMode && activeMapTab) {
+                if (!perMapLayerSettings[activeMapTab]) {
+                    perMapLayerSettings[activeMapTab] = { scav: false, sniper: false, pmc: false, boss: false };
+                }
+                perMapLayerSettings[activeMapTab][layerType] = spawnLayers[layerType].enabled;
+            }
+            
+            // Show "Apply to All" button in multi-map mode
+            const applyAllBtn = document.querySelector('.btn-apply-all');
+            if (applyAllBtn && multiMapMode) {
+                applyAllBtn.style.display = 'inline-block';
+            }
+            
+            renderSpawnMarkers();
+        }
+        
+        function applySpawnLayersToAllMaps() {
+            const currentSettings = {
+                scav: spawnLayers.scav.enabled,
+                sniper: spawnLayers.sniper.enabled,
+                pmc: spawnLayers.pmc.enabled,
+                boss: spawnLayers.boss.enabled
+            };
+            
+            requiredMaps.forEach(mapKey => {
+                perMapLayerSettings[mapKey] = { ...currentSettings };
+            });
+            
+            // Hide button after applying
+            const applyAllBtn = document.querySelector('.btn-apply-all');
+            if (applyAllBtn) applyAllBtn.style.display = 'none';
+        }
+        
+        async function renderSpawnMarkers() {
+            const currentMap = activeMapTab || document.getElementById('mapSelect')?.value || 'customs';
+            
+            // Clear existing spawn markers
+            Object.values(spawnLayers).forEach(layer => {
+                layer.markers.forEach(m => m.remove());
+                layer.markers = [];
+            });
+            
+            // Load spawn data for current map
+            const spawns = await loadMapSpawnData(currentMap);
+            if (!spawns) return;
+            
+            // Get map dimensions for coordinate conversion
+            const mapContainer = document.getElementById('map');
+            if (!mapContainer || !map) return;
+            
+            const mapConfig = MAP_CONFIG[currentMap];
+            if (!mapConfig) return;
+            
+            // Render each enabled layer
+            for (const [layerType, layer] of Object.entries(spawnLayers)) {
+                if (!layer.enabled) continue;
+                
+                const spawnPoints = spawns[layerType] || [];
+                
+                spawnPoints.forEach(spawn => {
+                    // Convert game coordinates to map coordinates
+                    // This may need adjustment based on actual coordinate systems
+                    const coords = convertGameCoordsToMap(spawn.x, spawn.y, currentMap);
+                    if (!coords) return;
+                    
+                    // Create marker icon based on type
+                    const icon = createSpawnIcon(layerType, spawn);
+                    
+                    const marker = L.marker([coords.y, coords.x], { icon })
+                        .addTo(map);
+                    
+                    // Add tooltip
+                    let tooltip = '';
+                    if (layerType === 'boss') {
+                        tooltip = `${spawn.name}<br>Spawn: ${Math.round((spawn.spawnChance || 0) * 100)}%<br>${spawn.zone || ''}`;
+                    } else {
+                        tooltip = `${layerType.toUpperCase()} Spawn<br>${spawn.zone || ''}`;
+                    }
+                    marker.bindTooltip(tooltip, { className: 'spawn-tooltip' });
+                    
+                    layer.markers.push(marker);
+                });
+            }
+            
+            updateMarkerCount();
+        }
+        
+        function createSpawnIcon(type, spawn) {
+            let html = '';
+            let className = `spawn-marker ${type}`;
+            
+            switch(type) {
+                case 'scav':
+                    html = '<div class="spawn-marker-icon">☠☠</div>';
+                    break;
+                case 'sniper':
+                    html = '<div class="spawn-marker-icon">⌖</div>';
+                    break;
+                case 'pmc':
+                    html = '<div class="spawn-marker-icon">⚔</div>';
+                    break;
+                case 'boss':
+                    html = '<div class="spawn-marker-icon">💀</div>';
+                    break;
+            }
+            
+            return L.divIcon({
+                html: html,
+                className: className,
+                iconSize: [24, 24],
+                iconAnchor: [12, 12]
+            });
+        }
+        
+        function convertGameCoordsToMap(gameX, gameY, mapKey) {
+            // Coordinate conversion - this needs calibration per map
+            // tarkovdata SVG maps use a specific coordinate system
+            // For now, using a simple transformation that may need adjustment
+            
+            // Different maps have different scales and offsets
+            const mapTransforms = {
+                customs: { scaleX: 1, scaleY: -1, offsetX: 0, offsetY: 0 },
+                woods: { scaleX: 1, scaleY: -1, offsetX: 0, offsetY: 0 },
+                shoreline: { scaleX: 1, scaleY: -1, offsetX: 0, offsetY: 0 },
+                interchange: { scaleX: 1, scaleY: -1, offsetX: 0, offsetY: 0 },
+                reserve: { scaleX: 1, scaleY: -1, offsetX: 0, offsetY: 0 },
+                lighthouse: { scaleX: 1, scaleY: -1, offsetX: 0, offsetY: 0 },
+                streets: { scaleX: 1, scaleY: -1, offsetX: 0, offsetY: 0 },
+                groundzero: { scaleX: 1, scaleY: -1, offsetX: 0, offsetY: 0 },
+                factory: { scaleX: 1, scaleY: -1, offsetX: 0, offsetY: 0 },
+                labs: { scaleX: 1, scaleY: -1, offsetX: 0, offsetY: 0 }
+            };
+            
+            const transform = mapTransforms[mapKey] || { scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0 };
+            
+            return {
+                x: gameX * transform.scaleX + transform.offsetX,
+                y: gameY * transform.scaleY + transform.offsetY
+            };
+        }
+
+        // ============================================================================
+        // MULTI-MAP TAB SYSTEM
+        // ============================================================================
+        
+        function analyzeQuestMaps(selectedQuests) {
+            const mapSet = new Set();
+            const questsByMap = {};
+            
+            selectedQuests.forEach(quest => {
+                // Check quest's main map
+                const questMap = quest.map?.normalizedName;
+                
+                // Check objectives for specific map requirements
+                if (quest.objectives) {
+                    quest.objectives.forEach(obj => {
+                        if (obj.maps && obj.maps.length > 0) {
+                            obj.maps.forEach(m => {
+                                const mapKey = m.normalizedName;
+                                if (mapKey && mapKey !== 'any') {
+                                    mapSet.add(mapKey);
+                                    if (!questsByMap[mapKey]) questsByMap[mapKey] = [];
+                                    if (!questsByMap[mapKey].includes(quest.name)) {
+                                        questsByMap[mapKey].push(quest.name);
+                                    }
+                                }
+                            });
+                        }
+                    });
+                }
+                
+                // If quest has a specific map (not "any"), add it
+                if (questMap && questMap !== 'any') {
+                    mapSet.add(questMap);
+                    if (!questsByMap[questMap]) questsByMap[questMap] = [];
+                    if (!questsByMap[questMap].includes(quest.name)) {
+                        questsByMap[questMap].push(quest.name);
+                    }
+                }
+            });
+            
+            return {
+                maps: Array.from(mapSet),
+                questsByMap: questsByMap
+            };
+        }
+        
+        function setupMultiMapTabs(maps, questsByMap) {
+            const tabsContainer = document.getElementById('multiMapTabs');
+            const tabsInner = document.getElementById('mapTabsContainer');
+            const mapSelect = document.getElementById('mapSelect');
+            
+            if (maps.length <= 1) {
+                // Single map mode - hide tabs, show dropdown
+                tabsContainer.style.display = 'none';
+                mapSelect.closest('.row')?.style.setProperty('display', '');
+                multiMapMode = false;
+                requiredMaps = [];
+                return;
+            }
+            
+            // Multi-map mode
+            multiMapMode = true;
+            requiredMaps = maps;
+            tabsContainer.style.display = 'block';
+            
+            // Hide map dropdown in multi-map mode
+            mapSelect.closest('.col-md-6')?.style.setProperty('display', 'none');
+            
+            // Build tabs HTML
+            const mapLabels = {
+                customs: 'Customs',
+                woods: 'Woods',
+                shoreline: 'Shoreline',
+                interchange: 'Interchange',
+                reserve: 'Reserve',
+                lighthouse: 'Lighthouse',
+                streets: 'Streets',
+                groundzero: 'Ground Zero',
+                factory: 'Factory',
+                labs: 'Labs'
+            };
+            
+            let tabsHtml = '';
+            maps.forEach((mapKey, idx) => {
+                const questCount = questsByMap[mapKey]?.length || 0;
+                const isActive = idx === 0;
+                tabsHtml += `
+                    <div class="map-tab ${isActive ? 'active' : ''}" data-map="${mapKey}" onclick="switchMapTab('${mapKey}')">
+                        ${mapLabels[mapKey] || mapKey}
+                        <span class="tab-quest-count">${questCount}</span>
+                    </div>
+                `;
+                
+                // Initialize per-map layer settings
+                if (!perMapLayerSettings[mapKey]) {
+                    perMapLayerSettings[mapKey] = { scav: false, sniper: false, pmc: false, boss: false };
+                }
+            });
+            
+            tabsInner.innerHTML = tabsHtml;
+            
+            // Set first map as active
+            activeMapTab = maps[0];
+            
+            // Show "Apply to All" button
+            const applyAllBtn = document.querySelector('.btn-apply-all');
+            if (applyAllBtn) applyAllBtn.style.display = 'none'; // Hidden until user changes settings
+        }
+        
+        async function switchMapTab(mapKey) {
+            // Update tab UI
+            document.querySelectorAll('.map-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.map === mapKey);
+            });
+            
+            activeMapTab = mapKey;
+            
+            // Restore layer settings for this map
+            if (perMapLayerSettings[mapKey]) {
+                Object.entries(perMapLayerSettings[mapKey]).forEach(([layer, enabled]) => {
+                    spawnLayers[layer].enabled = enabled;
+                    const checkbox = document.querySelector(`.spawn-toggle[data-layer="${layer}"] input`);
+                    if (checkbox) checkbox.checked = enabled;
+                });
+            }
+            
+            // Reload map with new content
+            await initMap(mapKey, selectedQuestNamesForMarkers, selectedQuestsForMarkers);
+            
+            // Render spawn markers for new map
+            await renderSpawnMarkers();
+        }
+        
+        function resetMultiMapMode() {
+            multiMapMode = false;
+            activeMapTab = null;
+            requiredMaps = [];
+            perMapLayerSettings = {};
+            
+            const tabsContainer = document.getElementById('multiMapTabs');
+            if (tabsContainer) tabsContainer.style.display = 'none';
+            
+            const mapSelect = document.getElementById('mapSelect');
+            mapSelect?.closest('.col-md-6')?.style.setProperty('display', '');
+            
+            // Reset layer toggles
+            Object.keys(spawnLayers).forEach(layer => {
+                spawnLayers[layer].enabled = false;
+                const checkbox = document.querySelector(`.spawn-toggle[data-layer="${layer}"] input`);
+                if (checkbox) checkbox.checked = false;
+            });
+        }
+
+        // ============================================================================
         // QUEST ITEM TRACKER
         // ============================================================================
         
@@ -3602,16 +4121,19 @@
         
         function renderQuestItemTracker(questItemsData) {
             const container = document.getElementById('quest-item-tracker');
+            const section = document.getElementById('quest-item-tracker-section');
             
             // Load saved progress
             loadCollectedQuestItems();
             
             if (!questItemsData || questItemsData.length === 0) {
-                container.innerHTML = '<span class="text-sub p-2">No items required for selected quests.</span>';
-                document.getElementById('tracker-progress').textContent = '0/0';
-                document.getElementById('tracker-progress-bar').style.width = '0%';
+                // Hide entire section when no items needed
+                if (section) section.style.display = 'none';
                 return;
             }
+            
+            // Show section
+            if (section) section.style.display = '';
             
             let html = '';
             let totalItems = 0;
