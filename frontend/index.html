@@ -448,10 +448,10 @@
                                 <span class="spawn-toggle-icon pmc-icon">⚔</span>
                                 <span>PMC</span>
                             </label>
-                            <label class="spawn-toggle" data-layer="boss">
-                                <input type="checkbox" onchange="toggleSpawnLayer('boss')">
+                            <label class="spawn-toggle" data-layer="boss" title="Boss positions not available via API" style="opacity: 0.5; cursor: not-allowed;">
+                                <input type="checkbox" disabled>
                                 <span class="spawn-toggle-icon boss-icon">💀</span>
-                                <span>Boss</span>
+                                <span>Boss (N/A)</span>
                             </label>
                             <button class="btn-tarkov btn-apply-all" onclick="applySpawnLayersToAllMaps()" style="display: none; margin-left: auto; padding: 3px 8px; font-size: 0.7rem;">Apply to All Maps</button>
                         </div>
@@ -936,7 +936,7 @@
         // invertLeafletY: if false, don't do (height - pixelY) for Leaflet
         const MAP_CONFIG = {
             customs:     { file: 'maps/Customs.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
-            woods:       { file: 'maps/Woods.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
+            woods:       { file: 'maps/Woods.svg', scaleX: 1, scaleY: 1, offsetX: 8, offsetY: 0, flipY: false, invertLeafletY: true },
             shoreline:   { file: 'maps/Shoreline.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
             interchange: { file: 'maps/Interchange.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
             reserve:     { file: 'maps/Reserve.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
@@ -3966,10 +3966,20 @@
                 const spawnPoints = spawns[layerType] || [];
                 console.log(`${layerType}: ${spawnPoints.length} spawn points`);
                 
-                spawnPoints.forEach(spawn => {
+                // Log first few spawn coordinates for debugging
+                if (spawnPoints.length > 0) {
+                    console.log(`Sample ${layerType} spawn coords:`, spawnPoints.slice(0, 3).map(s => ({x: s.x, z: s.y, zone: s.zone})));
+                }
+                
+                spawnPoints.forEach((spawn, idx) => {
                     // Convert game coordinates to map coordinates
                     const coords = convertGameCoordsToMap(spawn.x, spawn.y, currentMap);
                     if (!coords) return;
+                    
+                    // Log first marker coordinates for debugging
+                    if (idx === 0) {
+                        console.log(`First ${layerType} marker: game(${spawn.x}, ${spawn.y}) -> pixel(${coords.x.toFixed(1)}, ${coords.y.toFixed(1)})`);
+                    }
                     
                     // Create marker icon based on type
                     const icon = createSpawnIcon(layerType, spawn);
@@ -4023,30 +4033,53 @@
             });
         }
         
-        function convertGameCoordsToMap(gameX, gameY, mapKey) {
-            // Coordinate conversion - this needs calibration per map
-            // tarkovdata SVG maps use a specific coordinate system
-            // For now, using a simple transformation that may need adjustment
+        function convertGameCoordsToMap(gameX, gameZ, mapKey) {
+            // Convert game coordinates (in meters) to map pixel coordinates
+            // Each map has different coordinate bounds in the game
+            // These bounds are approximations based on known map data
             
-            // Different maps have different scales and offsets
-            const mapTransforms = {
-                customs: { scaleX: 1, scaleY: -1, offsetX: 0, offsetY: 0 },
-                woods: { scaleX: 1, scaleY: -1, offsetX: 0, offsetY: 0 },
-                shoreline: { scaleX: 1, scaleY: -1, offsetX: 0, offsetY: 0 },
-                interchange: { scaleX: 1, scaleY: -1, offsetX: 0, offsetY: 0 },
-                reserve: { scaleX: 1, scaleY: -1, offsetX: 0, offsetY: 0 },
-                lighthouse: { scaleX: 1, scaleY: -1, offsetX: 0, offsetY: 0 },
-                streets: { scaleX: 1, scaleY: -1, offsetX: 0, offsetY: 0 },
-                groundzero: { scaleX: 1, scaleY: -1, offsetX: 0, offsetY: 0 },
-                factory: { scaleX: 1, scaleY: -1, offsetX: 0, offsetY: 0 },
-                labs: { scaleX: 1, scaleY: -1, offsetX: 0, offsetY: 0 }
+            const mapBounds = {
+                // { minX, maxX, minZ, maxZ } - game coordinate bounds
+                // Coordinates are in game units (meters)
+                shoreline: { minX: -400, maxX: 400, minZ: -650, maxZ: 200, flipX: false, flipZ: true },
+                customs: { minX: -300, maxX: 500, minZ: -200, maxZ: 350, flipX: false, flipZ: true },
+                woods: { minX: -500, maxX: 400, minZ: -700, maxZ: 300, flipX: false, flipZ: true },
+                interchange: { minX: -200, maxX: 300, minZ: -300, maxZ: 200, flipX: false, flipZ: true },
+                reserve: { minX: -350, maxX: 250, minZ: -350, maxZ: 250, flipX: false, flipZ: true },
+                lighthouse: { minX: -300, maxX: 600, minZ: -500, maxZ: 200, flipX: false, flipZ: true },
+                streets: { minX: -350, maxX: 450, minZ: -400, maxZ: 400, flipX: false, flipZ: true },
+                groundzero: { minX: -200, maxX: 200, minZ: -200, maxZ: 200, flipX: false, flipZ: true },
+                factory: { minX: -60, maxX: 60, minZ: -60, maxZ: 60, flipX: false, flipZ: true },
+                labs: { minX: -200, maxX: 200, minZ: -200, maxZ: 200, flipX: false, flipZ: true }
             };
             
-            const transform = mapTransforms[mapKey] || { scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0 };
+            const bounds = mapBounds[mapKey];
+            if (!bounds) {
+                console.warn('No bounds defined for map:', mapKey);
+                return null;
+            }
             
+            // Normalize to 0-1 range
+            let normalizedX = (gameX - bounds.minX) / (bounds.maxX - bounds.minX);
+            let normalizedZ = (gameZ - bounds.minZ) / (bounds.maxZ - bounds.minZ);
+            
+            // Apply flips if needed
+            if (bounds.flipX) normalizedX = 1 - normalizedX;
+            if (bounds.flipZ) normalizedZ = 1 - normalizedZ;
+            
+            // Clamp to 0-1 range (spawns outside bounds will be at edges)
+            normalizedX = Math.max(0, Math.min(1, normalizedX));
+            normalizedZ = Math.max(0, Math.min(1, normalizedZ));
+            
+            // Convert to pixel coordinates
+            const pixelX = normalizedX * currentMapWidth;
+            const pixelY = normalizedZ * currentMapHeight;
+            
+            // For Leaflet with CRS.Simple, Y increases downward from top
+            // So we need to invert: leafletY = mapHeight - pixelY
             return {
-                x: gameX * transform.scaleX + transform.offsetX,
-                y: gameY * transform.scaleY + transform.offsetY
+                x: pixelX,
+                y: currentMapHeight - pixelY
             };
         }
 
