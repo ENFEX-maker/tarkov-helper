@@ -431,29 +431,29 @@
                         </div>
                         
                         <!-- Spawn Layer Controls -->
-                        <div class="spawn-layer-controls">
+                        <div class="spawn-layer-controls" style="opacity: 0.5;">
                             <span class="spawn-layer-title">Spawn Layers:</span>
-                            <label class="spawn-toggle" data-layer="scav">
-                                <input type="checkbox" onchange="toggleSpawnLayer('scav')">
+                            <span style="color: var(--eft-gold); font-size: 0.8rem; font-style: italic;">Coming Soon</span>
+                            <label class="spawn-toggle" data-layer="scav" style="cursor: not-allowed;">
+                                <input type="checkbox" disabled>
                                 <span class="spawn-toggle-icon scav-icon">☠☠☠</span>
                                 <span>Scavs</span>
                             </label>
-                            <label class="spawn-toggle" data-layer="sniper">
-                                <input type="checkbox" onchange="toggleSpawnLayer('sniper')">
+                            <label class="spawn-toggle" data-layer="sniper" style="cursor: not-allowed;">
+                                <input type="checkbox" disabled>
                                 <span class="spawn-toggle-icon sniper-icon">⌖</span>
                                 <span>Sniper</span>
                             </label>
-                            <label class="spawn-toggle" data-layer="pmc">
-                                <input type="checkbox" onchange="toggleSpawnLayer('pmc')">
+                            <label class="spawn-toggle" data-layer="pmc" style="cursor: not-allowed;">
+                                <input type="checkbox" disabled>
                                 <span class="spawn-toggle-icon pmc-icon">⚔</span>
                                 <span>PMC</span>
                             </label>
-                            <label class="spawn-toggle" data-layer="boss" title="Boss positions not available via API" style="opacity: 0.5; cursor: not-allowed;">
+                            <label class="spawn-toggle" data-layer="boss" style="cursor: not-allowed;">
                                 <input type="checkbox" disabled>
                                 <span class="spawn-toggle-icon boss-icon">💀</span>
-                                <span>Boss (N/A)</span>
+                                <span>Boss</span>
                             </label>
-                            <button class="btn-tarkov btn-apply-all" onclick="applySpawnLayersToAllMaps()" style="display: none; margin-left: auto; padding: 3px 8px; font-size: 0.7rem;">Apply to All Maps</button>
                         </div>
                         
                         <div class="map-controls">
@@ -936,7 +936,7 @@
         // invertLeafletY: if false, don't do (height - pixelY) for Leaflet
         const MAP_CONFIG = {
             customs:     { file: 'maps/Customs.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
-            woods:       { file: 'maps/Woods.svg', scaleX: 1, scaleY: 1, offsetX: 4, offsetY: 0, flipY: false, invertLeafletY: true },
+            woods:       { file: 'maps/Woods.svg', scaleX: 1, scaleY: 1, offsetX: 3, offsetY: 0, flipY: false, invertLeafletY: true },
             shoreline:   { file: 'maps/Shoreline.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
             interchange: { file: 'maps/Interchange.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
             reserve:     { file: 'maps/Reserve.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
