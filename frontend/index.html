@@ -1176,8 +1176,21 @@
         const SUPABASE_URL = 'https://dpryrhcqeviyvssyiwdz.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwcnlyaGNxZXZpeXZzc3lpd2R6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk0OTg0MjEsImV4cCI6MjA4NTA3NDQyMX0.IiYyEjEOU1fSq8DN_7tG2oQPr6Iuft2zMC2TasMXSfI';
         
-        // Initialize Supabase client
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Initialize Supabase client (delayed to ensure SDK is loaded)
+        let supabase = null;
+        
+        function initSupabase() {
+            if (supabase) return supabase;
+            
+            if (window.supabase && window.supabase.createClient) {
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                console.log('Supabase initialized');
+                return supabase;
+            } else {
+                console.error('Supabase SDK not loaded');
+                return null;
+            }
+        }
         
         // Auth state
         let currentUser = null;
@@ -1212,6 +1225,12 @@
                 return;
             }
             
+            if (!supabase) {
+                errorDiv.textContent = 'Authentication service not available';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            
             submitBtn.disabled = true;
             submitBtn.textContent = 'Logging in...';
             
@@ -1238,6 +1257,8 @@
         }
         
         async function logout() {
+            if (!supabase) return;
+            
             try {
                 await supabase.auth.signOut();
                 currentUser = null;
@@ -1305,14 +1326,21 @@
         
         // Check auth state on page load
         async function initAuth() {
+            // Initialize Supabase first
+            const sb = initSupabase();
+            if (!sb) {
+                console.warn('Supabase not available - auth disabled');
+                return;
+            }
+            
             try {
-                const { data: { session } } = await supabase.auth.getSession();
+                const { data: { session } } = await sb.auth.getSession();
                 if (session?.user) {
                     updateAuthUI(session.user);
                 }
                 
                 // Listen for auth changes
-                supabase.auth.onAuthStateChange((event, session) => {
+                sb.auth.onAuthStateChange((event, session) => {
                     updateAuthUI(session?.user || null);
                 });
             } catch (error) {
