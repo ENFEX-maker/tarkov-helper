@@ -95,6 +95,9 @@
         .shopping-item .item-name { font-size: 0.85rem; color: var(--text-main); }
         .shopping-item .item-for { font-size: 0.7rem; color: var(--text-sub); }
         .shopping-item .item-count { color: var(--eft-gold); font-weight: 600; font-size: 0.9rem; }
+        .fir-badge { background: var(--eft-red); color: #fff; font-size: 0.6rem; font-weight: 700; padding: 1px 4px; border-radius: 2px; margin-left: 4px; }
+        .fir-required { border-left: 2px solid var(--eft-red); }
+        .shopping-item .fir-badge { font-size: 0.55rem; }
         
         .quest-info { flex-grow: 1; min-width: 0; }
         .quest-name { font-weight: 600; color: var(--text-beige); font-size: 0.95rem; }
@@ -783,6 +786,42 @@
             </div>
         </div>
         
+        <!-- Raid Share Modal -->
+        <div id="raidShareModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 9999; justify-content: center; align-items: center;">
+            <div style="background: var(--bg-panel); border: 1px solid var(--eft-gold); padding: 25px; max-width: 500px; width: 90%;">
+                <h5 style="color: var(--eft-gold); margin-bottom: 15px;">📤 Share Raid Plan</h5>
+                <p class="text-sub small mb-3">Send this code to your squadmates:</p>
+                
+                <div id="raidShareSummary" style="background: var(--bg-dark); padding: 10px; margin-bottom: 15px; font-size: 0.85rem; border: 1px solid var(--border-dark);"></div>
+                
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <input type="text" id="raidShareCode" class="form-control-tarkov" readonly style="flex: 1; font-family: monospace; font-size: 0.75rem;">
+                    <button class="btn-tarkov" onclick="copyRaidCode()" style="padding: 8px 15px;">📋 Copy</button>
+                </div>
+                
+                <div style="text-align: right;">
+                    <button class="btn-tarkov" onclick="hideRaidShareModal()" style="padding: 8px 15px; background: var(--bg-dark);">Close</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Raid Import Modal -->
+        <div id="raidImportModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 9999; justify-content: center; align-items: center;">
+            <div style="background: var(--bg-panel); border: 1px solid var(--eft-gold); padding: 25px; max-width: 500px; width: 90%;">
+                <h5 style="color: var(--eft-gold); margin-bottom: 15px;">📥 Import Raid Plan</h5>
+                <p class="text-sub small mb-3">Paste the raid code from your squadmate:</p>
+                
+                <input type="text" id="raidImportCode" class="form-control-tarkov w-100 mb-3" placeholder="Paste raid code here..." style="font-family: monospace;">
+                
+                <div id="raidImportPreview" style="display: none; background: var(--bg-dark); padding: 10px; margin-bottom: 15px; font-size: 0.85rem; border: 1px solid var(--border-dark);"></div>
+                
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button class="btn-tarkov" onclick="hideRaidImportModal()" style="padding: 8px 15px; background: var(--bg-dark);">Cancel</button>
+                    <button class="btn-tarkov" onclick="importRaidPlan()" id="btnImportRaid" style="padding: 8px 15px;">🎯 Load Raid</button>
+                </div>
+            </div>
+        </div>
+        
         <!-- Correction Dialog (for editing marker positions) -->
         <div id="correctionDialogOverlay" class="correction-dialog-overlay" style="display: none;">
             <div class="correction-dialog">
@@ -918,6 +957,14 @@
                             </div>
                             <div class="col-md-6">
                                 <button class="btn-tarkov w-100" onclick="planRaid()">Plan Raid</button>
+                            </div>
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <button class="btn-tarkov w-100" onclick="showRaidExportModal()" style="font-size: 0.8rem; padding: 6px 10px;">📤 Share Raid</button>
+                            </div>
+                            <div class="col-6">
+                                <button class="btn-tarkov w-100" onclick="showRaidImportModal()" style="font-size: 0.8rem; padding: 6px 10px;">📥 Import Raid</button>
                             </div>
                         </div>
                         <div id="mapHint" class="map-hint" style="display: none;"></div>
@@ -2713,6 +2760,10 @@
                                     iconLink
                                 }
                                 count
+                                attributes {
+                                    type
+                                    value
+                                }
                             }
                             stationLevelRequirements {
                                 station {
@@ -2794,14 +2845,18 @@
                     if (nextLevel && nextLevel.itemRequirements) {
                         nextLevel.itemRequirements.forEach(req => {
                             const key = req.item.id;
+                            const fir = isFoundInRaid(req.attributes);
                             if (shoppingListItems.has(key)) {
                                 shoppingListItems.get(key).count += req.count;
                                 shoppingListItems.get(key).stations.push(station.name);
+                                // Mark as FIR if any requirement needs FIR
+                                if (fir) shoppingListItems.get(key).fir = true;
                             } else {
                                 shoppingListItems.set(key, {
                                     item: req.item,
                                     count: req.count,
-                                    stations: [station.name]
+                                    stations: [station.name],
+                                    fir: fir
                                 });
                             }
                         });
@@ -2860,6 +2915,13 @@
             return html;
         }
         
+        function isFoundInRaid(attributes) {
+            if (!attributes || !Array.isArray(attributes)) return false;
+            return attributes.some(attr => 
+                attr.type === 'foundInRaid' && (attr.value === 'true' || attr.value === true)
+            );
+        }
+        
         function renderLevelRequirements(level) {
             let html = '';
             
@@ -2869,13 +2931,16 @@
                     <div class="hideout-req-section">
                         <div class="req-title">📦 Items Required</div>
                         <div class="hideout-req-items">
-                            ${level.itemRequirements.map(req => `
-                                <div class="hideout-req-item">
+                            ${level.itemRequirements.map(req => {
+                                const fir = isFoundInRaid(req.attributes);
+                                return `
+                                <div class="hideout-req-item ${fir ? 'fir-required' : ''}">
                                     ${req.item.iconLink ? `<img src="${req.item.iconLink}" alt="${req.item.shortName}">` : ''}
                                     <span class="item-count">${req.count}x</span>
                                     <span class="item-name" title="${req.item.name}">${req.item.shortName || req.item.name}</span>
+                                    ${fir ? '<span class="fir-badge" title="Found in Raid required">FIR</span>' : ''}
                                 </div>
-                            `).join('')}
+                            `}).join('')}
                         </div>
                     </div>
                 `;
@@ -2957,10 +3022,10 @@
             let html = '';
             sortedItems.forEach(data => {
                 html += `
-                    <div class="shopping-item">
+                    <div class="shopping-item ${data.fir ? 'fir-required' : ''}">
                         ${data.item.iconLink ? `<img src="${data.item.iconLink}" alt="${data.item.shortName}">` : ''}
                         <div class="item-info">
-                            <div class="item-name">${data.item.shortName || data.item.name}</div>
+                            <div class="item-name">${data.item.shortName || data.item.name} ${data.fir ? '<span class="fir-badge">FIR</span>' : ''}</div>
                             <div class="item-for">For: ${data.stations.slice(0, 2).join(', ')}${data.stations.length > 2 ? ` +${data.stations.length - 2} more` : ''}</div>
                         </div>
                         <span class="item-count">${data.count}x</span>
@@ -3735,6 +3800,175 @@
                     </div>
                 `).join('') 
                 : '<div class="text-sub p-2">No immediate unlocks.</div>';
+        }
+        
+        // ============================================================================
+        // RAID PLAN SHARING
+        // ============================================================================
+        
+        function showRaidExportModal() {
+            const savedQuests = getSavedQuests();
+            
+            if (savedQuests.size === 0) {
+                alert('No tasks selected. Select some tasks first, then click "Plan Raid" before sharing.');
+                return;
+            }
+            
+            const selectedQuests = allQuestsGlobal.filter(q => savedQuests.has(q.id));
+            const currentMap = document.getElementById('mapSelect')?.value || 'customs';
+            
+            // Build raid plan data
+            const raidPlan = {
+                v: 1, // version
+                m: currentMap,
+                q: selectedQuests.map(q => ({ id: q.id, n: q.name }))
+            };
+            
+            // Encode as Base64
+            const json = JSON.stringify(raidPlan);
+            const code = btoa(unescape(encodeURIComponent(json)));
+            
+            // Build summary
+            const mapNames = {
+                customs: 'Customs', factory: 'Factory', groundzero: 'Ground Zero',
+                interchange: 'Interchange', labs: 'The Lab', lighthouse: 'Lighthouse',
+                reserve: 'Reserve', shoreline: 'Shoreline', streets: 'Streets of Tarkov', woods: 'Woods'
+            };
+            
+            const summary = `
+                <div style="color: var(--eft-gold); margin-bottom: 8px;">🗺️ ${mapNames[currentMap] || currentMap}</div>
+                <div style="color: var(--text-beige);">${selectedQuests.length} Tasks:</div>
+                <ul style="margin: 5px 0 0 20px; padding: 0; color: var(--text-sub); font-size: 0.8rem;">
+                    ${selectedQuests.slice(0, 5).map(q => `<li>${q.name}</li>`).join('')}
+                    ${selectedQuests.length > 5 ? `<li>... and ${selectedQuests.length - 5} more</li>` : ''}
+                </ul>
+            `;
+            
+            document.getElementById('raidShareSummary').innerHTML = summary;
+            document.getElementById('raidShareCode').value = code;
+            document.getElementById('raidShareModal').style.display = 'flex';
+        }
+        
+        function hideRaidShareModal() {
+            document.getElementById('raidShareModal').style.display = 'none';
+        }
+        
+        function copyRaidCode() {
+            const input = document.getElementById('raidShareCode');
+            input.select();
+            document.execCommand('copy');
+            navigator.clipboard.writeText(input.value).catch(() => {});
+            
+            // Visual feedback
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = '✓ Copied!';
+            btn.style.background = 'var(--eft-green)';
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.style.background = '';
+            }, 2000);
+        }
+        
+        function showRaidImportModal() {
+            document.getElementById('raidImportCode').value = '';
+            document.getElementById('raidImportPreview').style.display = 'none';
+            document.getElementById('raidImportModal').style.display = 'flex';
+            document.getElementById('raidImportCode').focus();
+            
+            // Add input listener for preview
+            document.getElementById('raidImportCode').oninput = previewRaidImport;
+        }
+        
+        function hideRaidImportModal() {
+            document.getElementById('raidImportModal').style.display = 'none';
+        }
+        
+        function previewRaidImport() {
+            const code = document.getElementById('raidImportCode').value.trim();
+            const preview = document.getElementById('raidImportPreview');
+            
+            if (!code) {
+                preview.style.display = 'none';
+                return;
+            }
+            
+            try {
+                const json = decodeURIComponent(escape(atob(code)));
+                const raidPlan = JSON.parse(json);
+                
+                if (!raidPlan.q || !Array.isArray(raidPlan.q)) {
+                    throw new Error('Invalid raid plan format');
+                }
+                
+                const mapNames = {
+                    customs: 'Customs', factory: 'Factory', groundzero: 'Ground Zero',
+                    interchange: 'Interchange', labs: 'The Lab', lighthouse: 'Lighthouse',
+                    reserve: 'Reserve', shoreline: 'Shoreline', streets: 'Streets of Tarkov', woods: 'Woods'
+                };
+                
+                preview.innerHTML = `
+                    <div style="color: var(--eft-green); margin-bottom: 5px;">✓ Valid raid plan</div>
+                    <div style="color: var(--eft-gold);">🗺️ ${mapNames[raidPlan.m] || raidPlan.m || 'Unknown'}</div>
+                    <div style="color: var(--text-beige);">${raidPlan.q.length} Tasks</div>
+                `;
+                preview.style.display = 'block';
+                
+            } catch (e) {
+                preview.innerHTML = `<div style="color: var(--eft-red);">⚠ Invalid code</div>`;
+                preview.style.display = 'block';
+            }
+        }
+        
+        async function importRaidPlan() {
+            const code = document.getElementById('raidImportCode').value.trim();
+            
+            if (!code) {
+                alert('Please paste a raid code first.');
+                return;
+            }
+            
+            try {
+                const json = decodeURIComponent(escape(atob(code)));
+                const raidPlan = JSON.parse(json);
+                
+                if (!raidPlan.q || !Array.isArray(raidPlan.q)) {
+                    throw new Error('Invalid raid plan format');
+                }
+                
+                // Clear current selection
+                localStorage.setItem(STORAGE_KEY_QUESTS, JSON.stringify([]));
+                
+                // Select the imported quests
+                const questIds = raidPlan.q.map(q => q.id);
+                localStorage.setItem(STORAGE_KEY_QUESTS, JSON.stringify(questIds));
+                
+                // Set map if provided
+                if (raidPlan.m) {
+                    const mapSelect = document.getElementById('mapSelect');
+                    if (mapSelect) {
+                        mapSelect.value = raidPlan.m;
+                    }
+                }
+                
+                // Re-render quest list with new selection
+                renderQuestList();
+                updateSelectedQuestCount();
+                
+                // Close modal
+                hideRaidImportModal();
+                
+                // Auto-plan the raid
+                await planRaid();
+                
+                // Show success message
+                const questNames = raidPlan.q.map(q => q.n).slice(0, 3).join(', ');
+                const moreText = raidPlan.q.length > 3 ? ` +${raidPlan.q.length - 3} more` : '';
+                alert(`Raid plan loaded!\n\nTasks: ${questNames}${moreText}`);
+                
+            } catch (e) {
+                alert('Error importing raid plan: ' + e.message);
+            }
         }
 
         // ============================================================================
