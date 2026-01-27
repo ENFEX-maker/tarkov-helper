@@ -43,10 +43,21 @@
         .trader-header h6 { margin: 0; font-size: 1.1rem; flex-grow: 1; }
         .trader-quests { display: none; padding: 0 15px 15px; }
         .trader-quests.show { display: block; }
-        .quest-row { display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--bg-dark); border: 1px solid var(--border-dark); margin-bottom: 6px; cursor: pointer; transition: all 0.15s ease; }
+        .quest-row { display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--bg-dark); border: 1px solid var(--border-dark); margin-bottom: 6px; cursor: pointer; transition: all 0.15s ease; position: relative; }
         .quest-row:hover { background: var(--bg-hover); border-color: var(--eft-gold); }
         .quest-row.selected { background: rgba(158, 143, 107, 0.15); border-color: var(--eft-gold); }
+        .quest-row.completed { opacity: 0.5; background: rgba(74, 122, 74, 0.1); border-color: var(--eft-green); }
+        .quest-row.completed .quest-name { text-decoration: line-through; color: var(--text-sub); }
+        .quest-row.completed .complete-btn { background: var(--eft-green); color: #fff; }
+        .quest-row.locked { opacity: 0.4; }
+        .quest-row.locked::before { content: '🔒'; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 0.9rem; }
         .quest-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--eft-gold); cursor: pointer; flex-shrink: 0; }
+        .complete-btn { background: var(--bg-element); border: 1px solid var(--border-dark); color: var(--text-sub); padding: 2px 6px; font-size: 0.65rem; cursor: pointer; transition: all 0.15s; border-radius: 2px; flex-shrink: 0; }
+        .complete-btn:hover { background: var(--eft-green); color: #fff; border-color: var(--eft-green); }
+        .quest-prereqs { font-size: 0.7rem; color: var(--text-sub); margin-top: 3px; }
+        .quest-prereqs .prereq-tag { background: var(--bg-element); padding: 1px 5px; margin-right: 4px; border-radius: 2px; }
+        .quest-prereqs .prereq-done { color: var(--eft-green); }
+        .quest-prereqs .prereq-missing { color: var(--eft-red); }
         .quest-info { flex-grow: 1; min-width: 0; }
         .quest-name { font-weight: 600; color: var(--text-beige); font-size: 0.95rem; }
         .quest-name a { color: inherit; text-decoration: none; }
@@ -70,12 +81,20 @@
         .legend-items { display: flex; flex-wrap: wrap; gap: 12px; }
         .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--text-main); }
         .legend-color { width: 16px; height: 16px; border-radius: 50%; border: 2px solid; flex-shrink: 0; }
-        .marker-label { background: rgba(0,0,0,0.85) !important; border: 1px solid var(--eft-gold) !important; color: var(--text-beige) !important; font-family: 'Rajdhani', sans-serif !important; padding: 5px 10px !important; border-radius: 0 !important; }
-        .quest-marker-popup { min-width: 200px; max-width: 280px; }
-        .quest-marker-popup h6 { color: var(--eft-gold); margin-bottom: 8px; font-size: 0.9rem; }
-        .quest-marker-popup p { margin: 0; font-size: 0.85rem; color: var(--text-main); }
-        .quest-marker-popup .obj-type { display: inline-block; padding: 2px 8px; font-size: 0.7rem; text-transform: uppercase; margin-bottom: 5px; }
-        .quest-marker-popup .obj-num { display: inline-block; background: var(--eft-gold); color: #000; font-weight: 700; padding: 2px 6px; font-size: 0.7rem; margin-right: 5px; }
+        .marker-label { background: rgba(0,0,0,0.95) !important; border: 1px solid var(--eft-gold) !important; color: var(--text-beige) !important; font-family: 'Rajdhani', sans-serif !important; padding: 8px 12px !important; border-radius: 0 !important; box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important; }
+        .leaflet-tooltip { white-space: nowrap; z-index: 9999 !important; }
+        .leaflet-popup { z-index: 9999 !important; }
+        .leaflet-popup-content-wrapper { background: var(--bg-panel) !important; color: var(--text-main) !important; border-radius: 0 !important; border: 1px solid var(--eft-gold) !important; box-shadow: 0 4px 15px rgba(0,0,0,0.6) !important; }
+        .leaflet-popup-content { margin: 12px 15px !important; }
+        .leaflet-popup-tip { background: var(--bg-panel) !important; border: 1px solid var(--eft-gold) !important; border-top: none !important; border-left: none !important; }
+        .leaflet-popup-close-button { color: var(--text-sub) !important; font-size: 20px !important; padding: 8px !important; }
+        .leaflet-popup-close-button:hover { color: var(--eft-gold) !important; }
+        .quest-marker-popup { min-width: 220px; max-width: 300px; }
+        .quest-marker-popup h6 { color: var(--eft-gold); margin-bottom: 8px; font-size: 1rem; font-weight: 600; }
+        .quest-marker-popup p { margin: 0; font-size: 0.9rem; color: var(--text-main); line-height: 1.4; }
+        .quest-marker-popup .obj-type { display: inline-block; padding: 3px 10px; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 8px; font-weight: 600; letter-spacing: 1px; }
+        .quest-marker-popup .obj-num { display: inline-block; background: var(--eft-gold); color: #000; font-weight: 700; padding: 3px 8px; font-size: 0.8rem; margin-right: 8px; }
+        .quest-marker-popup .popup-footer { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border-dark); font-size: 0.75rem; color: var(--text-sub); }
         .obj-pickup { background: #2d5a2d; color: #7fff7f; }
         .obj-place { background: #5a5a2d; color: #ffff7f; }
         .obj-mark { background: #5a2d5a; color: #ff7fff; }
@@ -816,6 +835,10 @@
                         <div class="quest-list-controls" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; margin-bottom: 8px; border-bottom: 1px solid var(--border-dark);">
                             <span class="text-sub small"><span id="selectedQuestCount">0</span> tasks selected</span>
                             <div style="display: flex; gap: 8px; align-items: center;">
+                                <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 0.75rem; color: var(--text-sub);">
+                                    <input type="checkbox" id="hideCompletedToggle" onchange="filterQuests()" style="width: 14px; height: 14px; accent-color: var(--eft-gold);">
+                                    Hide done
+                                </label>
                                 <div class="group-toggle" style="display: flex; background: var(--bg-dark); border: 1px solid var(--border-dark); border-radius: 3px; overflow: hidden;">
                                     <button id="groupByTrader" class="group-toggle-btn active" onclick="setQuestGrouping('trader')" style="padding: 3px 8px; font-size: 0.7rem; border: none; background: var(--eft-gold); color: #000; cursor: pointer;">Trader</button>
                                     <button id="groupByMap" class="group-toggle-btn" onclick="setQuestGrouping('map')" style="padding: 3px 8px; font-size: 0.7rem; border: none; background: transparent; color: var(--text-sub); cursor: pointer;">Map</button>
@@ -2015,13 +2038,44 @@
                                 
                                 objIndex++;
                                 
-                                // Build concise description from available fields
-                                const descParts = [];
-                                if (obj.target) descParts.push(obj.target);
-                                if (obj.tool && !descParts.includes(obj.tool)) descParts.push(`with ${obj.tool}`);
-                                const description = descParts.length > 0 
-                                    ? descParts.join(' ').substring(0, 80) 
-                                    : `Objective #${objIndex}`;
+                                // Build human-readable description - filter out raw MongoDB IDs
+                                const isMongoId = (str) => /^[a-f0-9]{24}$/i.test(str);
+                                
+                                // Get readable type label
+                                const typeLabels = {
+                                    'mark': 'Mark location',
+                                    'find': 'Find item',
+                                    'pickup': 'Pick up item',
+                                    'place': 'Place item',
+                                    'locate': 'Locate',
+                                    'key': 'Use key',
+                                    'shoot': 'Shoot',
+                                    'kill': 'Eliminate target',
+                                    'extract': 'Extract',
+                                    'visit': 'Visit location',
+                                    'build': 'Build/Install',
+                                    'plantItem': 'Plant item',
+                                    'giveItem': 'Hand over item',
+                                    'findItem': 'Find in raid'
+                                };
+                                
+                                const typeLabel = typeLabels[obj.type] || (obj.type ? obj.type.charAt(0).toUpperCase() + obj.type.slice(1) : 'Objective');
+                                
+                                // Build description from available fields, excluding IDs
+                                let description = typeLabel;
+                                if (obj.target && !isMongoId(obj.target)) {
+                                    description = obj.target;
+                                }
+                                // Don't include 'tool' if it's a raw ID
+                                if (obj.tool && !isMongoId(obj.tool)) {
+                                    description += ` (using ${obj.tool})`;
+                                }
+                                
+                                // Truncate and clean up
+                                description = description.substring(0, 100).trim();
+                                if (!description || description === typeLabel) {
+                                    description = `${typeLabel} #${objIndex}`;
+                                }
                                 
                                 const locData = {
                                     questId: questId,
@@ -2276,21 +2330,39 @@
                     });
                     
                     // Build tooltip text: short and informative
-                    const typeLabel = loc.type.charAt(0).toUpperCase() + loc.type.slice(1);
-                    const tooltipText = `#${loc.objectiveIndex || markerCount}: ${typeLabel} - ${loc.description}`;
+                    const typeLabels = {
+                        'mark': 'MARK', 'find': 'FIND', 'pickup': 'PICKUP', 'place': 'PLACE',
+                        'locate': 'LOCATE', 'key': 'KEY', 'shoot': 'SHOOT', 'kill': 'KILL',
+                        'extract': 'EXTRACT', 'visit': 'VISIT', 'plantItem': 'PLANT', 'giveItem': 'GIVE'
+                    };
+                    const typeLabel = typeLabels[loc.type] || loc.type.toUpperCase();
+                    const shortDesc = loc.description.length > 40 ? loc.description.substring(0, 37) + '...' : loc.description;
+                    const tooltipText = `${loc.questName}`;
+                    
+                    // Get appropriate color class for objective type
+                    const typeColorClass = {
+                        'mark': 'obj-mark', 'find': 'obj-find', 'pickup': 'obj-pickup', 'place': 'obj-place',
+                        'locate': 'obj-locate', 'kill': 'obj-kill', 'shoot': 'obj-kill',
+                        'key': 'obj-find', 'visit': 'obj-locate', 'plantItem': 'obj-place', 'giveItem': 'obj-place'
+                    }[loc.type] || 'obj-find';
                     
                     const popupContent = `
                         <div class="quest-marker-popup">
                             <span class="obj-num">#${loc.objectiveIndex || markerCount}</span>
-                            <span class="obj-type" style="background: ${color.fill}; color: ${color.border};">${loc.type}</span>
+                            <span class="obj-type ${typeColorClass}">${typeLabel}</span>
                             <h6>${loc.questName}</h6>
                             <p>${loc.description}</p>
-                            ${loc.floor !== 'Ground_Level' ? `<p class="text-sub" style="font-size: 0.75rem; margin-top: 5px;">Floor: ${loc.floor}</p>` : ''}
+                            ${loc.floor && loc.floor !== 'Ground_Level' ? `<div class="popup-footer">📍 Floor: ${loc.floor.replace(/_/g, ' ')}</div>` : ''}
                         </div>
                     `;
                     
-                    marker.bindPopup(popupContent, { className: 'marker-label' });
-                    marker.bindTooltip(tooltipText, { direction: 'top', className: 'marker-label', offset: [0, -15] });
+                    marker.bindPopup(popupContent);
+                    marker.bindTooltip(tooltipText, { 
+                        direction: 'auto',  // Auto-adjust direction to avoid clipping
+                        className: 'marker-label', 
+                        offset: [0, -10],
+                        sticky: false
+                    });
                     
                     questMarkersLayer.addLayer(marker);
                 });
@@ -2392,6 +2464,79 @@
             if (el) el.textContent = count;
         }
         
+        // ============================================================================
+        // QUEST COMPLETION TRACKING
+        // ============================================================================
+        
+        const STORAGE_KEY_COMPLETED = 'tarkov_planner_completed_v1';
+        
+        function getCompletedQuests() {
+            const saved = localStorage.getItem(STORAGE_KEY_COMPLETED);
+            return saved ? new Set(JSON.parse(saved)) : new Set();
+        }
+        
+        function setQuestCompleted(questId, isCompleted) {
+            const completed = getCompletedQuests();
+            isCompleted ? completed.add(questId) : completed.delete(questId);
+            localStorage.setItem(STORAGE_KEY_COMPLETED, JSON.stringify([...completed]));
+        }
+        
+        function toggleQuestCompleted(questId, event) {
+            event.stopPropagation();
+            const completed = getCompletedQuests();
+            const isNowCompleted = !completed.has(questId);
+            setQuestCompleted(questId, isNowCompleted);
+            
+            // Update UI
+            const row = document.querySelector(`#cb-${questId}`)?.closest('.quest-row');
+            if (row) {
+                row.classList.toggle('completed', isNowCompleted);
+                const btn = row.querySelector('.complete-btn');
+                if (btn) btn.textContent = isNowCompleted ? '✓' : '○';
+            }
+            
+            // Update trader badge
+            const groupId = document.querySelector(`#cb-${questId}`)?.dataset.parentGroup;
+            if (groupId) updateTraderBadge(groupId);
+            
+            // Re-apply filter if "hide completed" is active
+            const hideToggle = document.getElementById('hideCompletedToggle');
+            if (hideToggle?.checked) filterQuests();
+        }
+        
+        // ============================================================================
+        // QUEST PREREQUISITES
+        // ============================================================================
+        
+        function getQuestPrereqs(quest) {
+            if (!quest.taskRequirements || quest.taskRequirements.length === 0) return [];
+            
+            const completed = getCompletedQuests();
+            return quest.taskRequirements.map(req => {
+                const prereqQuest = allQuestsGlobal.find(q => q.id === req.task?.id);
+                return {
+                    id: req.task?.id,
+                    name: prereqQuest?.name || req.task?.name || 'Unknown',
+                    isDone: completed.has(req.task?.id)
+                };
+            }).filter(p => p.id); // Filter out any without valid IDs
+        }
+        
+        function isQuestLocked(quest) {
+            const prereqs = getQuestPrereqs(quest);
+            return prereqs.length > 0 && prereqs.some(p => !p.isDone);
+        }
+        
+        function renderPrereqsHtml(prereqs) {
+            if (!prereqs || prereqs.length === 0) return '';
+            
+            const prereqHtml = prereqs.map(p => 
+                `<span class="prereq-tag ${p.isDone ? 'prereq-done' : 'prereq-missing'}">${p.isDone ? '✓' : '⚠'} ${p.name}</span>`
+            ).join('');
+            
+            return `<div class="quest-prereqs">Requires: ${prereqHtml}</div>`;
+        }
+        
         function getWikiUrl(questName) {
             return 'https://escapefromtarkov.fandom.com/wiki/' + encodeURIComponent(questName.replace(/ /g, '_'));
         }
@@ -2442,6 +2587,7 @@
         function renderQuestList() {
             const list = document.getElementById('quest-list');
             const savedQuests = getSavedQuests();
+            const completedQuests = getCompletedQuests();
             
             if (!allQuestsGlobal || allQuestsGlobal.length === 0) {
                 list.innerHTML = '<div class="text-sub text-center p-3">No tasks loaded</div>';
@@ -2473,9 +2619,15 @@
                     
                     data.quests.forEach(q => {
                         const isSelected = savedQuests.has(q.id);
+                        const isCompleted = completedQuests.has(q.id);
+                        const prereqs = getQuestPrereqs(q);
+                        const isLocked = prereqs.length > 0 && prereqs.some(p => !p.isDone);
+                        const prereqsHtml = renderPrereqsHtml(prereqs);
+                        
                         html += `
-                            <div class="quest-row ${isSelected ? 'selected' : ''}" onclick="toggleSelection('${q.id}', this, event)">
+                            <div class="quest-row ${isSelected ? 'selected' : ''} ${isCompleted ? 'completed' : ''} ${isLocked ? 'locked' : ''}" onclick="toggleSelection('${q.id}', this, event)" data-quest-id="${q.id}">
                                 <input type="checkbox" id="cb-${q.id}" ${isSelected ? 'checked' : ''} data-parent-group="${groupId}" data-quest-name="${q.name}">
+                                <button class="complete-btn" onclick="toggleQuestCompleted('${q.id}', event)" title="${isCompleted ? 'Mark as not done' : 'Mark as done'}">${isCompleted ? '✓' : '○'}</button>
                                 <div class="quest-info">
                                     <div class="quest-name">
                                         <a href="${getWikiUrl(q.name)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">${q.name}</a>
@@ -2484,6 +2636,7 @@
                                         <span>${q.map?.name || 'Any'}</span>
                                         <span>Lvl ${q.minPlayerLevel || '?'}</span>
                                     </div>
+                                    ${prereqsHtml}
                                 </div>
                             </div>
                         `;
@@ -2525,9 +2678,9 @@
                     const mapIcons = {
                         'Customs': '🏭', 'Woods': '🌲', 'Shoreline': '🏖️', 'Interchange': '🛒',
                         'Reserve': '🏰', 'Lighthouse': '🗼', 'Streets of Tarkov': '🏙️',
-                        'Ground Zero': '☢️', 'Factory': '🏗️', 'The Lab': 'ðŸ”¬', 'Any': '🌍'
+                        'Ground Zero': '☢️', 'Factory': '🏗️', 'The Lab': '🔬', 'Any': '🌍'
                     };
-                    const icon = mapIcons[mapName] || 'ðŸ“';
+                    const icon = mapIcons[mapName] || '📍';
                     
                     html += `
                         <div class="trader-group">
@@ -2541,9 +2694,15 @@
                     
                     quests.forEach(q => {
                         const isSelected = savedQuests.has(q.id);
+                        const isCompleted = completedQuests.has(q.id);
+                        const prereqs = getQuestPrereqs(q);
+                        const isLocked = prereqs.length > 0 && prereqs.some(p => !p.isDone);
+                        const prereqsHtml = renderPrereqsHtml(prereqs);
+                        
                         html += `
-                            <div class="quest-row ${isSelected ? 'selected' : ''}" onclick="toggleSelection('${q.id}', this, event)">
+                            <div class="quest-row ${isSelected ? 'selected' : ''} ${isCompleted ? 'completed' : ''} ${isLocked ? 'locked' : ''}" onclick="toggleSelection('${q.id}', this, event)" data-quest-id="${q.id}">
                                 <input type="checkbox" id="cb-${q.id}" ${isSelected ? 'checked' : ''} data-parent-group="${groupId}" data-quest-name="${q.name}">
+                                <button class="complete-btn" onclick="toggleQuestCompleted('${q.id}', event)" title="${isCompleted ? 'Mark as not done' : 'Mark as done'}">${isCompleted ? '✓' : '○'}</button>
                                 <div class="quest-info">
                                     <div class="quest-name">
                                         <a href="${getWikiUrl(q.name)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">${q.name}</a>
@@ -2552,6 +2711,7 @@
                                         <span>${q.trader?.name || 'Unknown'}</span>
                                         <span>Lvl ${q.minPlayerLevel || '?'}</span>
                                     </div>
+                                    ${prereqsHtml}
                                 </div>
                             </div>
                         `;
@@ -2712,12 +2872,19 @@
         
         function filterQuests() {
             const search = document.getElementById('questSearch').value.toLowerCase();
+            const hideCompleted = document.getElementById('hideCompletedToggle')?.checked || false;
+            const completedQuests = getCompletedQuests();
             
             // Filter individual quest rows
             document.querySelectorAll('.quest-row').forEach(row => {
                 const name = row.querySelector('.quest-name').textContent.toLowerCase();
-                const matches = name.includes(search);
-                row.style.display = matches ? '' : 'none';
+                const questId = row.dataset.questId;
+                const matchesSearch = name.includes(search);
+                const isCompleted = questId && completedQuests.has(questId);
+                
+                // Show if: matches search AND (not hiding completed OR not completed)
+                const shouldShow = matchesSearch && (!hideCompleted || !isCompleted);
+                row.style.display = shouldShow ? '' : 'none';
             });
             
             // Hide/show groups based on whether they have visible quests
