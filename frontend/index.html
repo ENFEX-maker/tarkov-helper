@@ -56,6 +56,46 @@
         .quest-prereqs .prereq-tag { background: var(--bg-element); padding: 1px 5px; margin-right: 4px; border-radius: 2px; display: inline-block; margin-bottom: 2px; }
         .quest-prereqs .prereq-done { color: var(--eft-green); text-decoration: line-through; opacity: 0.7; }
         .quest-prereqs .prereq-pending { color: var(--text-sub); }
+        
+        /* Hideout Tracker Styles */
+        .hideout-station { background: var(--bg-element); border: 1px solid var(--border-dark); margin-bottom: 10px; }
+        .hideout-station.maxed { opacity: 0.6; border-color: var(--eft-green); }
+        .hideout-station-header { display: flex; align-items: center; gap: 12px; padding: 12px 15px; cursor: pointer; transition: background 0.2s; }
+        .hideout-station-header:hover { background: var(--bg-hover); }
+        .hideout-station-header img { width: 48px; height: 48px; object-fit: contain; }
+        .hideout-station-header .station-info { flex-grow: 1; }
+        .hideout-station-header .station-name { font-weight: 600; color: var(--text-beige); font-size: 1rem; }
+        .hideout-station-header .station-level { font-size: 0.8rem; color: var(--text-sub); }
+        .hideout-station-header .station-level .current { color: var(--eft-gold); font-weight: 600; }
+        .hideout-station-levels { display: none; padding: 0 15px 15px; }
+        .hideout-station-levels.show { display: block; }
+        .hideout-level { background: var(--bg-dark); border: 1px solid var(--border-dark); padding: 12px; margin-bottom: 8px; }
+        .hideout-level.completed { border-color: var(--eft-green); background: rgba(74, 122, 74, 0.1); }
+        .hideout-level.current-target { border-color: var(--eft-gold); background: rgba(158, 143, 107, 0.1); }
+        .hideout-level-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .hideout-level-header h6 { margin: 0; font-size: 0.9rem; color: var(--text-beige); }
+        .hideout-level-header .level-status { font-size: 0.75rem; padding: 2px 8px; }
+        .hideout-level-header .level-status.done { background: var(--eft-green); color: #fff; }
+        .hideout-level-header .level-status.locked { background: var(--bg-element); color: var(--text-sub); }
+        .hideout-requirements { display: flex; flex-direction: column; gap: 8px; }
+        .hideout-req-section { font-size: 0.8rem; }
+        .hideout-req-section .req-title { color: var(--text-sub); margin-bottom: 4px; }
+        .hideout-req-items { display: flex; flex-wrap: wrap; gap: 6px; }
+        .hideout-req-item { display: flex; align-items: center; gap: 6px; background: var(--bg-element); padding: 4px 8px; font-size: 0.75rem; }
+        .hideout-req-item img { width: 24px; height: 24px; object-fit: contain; }
+        .hideout-req-item.owned { background: rgba(74, 122, 74, 0.2); border: 1px solid var(--eft-green); }
+        .hideout-req-item .item-count { color: var(--eft-gold); font-weight: 600; }
+        .hideout-req-item .item-name { color: var(--text-main); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .level-complete-btn { background: var(--bg-element); border: 1px solid var(--border-dark); color: var(--text-sub); padding: 4px 12px; font-size: 0.75rem; cursor: pointer; transition: all 0.15s; }
+        .level-complete-btn:hover { background: var(--eft-green); color: #fff; border-color: var(--eft-green); }
+        .level-complete-btn.completed { background: var(--eft-green); color: #fff; border-color: var(--eft-green); }
+        .shopping-item { display: flex; align-items: center; gap: 8px; padding: 8px; background: var(--bg-dark); border: 1px solid var(--border-dark); margin-bottom: 6px; }
+        .shopping-item img { width: 32px; height: 32px; object-fit: contain; }
+        .shopping-item .item-info { flex-grow: 1; }
+        .shopping-item .item-name { font-size: 0.85rem; color: var(--text-main); }
+        .shopping-item .item-for { font-size: 0.7rem; color: var(--text-sub); }
+        .shopping-item .item-count { color: var(--eft-gold); font-weight: 600; font-size: 0.9rem; }
+        
         .quest-info { flex-grow: 1; min-width: 0; }
         .quest-name { font-weight: 600; color: var(--text-beige); font-size: 0.95rem; }
         .quest-name a { color: inherit; text-decoration: none; }
@@ -777,6 +817,7 @@
         
         <div class="nav-tabs-tarkov">
             <div class="nav-tab active" onclick="switchTab('planner')">Mission Planner</div>
+            <div class="nav-tab" onclick="switchTab('hideout')">Hideout</div>
             <div class="nav-tab" onclick="switchTab('penetration')">Pen Chart</div>
             <div class="nav-tab" onclick="switchTab('ammo')">Ammo</div>
             <div class="nav-tab" onclick="switchTab('weapons')">Weapons</div>
@@ -954,6 +995,78 @@
                     <div class="col-md-6">
                         <h6 class="text-beige mb-3">Objectives</h6>
                         <div id="mission-steps" style="max-height: none; overflow: visible;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- HIDEOUT TRACKER TAB -->
+        <div id="tab-hideout" class="tab-content">
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="tarkov-panel">
+                        <h5>Hideout Upgrades</h5>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <input type="text" class="form-control-tarkov w-100" placeholder="Search stations..." id="hideoutSearch" oninput="filterHideoutStations()">
+                            </div>
+                            <div class="col-md-4">
+                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.85rem; color: var(--text-sub); height: 100%;">
+                                    <input type="checkbox" id="hideCompletedStations" onchange="filterHideoutStations()" style="width: 16px; height: 16px; accent-color: var(--eft-gold);">
+                                    Hide maxed stations
+                                </label>
+                            </div>
+                            <div class="col-md-4">
+                                <button class="btn-tarkov w-100" onclick="loadHideoutData()" id="btn-refresh-hideout">🔄 Refresh</button>
+                            </div>
+                        </div>
+                        <div class="hideout-progress-bar mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="text-sub small">Overall Progress</span>
+                                <span class="text-gold" id="hideout-progress-text">0 / 0 Levels</span>
+                            </div>
+                            <div style="background: var(--bg-dark); border: 1px solid var(--border-dark); height: 8px;">
+                                <div id="hideout-progress-fill" style="background: var(--eft-gold); height: 100%; width: 0%; transition: width 0.3s;"></div>
+                            </div>
+                        </div>
+                        <div id="hideout-loading" class="loading-spinner">
+                            <div class="spinner"></div>
+                            <div>Loading hideout data...</div>
+                        </div>
+                        <div id="hideout-content" class="d-none">
+                            <div id="hideout-stations-list" style="max-height: 600px; overflow-y: auto;"></div>
+                        </div>
+                        <div id="hideout-error" class="alert alert-danger d-none"></div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="tarkov-panel">
+                        <h5>📋 Shopping List</h5>
+                        <p class="text-sub small mb-3">Items needed for next upgrades</p>
+                        <div id="hideout-shopping-list" style="max-height: 400px; overflow-y: auto;">
+                            <div class="text-sub text-center p-3">Select a target level to see required items</div>
+                        </div>
+                    </div>
+                    <div class="tarkov-panel mt-3">
+                        <h5>📊 Station Stats</h5>
+                        <div id="hideout-stats">
+                            <div class="d-flex justify-content-between py-2 border-bottom" style="border-color: var(--border-dark) !important;">
+                                <span class="text-sub">Stations</span>
+                                <span class="text-beige" id="stat-stations-count">0</span>
+                            </div>
+                            <div class="d-flex justify-content-between py-2 border-bottom" style="border-color: var(--border-dark) !important;">
+                                <span class="text-sub">Completed</span>
+                                <span class="text-gold" id="stat-completed-count">0</span>
+                            </div>
+                            <div class="d-flex justify-content-between py-2 border-bottom" style="border-color: var(--border-dark) !important;">
+                                <span class="text-sub">In Progress</span>
+                                <span class="text-beige" id="stat-inprogress-count">0</span>
+                            </div>
+                            <div class="d-flex justify-content-between py-2">
+                                <span class="text-sub">Not Started</span>
+                                <span class="text-sub" id="stat-notstarted-count">0</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2399,7 +2512,7 @@
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             
             // Find and activate the correct tab button
-            const tabIndex = ['planner', 'penetration', 'ammo', 'weapons', 'gear', 'attachments'].indexOf(tabId);
+            const tabIndex = ['planner', 'hideout', 'penetration', 'ammo', 'weapons', 'gear', 'attachments'].indexOf(tabId);
             if (tabIndex >= 0) {
                 const tabButtons = document.querySelectorAll('.nav-tab');
                 if (tabButtons[tabIndex]) tabButtons[tabIndex].classList.add('active');
@@ -2412,6 +2525,11 @@
             // Special handling for penetration tab
             if (tabId === 'penetration' && allAmmoData) {
                 renderPenMatrix();
+            }
+            
+            // Special handling for hideout tab
+            if (tabId === 'hideout' && !hideoutDataLoaded) {
+                loadHideoutData();
             }
             
             // Show/hide dashboard based on tab
@@ -2539,6 +2657,376 @@
             ).join('');
             
             return `<div class="quest-prereqs">Requires: ${prereqHtml}</div>`;
+        }
+        
+        // ============================================================================
+        // HIDEOUT TRACKER
+        // ============================================================================
+        
+        const STORAGE_KEY_HIDEOUT = 'tarkov_planner_hideout_v1';
+        const HIDEOUT_GRAPHQL_URL = 'https://api.tarkov.dev/graphql';
+        
+        let hideoutData = null;
+        let hideoutDataLoaded = false;
+        let hideoutProgress = {}; // stationId -> level completed
+        
+        function getHideoutProgress() {
+            const saved = localStorage.getItem(STORAGE_KEY_HIDEOUT);
+            return saved ? JSON.parse(saved) : {};
+        }
+        
+        function saveHideoutProgress() {
+            localStorage.setItem(STORAGE_KEY_HIDEOUT, JSON.stringify(hideoutProgress));
+        }
+        
+        function setStationLevel(stationId, level) {
+            hideoutProgress[stationId] = level;
+            saveHideoutProgress();
+            renderHideoutList();
+            updateHideoutStats();
+        }
+        
+        async function loadHideoutData() {
+            const loading = document.getElementById('hideout-loading');
+            const content = document.getElementById('hideout-content');
+            const error = document.getElementById('hideout-error');
+            
+            loading.classList.remove('d-none');
+            content.classList.add('d-none');
+            error.classList.add('d-none');
+            
+            try {
+                const query = `{
+                    hideoutStations {
+                        id
+                        name
+                        normalizedName
+                        imageLink
+                        levels {
+                            level
+                            constructionTime
+                            itemRequirements {
+                                item {
+                                    id
+                                    name
+                                    shortName
+                                    iconLink
+                                }
+                                count
+                            }
+                            stationLevelRequirements {
+                                station {
+                                    id
+                                    name
+                                }
+                                level
+                            }
+                            traderRequirements {
+                                trader {
+                                    name
+                                }
+                                level
+                            }
+                            skillRequirements {
+                                name
+                                level
+                            }
+                        }
+                    }
+                }`;
+                
+                const response = await fetch(HIDEOUT_GRAPHQL_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query })
+                });
+                
+                if (!response.ok) throw new Error('API error: ' + response.status);
+                
+                const result = await response.json();
+                hideoutData = result.data.hideoutStations;
+                hideoutProgress = getHideoutProgress();
+                hideoutDataLoaded = true;
+                
+                console.log(`Loaded ${hideoutData.length} hideout stations`);
+                
+                renderHideoutList();
+                updateHideoutStats();
+                
+                loading.classList.add('d-none');
+                content.classList.remove('d-none');
+                
+            } catch (err) {
+                console.error('Error loading hideout data:', err);
+                error.innerHTML = `<strong>ERROR:</strong> ${err.message}`;
+                error.classList.remove('d-none');
+                loading.classList.add('d-none');
+            }
+        }
+        
+        function renderHideoutList() {
+            if (!hideoutData) return;
+            
+            const container = document.getElementById('hideout-stations-list');
+            const searchTerm = document.getElementById('hideoutSearch')?.value.toLowerCase() || '';
+            const hideCompleted = document.getElementById('hideCompletedStations')?.checked || false;
+            
+            // Sort stations alphabetically
+            const sortedStations = [...hideoutData].sort((a, b) => a.name.localeCompare(b.name));
+            
+            let html = '';
+            let shoppingListItems = new Map(); // itemId -> { item, count, stations[] }
+            
+            sortedStations.forEach(station => {
+                const maxLevel = station.levels.length;
+                const currentLevel = hideoutProgress[station.id] || 0;
+                const isMaxed = currentLevel >= maxLevel;
+                
+                // Filter by search
+                if (searchTerm && !station.name.toLowerCase().includes(searchTerm)) return;
+                
+                // Filter by completion
+                if (hideCompleted && isMaxed) return;
+                
+                // Collect items for shopping list (next level only)
+                if (currentLevel < maxLevel) {
+                    const nextLevel = station.levels.find(l => l.level === currentLevel + 1);
+                    if (nextLevel && nextLevel.itemRequirements) {
+                        nextLevel.itemRequirements.forEach(req => {
+                            const key = req.item.id;
+                            if (shoppingListItems.has(key)) {
+                                shoppingListItems.get(key).count += req.count;
+                                shoppingListItems.get(key).stations.push(station.name);
+                            } else {
+                                shoppingListItems.set(key, {
+                                    item: req.item,
+                                    count: req.count,
+                                    stations: [station.name]
+                                });
+                            }
+                        });
+                    }
+                }
+                
+                html += `
+                    <div class="hideout-station ${isMaxed ? 'maxed' : ''}" data-station-id="${station.id}">
+                        <div class="hideout-station-header" onclick="toggleHideoutStation('${station.id}')">
+                            ${station.imageLink ? `<img src="${station.imageLink}" alt="${station.name}">` : '<div style="width:48px;height:48px;background:var(--bg-dark);"></div>'}
+                            <div class="station-info">
+                                <div class="station-name">${station.name}</div>
+                                <div class="station-level">Level <span class="current">${currentLevel}</span> / ${maxLevel}</div>
+                            </div>
+                            <span class="badge-tarkov ${isMaxed ? 'badge-active' : ''}">${isMaxed ? '✓ MAXED' : `${maxLevel - currentLevel} to go`}</span>
+                        </div>
+                        <div class="hideout-station-levels" id="levels-${station.id}">
+                            ${renderStationLevels(station, currentLevel)}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html || '<div class="text-sub text-center p-3">No stations found</div>';
+            
+            // Render shopping list
+            renderShoppingList(shoppingListItems);
+        }
+        
+        function renderStationLevels(station, currentLevel) {
+            let html = '';
+            
+            station.levels.forEach(level => {
+                const isCompleted = currentLevel >= level.level;
+                const isNext = level.level === currentLevel + 1;
+                
+                html += `
+                    <div class="hideout-level ${isCompleted ? 'completed' : ''} ${isNext ? 'current-target' : ''}">
+                        <div class="hideout-level-header">
+                            <h6>Level ${level.level}</h6>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <span class="level-status ${isCompleted ? 'done' : 'locked'}">${isCompleted ? '✓ Done' : 'Locked'}</span>
+                                <button class="level-complete-btn ${isCompleted ? 'completed' : ''}" 
+                                        onclick="event.stopPropagation(); toggleStationLevel('${station.id}', ${level.level}, ${isCompleted})">
+                                    ${isCompleted ? '↩ Undo' : '✓ Complete'}
+                                </button>
+                            </div>
+                        </div>
+                        <div class="hideout-requirements">
+                            ${renderLevelRequirements(level)}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            return html;
+        }
+        
+        function renderLevelRequirements(level) {
+            let html = '';
+            
+            // Item requirements
+            if (level.itemRequirements && level.itemRequirements.length > 0) {
+                html += `
+                    <div class="hideout-req-section">
+                        <div class="req-title">📦 Items Required</div>
+                        <div class="hideout-req-items">
+                            ${level.itemRequirements.map(req => `
+                                <div class="hideout-req-item">
+                                    ${req.item.iconLink ? `<img src="${req.item.iconLink}" alt="${req.item.shortName}">` : ''}
+                                    <span class="item-count">${req.count}x</span>
+                                    <span class="item-name" title="${req.item.name}">${req.item.shortName || req.item.name}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Station requirements
+            if (level.stationLevelRequirements && level.stationLevelRequirements.length > 0) {
+                html += `
+                    <div class="hideout-req-section">
+                        <div class="req-title">🏠 Station Requirements</div>
+                        <div class="hideout-req-items">
+                            ${level.stationLevelRequirements.map(req => `
+                                <div class="hideout-req-item">
+                                    <span class="item-name">${req.station.name} Lv${req.level}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Trader requirements
+            if (level.traderRequirements && level.traderRequirements.length > 0) {
+                html += `
+                    <div class="hideout-req-section">
+                        <div class="req-title">🤝 Trader Requirements</div>
+                        <div class="hideout-req-items">
+                            ${level.traderRequirements.map(req => `
+                                <div class="hideout-req-item">
+                                    <span class="item-name">${req.trader.name} LL${req.level}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Skill requirements
+            if (level.skillRequirements && level.skillRequirements.length > 0) {
+                html += `
+                    <div class="hideout-req-section">
+                        <div class="req-title">📈 Skill Requirements</div>
+                        <div class="hideout-req-items">
+                            ${level.skillRequirements.map(req => `
+                                <div class="hideout-req-item">
+                                    <span class="item-name">${req.name} Lv${req.level}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Construction time
+            if (level.constructionTime > 0) {
+                const hours = Math.floor(level.constructionTime / 3600);
+                const minutes = Math.floor((level.constructionTime % 3600) / 60);
+                html += `
+                    <div class="hideout-req-section">
+                        <div class="req-title">⏱️ Build Time: ${hours}h ${minutes}m</div>
+                    </div>
+                `;
+            }
+            
+            return html || '<div class="text-sub small">No requirements</div>';
+        }
+        
+        function renderShoppingList(itemsMap) {
+            const container = document.getElementById('hideout-shopping-list');
+            
+            if (itemsMap.size === 0) {
+                container.innerHTML = '<div class="text-sub text-center p-3">All next levels have no item requirements!</div>';
+                return;
+            }
+            
+            // Sort by count (most needed first)
+            const sortedItems = [...itemsMap.values()].sort((a, b) => b.count - a.count);
+            
+            let html = '';
+            sortedItems.forEach(data => {
+                html += `
+                    <div class="shopping-item">
+                        ${data.item.iconLink ? `<img src="${data.item.iconLink}" alt="${data.item.shortName}">` : ''}
+                        <div class="item-info">
+                            <div class="item-name">${data.item.shortName || data.item.name}</div>
+                            <div class="item-for">For: ${data.stations.slice(0, 2).join(', ')}${data.stations.length > 2 ? ` +${data.stations.length - 2} more` : ''}</div>
+                        </div>
+                        <span class="item-count">${data.count}x</span>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        function toggleHideoutStation(stationId) {
+            const levelsEl = document.getElementById('levels-' + stationId);
+            if (levelsEl) {
+                levelsEl.classList.toggle('show');
+            }
+        }
+        
+        function toggleStationLevel(stationId, level, isCurrentlyCompleted) {
+            if (isCurrentlyCompleted) {
+                // Undo: set to level - 1
+                setStationLevel(stationId, level - 1);
+            } else {
+                // Complete: set to this level
+                setStationLevel(stationId, level);
+            }
+        }
+        
+        function filterHideoutStations() {
+            renderHideoutList();
+        }
+        
+        function updateHideoutStats() {
+            if (!hideoutData) return;
+            
+            let totalLevels = 0;
+            let completedLevels = 0;
+            let stationsMaxed = 0;
+            let stationsInProgress = 0;
+            let stationsNotStarted = 0;
+            
+            hideoutData.forEach(station => {
+                const maxLevel = station.levels.length;
+                const currentLevel = hideoutProgress[station.id] || 0;
+                
+                totalLevels += maxLevel;
+                completedLevels += currentLevel;
+                
+                if (currentLevel >= maxLevel) {
+                    stationsMaxed++;
+                } else if (currentLevel > 0) {
+                    stationsInProgress++;
+                } else {
+                    stationsNotStarted++;
+                }
+            });
+            
+            // Update progress bar
+            const progressPercent = totalLevels > 0 ? (completedLevels / totalLevels) * 100 : 0;
+            document.getElementById('hideout-progress-fill').style.width = progressPercent + '%';
+            document.getElementById('hideout-progress-text').textContent = `${completedLevels} / ${totalLevels} Levels`;
+            
+            // Update stats
+            document.getElementById('stat-stations-count').textContent = hideoutData.length;
+            document.getElementById('stat-completed-count').textContent = stationsMaxed;
+            document.getElementById('stat-inprogress-count').textContent = stationsInProgress;
+            document.getElementById('stat-notstarted-count').textContent = stationsNotStarted;
         }
         
         function getWikiUrl(questName) {
@@ -3642,7 +4130,7 @@
         function exportConfig() {
             // Show export modal with options
             const config = {
-                version: '1.0-beta',
+                version: '1.1-beta',
                 exportDate: new Date().toISOString(),
                 tierThresholds: tierThresholds,
                 activeStats: activeStats,
@@ -3653,7 +4141,9 @@
                     gear: [...ownedGear],
                     attachments: [...ownedAttachments]
                 },
-                collectedQuestItems: collectedQuestItems
+                collectedQuestItems: collectedQuestItems,
+                completedQuests: [...getCompletedQuests()],
+                hideoutProgress: hideoutProgress
             };
             
             const json = JSON.stringify(config);
@@ -3812,6 +4302,27 @@
                 if (config.collectedQuestItems) {
                     collectedQuestItems = config.collectedQuestItems;
                     saveCollectedQuestItems();
+                }
+                
+                // Apply completed quests
+                if (config.completedQuests) {
+                    const completed = new Set(config.completedQuests);
+                    localStorage.setItem(STORAGE_KEY_COMPLETED, JSON.stringify([...completed]));
+                    // Re-render quest list if loaded
+                    if (allQuestsGlobal && allQuestsGlobal.length > 0) {
+                        renderQuestList();
+                    }
+                }
+                
+                // Apply hideout progress
+                if (config.hideoutProgress) {
+                    hideoutProgress = config.hideoutProgress;
+                    saveHideoutProgress();
+                    // Re-render hideout list if loaded
+                    if (hideoutDataLoaded) {
+                        renderHideoutList();
+                        updateHideoutStats();
+                    }
                 }
                 
                 // Save and refresh UI
