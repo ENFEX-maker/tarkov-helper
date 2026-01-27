@@ -5941,6 +5941,14 @@
                                     name
                                     position { x y z }
                                 }
+                                requirements {
+                                    item {
+                                        name
+                                        shortName
+                                    }
+                                    count
+                                    tip
+                                }
                             }
                             hazards {
                                 name
@@ -6019,7 +6027,8 @@
                             faction: extract.faction,
                             x: pos.x,
                             y: pos.z,
-                            switches: extract.switches || []
+                            switches: extract.switches || [],
+                            requirements: extract.requirements || []
                         };
                         
                         // Categorize by faction
@@ -6216,11 +6225,41 @@
                 let typeName = extract.faction === 'pmc' ? 'PMC' : 
                                extract.faction === 'scav' ? 'Scav' : 'Co-Op';
                 
-                const hasConditions = extract.switches?.length > 0;
-                if (hasConditions) {
+                // Check for conditions that make this a "restricted" extract
+                const hasSwitches = extract.switches?.length > 0;
+                const hasRequirements = extract.requirements?.length > 0;
+                const isRestricted = hasSwitches || hasRequirements;
+                
+                // Build requirement descriptions
+                let requirementDetails = [];
+                if (hasSwitches) {
+                    requirementDetails.push('⚡ Switch activation');
+                }
+                if (hasRequirements) {
+                    extract.requirements.forEach(req => {
+                        if (req.item) {
+                            const itemName = req.item.shortName || req.item.name;
+                            const count = req.count > 1 ? ` x${req.count}` : '';
+                            // Detect flares, keys, etc.
+                            const name = req.item.name?.toLowerCase() || '';
+                            if (name.includes('flare')) {
+                                requirementDetails.push(`🔴 Flare needed${count}`);
+                            } else if (name.includes('key') || name.includes('keycard')) {
+                                requirementDetails.push(`🔑 ${itemName}${count}`);
+                            } else {
+                                requirementDetails.push(`📦 ${itemName}${count}`);
+                            }
+                        }
+                        if (req.tip) {
+                            requirementDetails.push(`💡 ${req.tip}`);
+                        }
+                    });
+                }
+                
+                if (isRestricted) {
                     markerClass += ' extract-restricted';
                     typeClass = 'restricted';
-                    typeName += ' (Conditional)';
+                    typeName += ' (Restricted)';
                 } else if (extract.faction === 'shared') {
                     markerClass += ' extract-shared';
                 } else if (extract.faction === 'pmc') {
@@ -6269,8 +6308,13 @@
                     <h6>🚪 ${extract.name}</h6>
                     <span class="overlay-type ${typeClass}">${typeName}</span>`;
                 
-                if (hasConditions) {
-                    popupHtml += `<div class="overlay-detail">⚡ Requires activation</div>`;
+                // Show all requirements
+                if (requirementDetails.length > 0) {
+                    popupHtml += `<div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border-dark);">`;
+                    requirementDetails.forEach(detail => {
+                        popupHtml += `<div class="overlay-detail">${detail}</div>`;
+                    });
+                    popupHtml += `</div>`;
                 }
                 
                 if (canEdit) {
@@ -6279,8 +6323,14 @@
                 
                 popupHtml += '</div>';
                 
-                marker.bindPopup(popupHtml, { className: 'tarkov-popup', maxWidth: 250 });
-                marker.bindTooltip(`${extract.name} (${typeName})`, { direction: 'auto', className: 'tarkov-tooltip' });
+                // Build tooltip with requirements summary
+                let tooltipText = `${extract.name} (${typeName})`;
+                if (requirementDetails.length > 0) {
+                    tooltipText += ` - ${requirementDetails[0]}`;
+                }
+                
+                marker.bindPopup(popupHtml, { className: 'tarkov-popup', maxWidth: 280 });
+                marker.bindTooltip(tooltipText, { direction: 'auto', className: 'tarkov-tooltip' });
                 
                 extractMarkers.push(marker);
             });
@@ -6344,22 +6394,24 @@
             btn.textContent = 'Saving...';
             
             try {
+                // Use __GLOBAL__ for all-extracts mode (NULL doesn't work with ON CONFLICT)
+                const extractName = extractCorrectionMode === 'all' 
+                    ? '__GLOBAL__' 
+                    : pendingExtractCorrection.extractName;
+                
                 const correctionData = {
                     map_key: pendingExtractCorrection.mapKey,
-                    extract_name: extractCorrectionMode === 'all' ? null : pendingExtractCorrection.extractName,
+                    extract_name: extractName,
                     offset_x: pendingExtractCorrection.deltaX,
                     offset_y: pendingExtractCorrection.deltaY,
                     corrected_by: currentUser.id
                 };
                 
-                // Determine conflict key based on mode
-                const onConflict = extractCorrectionMode === 'all' 
-                    ? 'map_key' 
-                    : 'map_key,extract_name';
-                
                 const { data, error } = await supabaseClient
                     .from('extract_corrections')
-                    .upsert(correctionData, { onConflict });
+                    .upsert(correctionData, { 
+                        onConflict: 'map_key,extract_name'
+                    });
                 
                 if (error) throw error;
                 
