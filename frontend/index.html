@@ -8,6 +8,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { --bg-black: #0a0a0a; --bg-dark: #0e0e0e; --bg-panel: #121212; --bg-element: #1a1a1a; --bg-hover: #252525; --border-dark: #2a2a2a; --border-gold: #9e8f6b; --text-main: #d0d0d0; --text-sub: #888; --text-beige: #d2c4a6; --eft-gold: #9e8f6b; --eft-gold-bright: #c4b896; --eft-red: #8c3b3b; --eft-green: #4a7a4a; --eft-blue: #4a6a8a; --tier-s: #ffd700; --tier-a: #c0c0c0; --tier-b: #cd7f32; --tier-c: #5a9e5a; --tier-d: #5a7a9e; --tier-f: #9e5a5a; }
         * { box-sizing: border-box; }
@@ -344,6 +345,126 @@
         .loading-item.error {
             color: var(--eft-red);
         }
+        
+        /* Login System */
+        .auth-buttons {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .user-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--bg-element);
+            border: 1px solid var(--eft-gold);
+            padding: 5px 12px;
+            font-size: 0.8rem;
+            color: var(--text-beige);
+        }
+        .user-badge .user-email {
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .edit-mode-badge {
+            background: var(--eft-red);
+            color: #fff;
+            padding: 3px 8px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            animation: edit-pulse 1.5s infinite;
+        }
+        @keyframes edit-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .login-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 99998;
+            justify-content: center;
+            align-items: center;
+        }
+        .login-modal.show {
+            display: flex;
+        }
+        .login-modal-content {
+            background: var(--bg-panel);
+            border: 2px solid var(--border-gold);
+            padding: 30px;
+            max-width: 400px;
+            width: 90%;
+        }
+        .login-modal-content h3 {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .login-form-group {
+            margin-bottom: 15px;
+        }
+        .login-form-group label {
+            display: block;
+            color: var(--text-beige);
+            font-size: 0.85rem;
+            margin-bottom: 5px;
+        }
+        .login-form-group input {
+            width: 100%;
+            padding: 10px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border-dark);
+            color: var(--text-main);
+            font-size: 0.9rem;
+        }
+        .login-form-group input:focus {
+            outline: none;
+            border-color: var(--eft-gold);
+        }
+        .login-error {
+            color: var(--eft-red);
+            font-size: 0.8rem;
+            margin-bottom: 10px;
+            display: none;
+        }
+        .login-error.show {
+            display: block;
+        }
+        .login-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .login-buttons button {
+            flex: 1;
+        }
+        
+        /* Modal Overlay (used for login, etc.) */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 99998;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: var(--bg-panel);
+            border: 2px solid var(--border-gold);
+            padding: 25px;
+            width: 90%;
+        }
     </style>
 </head>
 <body>
@@ -366,6 +487,18 @@
         <div class="header-row">
             <h1>Tarkov Raid Planner</h1>
             <div style="display: flex; align-items: center; gap: 15px;">
+                <!-- Edit Mode Badge (hidden by default) -->
+                <div id="editModeBadge" class="edit-mode-badge" style="display: none;">
+                    ✏️ EDIT MODE
+                </div>
+                <!-- Auth Buttons -->
+                <div id="authButtons" class="auth-buttons">
+                    <button id="loginBtn" class="btn-tarkov" onclick="showLoginModal()" style="padding: 6px 12px; font-size: 0.75rem;">🔑 Login</button>
+                    <div id="userInfo" style="display: none; align-items: center; gap: 8px;">
+                        <span id="userEmail" style="color: var(--text-sub); font-size: 0.75rem;"></span>
+                        <button class="btn-tarkov" onclick="logout()" style="padding: 6px 12px; font-size: 0.75rem;">Logout</button>
+                    </div>
+                </div>
                 <div class="config-buttons" style="display: flex; gap: 8px;">
                     <button class="btn-tarkov" onclick="exportConfig()" style="padding: 6px 12px; font-size: 0.75rem;" title="Export configuration">📥 Export</button>
                     <button class="btn-tarkov" onclick="showImportModal()" style="padding: 6px 12px; font-size: 0.75rem;" title="Import configuration">📤 Import</button>
@@ -375,6 +508,30 @@
                     <div class="status-dot" id="statusDot"></div>
                     <span id="statusText">Connecting...</span>
                 </div>
+            </div>
+        </div>
+        
+        <!-- Login Modal -->
+        <div id="loginModal" class="modal-overlay" style="display: none;">
+            <div class="modal-content" style="max-width: 400px;">
+                <h5 style="color: var(--text-beige); margin-bottom: 20px;">🔑 Contributor Login</h5>
+                <div id="loginError" style="display: none; background: rgba(140, 59, 59, 0.3); border: 1px solid var(--eft-red); padding: 10px; margin-bottom: 15px; color: var(--eft-red); font-size: 0.85rem;"></div>
+                <div style="margin-bottom: 15px;">
+                    <label style="color: var(--text-sub); font-size: 0.8rem; display: block; margin-bottom: 5px;">Email</label>
+                    <input type="email" id="loginEmail" class="form-control-tarkov w-100" placeholder="your@email.com" style="padding: 10px;">
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="color: var(--text-sub); font-size: 0.8rem; display: block; margin-bottom: 5px;">Password</label>
+                    <input type="password" id="loginPassword" class="form-control-tarkov w-100" placeholder="••••••••" style="padding: 10px;" onkeypress="if(event.key==='Enter')doLogin()">
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button class="btn-tarkov" onclick="hideLoginModal()" style="padding: 8px 20px; background: var(--bg-dark);">Cancel</button>
+                    <button class="btn-tarkov" onclick="doLogin()" id="loginSubmitBtn" style="padding: 8px 20px;">Login</button>
+                </div>
+                <p style="color: var(--text-sub); font-size: 0.75rem; margin-top: 15px; text-align: center;">
+                    Contributors can correct marker positions.<br>
+                    Contact admin for an account.
+                </p>
             </div>
         </div>
         
@@ -592,7 +749,7 @@
                     </div>
                     <div class="col-md-6">
                         <h6 class="text-beige mb-3">Objectives</h6>
-                        <ul id="mission-steps" class="list-group list-group-flush" style="max-height: 200px; overflow-y: auto;"></ul>
+                        <div id="mission-steps" style="max-height: none; overflow: visible;"></div>
                     </div>
                 </div>
             </div>
@@ -1013,6 +1170,156 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
+        // ============================================================================
+        // SUPABASE CONFIGURATION
+        // ============================================================================
+        const SUPABASE_URL = 'https://dpryrhcqeviyvssyiwdz.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwcnlyaGNxZXZpeXZzc3lpd2R6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk0OTg0MjEsImV4cCI6MjA4NTA3NDQyMX0.IiYyEjEOU1fSq8DN_7tG2oQPr6Iuft2zMC2TasMXSfI';
+        
+        // Initialize Supabase client
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        // Auth state
+        let currentUser = null;
+        let isEditMode = false;
+        
+        // ============================================================================
+        // AUTH FUNCTIONS
+        // ============================================================================
+        
+        function showLoginModal() {
+            document.getElementById('loginModal').style.display = 'flex';
+            document.getElementById('loginEmail').focus();
+            document.getElementById('loginError').style.display = 'none';
+        }
+        
+        function hideLoginModal() {
+            document.getElementById('loginModal').style.display = 'none';
+            document.getElementById('loginEmail').value = '';
+            document.getElementById('loginPassword').value = '';
+            document.getElementById('loginError').style.display = 'none';
+        }
+        
+        async function doLogin() {
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const errorDiv = document.getElementById('loginError');
+            const submitBtn = document.getElementById('loginSubmitBtn');
+            
+            if (!email || !password) {
+                errorDiv.textContent = 'Please enter email and password';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Logging in...';
+            
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+                
+                if (error) throw error;
+                
+                hideLoginModal();
+                updateAuthUI(data.user);
+                console.log('Login successful:', data.user.email);
+                
+            } catch (error) {
+                console.error('Login error:', error);
+                errorDiv.textContent = error.message || 'Login failed. Please check your credentials.';
+                errorDiv.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Login';
+            }
+        }
+        
+        async function logout() {
+            try {
+                await supabase.auth.signOut();
+                currentUser = null;
+                isEditMode = false;
+                updateAuthUI(null);
+                updateEditModeUI();
+                console.log('Logged out');
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+        }
+        
+        function updateAuthUI(user) {
+            currentUser = user;
+            const loginBtn = document.getElementById('loginBtn');
+            const userInfo = document.getElementById('userInfo');
+            const userEmail = document.getElementById('userEmail');
+            
+            if (user) {
+                loginBtn.style.display = 'none';
+                userInfo.style.display = 'flex';
+                userEmail.textContent = user.email;
+            } else {
+                loginBtn.style.display = 'block';
+                userInfo.style.display = 'none';
+                userEmail.textContent = '';
+            }
+        }
+        
+        function toggleEditMode() {
+            if (!currentUser) {
+                showLoginModal();
+                return;
+            }
+            
+            isEditMode = !isEditMode;
+            updateEditModeUI();
+            
+            // Make markers draggable/non-draggable
+            if (questMarkersLayer) {
+                questMarkersLayer.eachLayer(marker => {
+                    if (marker.dragging) {
+                        if (isEditMode) {
+                            marker.dragging.enable();
+                            marker._icon?.classList.add('leaflet-marker-draggable');
+                        } else {
+                            marker.dragging.disable();
+                            marker._icon?.classList.remove('leaflet-marker-draggable');
+                        }
+                    }
+                });
+            }
+            
+            console.log('Edit mode:', isEditMode ? 'ON' : 'OFF');
+        }
+        
+        function updateEditModeUI() {
+            const badge = document.getElementById('editModeBadge');
+            if (isEditMode) {
+                badge.style.display = 'block';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+        
+        // Check auth state on page load
+        async function initAuth() {
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session?.user) {
+                    updateAuthUI(session.user);
+                }
+                
+                // Listen for auth changes
+                supabase.auth.onAuthStateChange((event, session) => {
+                    updateAuthUI(session?.user || null);
+                });
+            } catch (error) {
+                console.error('Auth init error:', error);
+            }
+        }
+        
         // ============================================================================
         // CONFIGURATION
         // ============================================================================
@@ -4705,10 +5012,17 @@
                     e.preventDefault();
                 }
                 
+                // Ctrl+Shift+E: Toggle Edit Mode
+                if (e.key === 'E' && e.ctrlKey && e.shiftKey) {
+                    toggleEditMode();
+                    e.preventDefault();
+                }
+                
                 // Escape: Close modals
                 if (e.key === 'Escape') {
                     hideExportModal();
                     hideImportModal();
+                    hideLoginModal();
                     hideShortcutsHelp();
                 }
             });
@@ -4860,6 +5174,7 @@
             const loadingDetails = document.getElementById('loadingDetails');
             
             const tasks = [
+                { name: 'Authentication', fn: initAuth },
                 { name: 'Configuration', fn: async () => { loadTierData(); initTierConfigUI(); } },
                 { name: 'Shortcuts', fn: async () => { initKeyboardShortcuts(); initShortcutsHelp(); } },
                 { name: 'Local Data', fn: async () => { loadSavedAmmo(); loadCollectedQuestItems(); } },
