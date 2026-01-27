@@ -2812,17 +2812,40 @@
             
             imageBounds = [[0, 0], [currentMapHeight, currentMapWidth]];
             
+            // Get map container dimensions to calculate optimal zoom
+            const mapContainer = document.getElementById('map');
+            const containerWidth = mapContainer.clientWidth;
+            const containerHeight = mapContainer.clientHeight;
+            
+            // Calculate the zoom level that makes the image fit exactly in the container
+            // This will be our minZoom (can't zoom out further than full image visible)
+            const zoomX = Math.log2(containerWidth / currentMapWidth);
+            const zoomY = Math.log2(containerHeight / currentMapHeight);
+            const fitZoom = Math.min(zoomX, zoomY);
+            
+            // Set minZoom slightly below fitZoom to allow small margin, but not too much
+            const calculatedMinZoom = Math.floor(fitZoom * 4) / 4; // Round to nearest 0.25
+            
+            console.log(`Map zoom calculation: container=${containerWidth}x${containerHeight}, image=${currentMapWidth}x${currentMapHeight}, fitZoom=${fitZoom.toFixed(2)}, minZoom=${calculatedMinZoom}`);
+            
             mapInstance = L.map('map', {
                 crs: L.CRS.Simple,
-                minZoom: -3,
-                maxZoom: 2,
+                minZoom: calculatedMinZoom,
+                maxZoom: 5,  // Allow much more zoom in for detail work
                 zoomSnap: 0.25,
                 zoomDelta: 0.5,
-                attributionControl: false
+                attributionControl: false,
+                maxBounds: imageBounds,  // Restrict panning to image bounds
+                maxBoundsViscosity: 1.0  // Hard boundary (no elastic effect)
             });
             
             currentMapLayer = L.imageOverlay(cfg.file, imageBounds).addTo(mapInstance);
+            
+            // Fit bounds and set view to show full map centered
             mapInstance.fitBounds(imageBounds);
+            
+            // Ensure the map stays within bounds after any zoom
+            mapInstance.setMaxBounds(imageBounds);
             
             questMarkersLayer = L.layerGroup().addTo(mapInstance);
             
@@ -2834,9 +2857,31 @@
         
         function resetMapView() {
             if (mapInstance && imageBounds) {
-                mapInstance.fitBounds(imageBounds);
+                mapInstance.fitBounds(imageBounds, { animate: true });
             }
         }
+        
+        // Recalculate map bounds on window resize
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                if (mapInstance && imageBounds) {
+                    // Recalculate minZoom based on new container size
+                    const mapContainer = document.getElementById('map');
+                    const containerWidth = mapContainer.clientWidth;
+                    const containerHeight = mapContainer.clientHeight;
+                    
+                    const zoomX = Math.log2(containerWidth / currentMapWidth);
+                    const zoomY = Math.log2(containerHeight / currentMapHeight);
+                    const fitZoom = Math.min(zoomX, zoomY);
+                    const calculatedMinZoom = Math.floor(fitZoom * 4) / 4;
+                    
+                    mapInstance.setMinZoom(calculatedMinZoom);
+                    mapInstance.invalidateSize();
+                }
+            }, 250);
+        });
         
         async function onMapChange() {
             const mapName = document.getElementById('mapSelect').value;
