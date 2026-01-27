@@ -329,19 +329,27 @@
         .overlay-icon.hazard { color: #f44336; }
         .overlay-icon.locks { color: #9C27B0; }
         
-        /* Map Overlay Markers */
+        /* Map Overlay Markers - Extract Types with Color Coding */
         .overlay-marker { border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.4); transition: transform 0.15s; cursor: pointer; }
         .overlay-marker:hover { transform: scale(1.15); z-index: 1000 !important; }
+        /* PMC = Green */
         .overlay-marker.extract-pmc { background: rgba(76, 175, 80, 0.9); border: 2px solid #81C784; color: #fff; }
-        .overlay-marker.extract-scav { background: rgba(255, 152, 0, 0.9); border: 2px solid #FFB74D; color: #fff; }
+        /* Scav = Yellow/Amber */
+        .overlay-marker.extract-scav { background: rgba(255, 193, 7, 0.9); border: 2px solid #FFD54F; color: #000; }
+        /* Co-Op/Shared = Blue */
+        .overlay-marker.extract-shared { background: rgba(33, 150, 243, 0.9); border: 2px solid #64B5F6; color: #fff; }
+        /* Restricted/Conditional = Red */
+        .overlay-marker.extract-restricted { background: rgba(244, 67, 54, 0.9); border: 2px solid #E57373; color: #fff; }
+        /* Legacy types */
         .overlay-marker.hazard { background: rgba(244, 67, 54, 0.9); border: 2px solid #E57373; color: #fff; }
         .overlay-marker.lock { background: rgba(156, 39, 176, 0.9); border: 2px solid #BA68C8; color: #fff; }
         .overlay-popup { min-width: 180px; }
         .overlay-popup h6 { color: var(--eft-gold); margin-bottom: 6px; font-size: 0.95rem; }
         .overlay-popup .overlay-type { font-size: 0.7rem; padding: 2px 6px; display: inline-block; margin-bottom: 6px; border-radius: 2px; }
         .overlay-popup .overlay-type.pmc { background: #4CAF50; color: #fff; }
-        .overlay-popup .overlay-type.scav { background: #FF9800; color: #fff; }
+        .overlay-popup .overlay-type.scav { background: #FFC107; color: #000; }
         .overlay-popup .overlay-type.shared { background: #2196F3; color: #fff; }
+        .overlay-popup .overlay-type.restricted { background: #f44336; color: #fff; }
         .overlay-popup .overlay-type.hazard { background: #f44336; color: #fff; }
         .overlay-popup .overlay-type.lock { background: #9C27B0; color: #fff; }
         .overlay-popup .overlay-detail { font-size: 0.8rem; color: var(--text-sub); margin-top: 4px; }
@@ -1003,25 +1011,31 @@
                             <div id="mapTabsContainer" class="map-tabs-container"></div>
                         </div>
                         
-                        <!-- Map Overlay Controls -->
-                        <div class="map-overlay-controls" style="opacity: 0.6;">
-                            <span class="overlay-title">Extracts:</span>
-                            <span style="color: var(--eft-gold); font-size: 0.8rem; font-style: italic;">Coming Soon</span>
-                            <label class="overlay-toggle" style="cursor: not-allowed;">
-                                <input type="checkbox" disabled>
+                        <!-- Map Overlay Controls - Extract Toggle with Legend -->
+                        <div class="map-overlay-controls">
+                            <label class="overlay-toggle" id="extractToggleLabel">
+                                <input type="checkbox" id="showExtractsToggle" onchange="toggleExtracts()">
                                 <span>🚪</span>
-                                <span>PMC</span>
+                                <span>Show Extracts</span>
                             </label>
-                            <label class="overlay-toggle" style="cursor: not-allowed;">
-                                <input type="checkbox" disabled>
-                                <span>🚪</span>
-                                <span>Scav</span>
-                            </label>
-                            <label class="overlay-toggle" style="cursor: not-allowed;">
-                                <input type="checkbox" disabled>
-                                <span>🚪</span>
-                                <span>Co-Op</span>
-                            </label>
+                            <div class="extract-legend" id="extractLegend" style="display: none; margin-left: 15px;">
+                                <span style="display: inline-flex; align-items: center; gap: 4px; margin-right: 12px;">
+                                    <span style="width: 12px; height: 12px; background: #4CAF50; border-radius: 3px;"></span>
+                                    <span style="font-size: 0.75rem; color: var(--text-sub);">PMC</span>
+                                </span>
+                                <span style="display: inline-flex; align-items: center; gap: 4px; margin-right: 12px;">
+                                    <span style="width: 12px; height: 12px; background: #FFC107; border-radius: 3px;"></span>
+                                    <span style="font-size: 0.75rem; color: var(--text-sub);">Scav</span>
+                                </span>
+                                <span style="display: inline-flex; align-items: center; gap: 4px; margin-right: 12px;">
+                                    <span style="width: 12px; height: 12px; background: #2196F3; border-radius: 3px;"></span>
+                                    <span style="font-size: 0.75rem; color: var(--text-sub);">Co-Op</span>
+                                </span>
+                                <span style="display: inline-flex; align-items: center; gap: 4px;">
+                                    <span style="width: 12px; height: 12px; background: #f44336; border-radius: 3px;"></span>
+                                    <span style="font-size: 0.75rem; color: var(--text-sub);">Restricted</span>
+                                </span>
+                            </div>
                         </div>
                         
                         <div class="map-controls">
@@ -2567,9 +2581,11 @@
             if (questCount === null) {
                 questCount = document.querySelectorAll('.leaflet-marker-icon:not(.overlay-marker)').length;
             }
-            // Add overlay markers
+            // Add extract markers (new system)
+            const extractCount = extractMarkers.length;
+            // Add legacy overlay markers (deprecated)
             const overlayCount = Object.values(overlayLayers).reduce((sum, layer) => sum + layer.markers.length, 0);
-            const total = questCount + overlayCount;
+            const total = questCount + extractCount + overlayCount;
             document.getElementById('markerCount').textContent = total + ' marker' + (total !== 1 ? 's' : '');
         }
 
@@ -3633,7 +3649,9 @@
             const mapName = document.getElementById('mapSelect').value;
             // Redraw with currently selected quests (if any)
             await initMap(mapName, selectedQuestNamesForMarkers, selectedQuestsForMarkers);
-            // Also render spawn markers
+            // Render extract markers (new system)
+            await renderExtractMarkers();
+            // Also render legacy overlay markers
             await renderOverlayMarkers();
         }
 
@@ -3681,7 +3699,9 @@
             // Initialize map with selected quest markers
             await initMap(mapName, selectedQuestNamesForMarkers, selectedQuestsForMarkers);
             
-            // Render spawn markers if any layers are enabled
+            // Render extract markers (new system)
+            await renderExtractMarkers();
+            // Render legacy overlay markers if any layers are enabled
             await renderOverlayMarkers();
             
             // Collect items provided by quest starts
@@ -5778,6 +5798,11 @@
         let allMapsCache = null;
         
         // Overlay state
+        // Simplified extract markers system
+        let extractsEnabled = false;
+        let extractMarkers = [];
+        
+        // Legacy overlay layers (kept for compatibility but deprecated)
         let overlayLayers = {
             extracts_pmc: { enabled: false, markers: [] },
             extracts_scav: { enabled: false, markers: [] },
@@ -5897,6 +5922,7 @@
                 const processed = {
                     extracts_pmc: [],
                     extracts_scav: [],
+                    extracts_shared: [],  // Co-Op extracts
                     hazards: [],
                     locks: []
                 };
@@ -5915,11 +5941,18 @@
                             switches: extract.switches || []
                         };
                         
-                        if (extract.faction === 'pmc' || extract.faction === 'all') {
+                        // Categorize by faction
+                        if (extract.faction === 'shared') {
+                            // Co-Op extracts (requires both PMC and Scav)
+                            processed.extracts_shared.push(extractInfo);
+                        } else if (extract.faction === 'pmc') {
                             processed.extracts_pmc.push(extractInfo);
-                        }
-                        if (extract.faction === 'scav' || extract.faction === 'all') {
-                            processed.extracts_scav.push({...extractInfo});
+                        } else if (extract.faction === 'scav') {
+                            processed.extracts_scav.push(extractInfo);
+                        } else if (extract.faction === 'all') {
+                            // Available to both - add to PMC list (they're usually the same spots)
+                            processed.extracts_pmc.push({...extractInfo, faction: 'pmc'});
+                            processed.extracts_scav.push({...extractInfo, faction: 'scav'});
                         }
                     });
                 }
@@ -5958,6 +5991,7 @@
                 mapOverlayData[mapName] = processed;
                 console.log('Overlay data for', mapName, '- PMC Exits:', processed.extracts_pmc.length, 
                     'Scav Exits:', processed.extracts_scav.length,
+                    'Co-Op Exits:', processed.extracts_shared.length,
                     'Hazards:', processed.hazards.length, 
                     'Locks:', processed.locks.length);
                     
@@ -5969,6 +6003,111 @@
             }
         }
         
+        // New simplified toggle for all extracts
+        async function toggleExtracts() {
+            const checkbox = document.getElementById('showExtractsToggle');
+            const legend = document.getElementById('extractLegend');
+            extractsEnabled = checkbox?.checked || false;
+            
+            // Show/hide legend
+            if (legend) {
+                legend.style.display = extractsEnabled ? 'inline-flex' : 'none';
+            }
+            
+            console.log('toggleExtracts:', extractsEnabled);
+            await renderExtractMarkers();
+        }
+        
+        // New simplified render function for extracts only
+        async function renderExtractMarkers() {
+            const currentMap = activeMapTab || document.getElementById('mapSelect')?.value || 'customs';
+            console.log('renderExtractMarkers for map:', currentMap);
+            
+            // Clear existing extract markers
+            extractMarkers.forEach(m => m.remove());
+            extractMarkers = [];
+            
+            if (!extractsEnabled) {
+                updateMarkerCount();
+                return;
+            }
+            
+            // Load overlay data for current map
+            const overlays = await loadMapOverlayData(currentMap);
+            if (!overlays) {
+                console.warn('No overlay data for:', currentMap);
+                updateMarkerCount();
+                return;
+            }
+            
+            if (!mapInstance) {
+                console.warn('Map not ready');
+                return;
+            }
+            
+            // Combine all extracts with their faction info
+            const allExtracts = [
+                ...(overlays.extracts_pmc || []).map(e => ({ ...e, faction: 'pmc' })),
+                ...(overlays.extracts_scav || []).map(e => ({ ...e, faction: 'scav' })),
+                ...(overlays.extracts_shared || []).map(e => ({ ...e, faction: 'shared' }))
+            ];
+            
+            console.log('Total extracts to render:', allExtracts.length);
+            
+            allExtracts.forEach((extract) => {
+                const coords = convertGameCoordsToMap(extract.x, extract.y, currentMap);
+                if (!coords) return;
+                
+                // Determine marker class based on faction and conditions
+                let markerClass = 'overlay-marker';
+                let typeClass = extract.faction;
+                let typeName = extract.faction === 'pmc' ? 'PMC' : 
+                               extract.faction === 'scav' ? 'Scav' : 'Co-Op';
+                
+                // Check if extract has special conditions (switches, etc.)
+                const hasConditions = extract.switches?.length > 0;
+                if (hasConditions) {
+                    markerClass += ' extract-restricted';
+                    typeClass = 'restricted';
+                    typeName += ' (Conditional)';
+                } else if (extract.faction === 'shared') {
+                    markerClass += ' extract-shared';
+                } else if (extract.faction === 'pmc') {
+                    markerClass += ' extract-pmc';
+                } else {
+                    markerClass += ' extract-scav';
+                }
+                
+                const icon = L.divIcon({
+                    html: '🚪',
+                    className: markerClass,
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 14]
+                });
+                
+                const marker = L.marker([coords.y, coords.x], { icon }).addTo(mapInstance);
+                
+                // Build popup
+                let popupHtml = `<div class="overlay-popup">
+                    <h6>🚪 ${extract.name}</h6>
+                    <span class="overlay-type ${typeClass}">${typeName}</span>`;
+                
+                if (hasConditions) {
+                    popupHtml += `<div class="overlay-detail">⚡ Requires activation</div>`;
+                }
+                
+                popupHtml += '</div>';
+                
+                marker.bindPopup(popupHtml, { className: 'tarkov-popup', maxWidth: 250 });
+                marker.bindTooltip(`${extract.name} (${typeName})`, { direction: 'auto', className: 'tarkov-tooltip' });
+                
+                extractMarkers.push(marker);
+            });
+            
+            updateMarkerCount();
+        }
+        
+        // Legacy toggle function (deprecated, kept for compatibility)
         async function toggleMapOverlay(overlayType) {
             const checkbox = document.getElementById('overlay-' + overlayType.replace('_', '-'));
             overlayLayers[overlayType].enabled = checkbox?.checked || false;
@@ -6104,17 +6243,18 @@
         
         function convertGameCoordsToMap(gameX, gameZ, mapKey) {
             // Convert game coordinates (in meters) to map pixel coordinates
+            // flipX: true mirrors the X axis to match the SVG map orientation
             const mapBounds = {
-                shoreline: { minX: -1100, maxX: 600, minZ: -200, maxZ: 700, flipX: false, flipZ: true },
-                customs: { minX: -300, maxX: 500, minZ: -200, maxZ: 350, flipX: false, flipZ: true },
-                woods: { minX: -600, maxX: 600, minZ: -800, maxZ: 400, flipX: false, flipZ: true },
-                interchange: { minX: -200, maxX: 300, minZ: -300, maxZ: 200, flipX: false, flipZ: true },
-                reserve: { minX: -350, maxX: 250, minZ: -350, maxZ: 250, flipX: false, flipZ: true },
-                lighthouse: { minX: -300, maxX: 600, minZ: -500, maxZ: 200, flipX: false, flipZ: true },
-                streets: { minX: -350, maxX: 450, minZ: -400, maxZ: 400, flipX: false, flipZ: true },
-                groundzero: { minX: -200, maxX: 200, minZ: -200, maxZ: 200, flipX: false, flipZ: true },
-                factory: { minX: -60, maxX: 60, minZ: -60, maxZ: 60, flipX: false, flipZ: true },
-                labs: { minX: -200, maxX: 200, minZ: -200, maxZ: 200, flipX: false, flipZ: true }
+                shoreline: { minX: -1100, maxX: 600, minZ: -200, maxZ: 700, flipX: true, flipZ: true },
+                customs: { minX: -300, maxX: 500, minZ: -200, maxZ: 350, flipX: true, flipZ: true },
+                woods: { minX: -600, maxX: 600, minZ: -800, maxZ: 400, flipX: true, flipZ: true },
+                interchange: { minX: -200, maxX: 300, minZ: -300, maxZ: 200, flipX: true, flipZ: true },
+                reserve: { minX: -350, maxX: 250, minZ: -350, maxZ: 250, flipX: true, flipZ: true },
+                lighthouse: { minX: -300, maxX: 600, minZ: -500, maxZ: 200, flipX: true, flipZ: true },
+                streets: { minX: -350, maxX: 450, minZ: -400, maxZ: 400, flipX: true, flipZ: true },
+                groundzero: { minX: -200, maxX: 200, minZ: -200, maxZ: 200, flipX: true, flipZ: true },
+                factory: { minX: -60, maxX: 60, minZ: -60, maxZ: 60, flipX: true, flipZ: true },
+                labs: { minX: -200, maxX: 200, minZ: -200, maxZ: 200, flipX: true, flipZ: true }
             };
             
             const bounds = mapBounds[mapKey];
@@ -6285,7 +6425,9 @@
             // Reload map with new content
             await initMap(mapKey, selectedQuestNamesForMarkers, selectedQuestsForMarkers);
             
-            // Render overlay markers for new map
+            // Render extract markers (new system)
+            await renderExtractMarkers();
+            // Render legacy overlay markers for new map
             await renderOverlayMarkers();
         }
         
@@ -6309,7 +6451,14 @@
             const applyAllBtn = document.querySelector('.btn-apply-all');
             if (applyAllBtn) applyAllBtn.style.display = 'none';
             
-            // Reset overlay toggles
+            // Reset extract toggle (new system)
+            extractsEnabled = false;
+            const extractToggle = document.getElementById('showExtractsToggle');
+            if (extractToggle) extractToggle.checked = false;
+            const extractLegend = document.getElementById('extractLegend');
+            if (extractLegend) extractLegend.style.display = 'none';
+            
+            // Reset legacy overlay toggles
             Object.keys(overlayLayers).forEach(overlay => {
                 overlayLayers[overlay].enabled = false;
                 const checkbox = document.getElementById('overlay-' + overlay.replace('_', '-'));
