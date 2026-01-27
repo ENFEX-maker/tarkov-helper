@@ -788,15 +788,25 @@
         
         <!-- Raid Share Modal -->
         <div id="raidShareModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 9999; justify-content: center; align-items: center;">
-            <div style="background: var(--bg-panel); border: 1px solid var(--eft-gold); padding: 25px; max-width: 500px; width: 90%;">
+            <div style="background: var(--bg-panel); border: 1px solid var(--eft-gold); padding: 25px; max-width: 550px; width: 90%;">
                 <h5 style="color: var(--eft-gold); margin-bottom: 15px;">📤 Share Raid Plan</h5>
-                <p class="text-sub small mb-3">Send this code to your squadmates:</p>
                 
                 <div id="raidShareSummary" style="background: var(--bg-dark); padding: 10px; margin-bottom: 15px; font-size: 0.85rem; border: 1px solid var(--border-dark);"></div>
                 
-                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                    <input type="text" id="raidShareCode" class="form-control-tarkov" readonly style="flex: 1; font-family: monospace; font-size: 0.75rem;">
-                    <button class="btn-tarkov" onclick="copyRaidCode()" style="padding: 8px 15px;">📋 Copy</button>
+                <!-- Import Code -->
+                <div style="margin-bottom: 15px;">
+                    <p class="text-sub small mb-2">📦 Import Code (for the app):</p>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="raidShareCode" class="form-control-tarkov" readonly style="flex: 1; font-family: monospace; font-size: 0.75rem;">
+                        <button class="btn-tarkov" onclick="copyRaidCode()" style="padding: 8px 15px;">📋 Copy</button>
+                    </div>
+                </div>
+                
+                <!-- Discord Text -->
+                <div style="margin-bottom: 15px;">
+                    <p class="text-sub small mb-2">💬 Discord Message:</p>
+                    <textarea id="raidShareText" class="form-control-tarkov" readonly style="width: 100%; height: 120px; font-family: monospace; font-size: 0.75rem; resize: none;"></textarea>
+                    <button class="btn-tarkov w-100 mt-2" onclick="copyRaidText()" style="padding: 8px 15px;">📋 Copy for Discord</button>
                 </div>
                 
                 <div style="text-align: right;">
@@ -912,8 +922,19 @@
                 <div class="col-lg-5">
                     <div class="tarkov-panel">
                         <h5>Select Tasks</h5>
-                        <div class="search-box">
-                            <input type="text" class="form-control-tarkov w-100" placeholder="Search tasks..." id="questSearch" oninput="filterQuests()">
+                        <div class="search-box" style="display: flex; gap: 10px; align-items: center;">
+                            <input type="text" class="form-control-tarkov" placeholder="Search tasks..." id="questSearch" oninput="filterQuests()" style="flex: 1;">
+                            <select id="levelFilter" class="form-select-tarkov" onchange="filterQuests()" style="width: auto; padding: 8px 12px; font-size: 0.85rem;">
+                                <option value="0">All Levels</option>
+                                <option value="5">≤ Lvl 5</option>
+                                <option value="10">≤ Lvl 10</option>
+                                <option value="15">≤ Lvl 15</option>
+                                <option value="20">≤ Lvl 20</option>
+                                <option value="25">≤ Lvl 25</option>
+                                <option value="30">≤ Lvl 30</option>
+                                <option value="40">≤ Lvl 40</option>
+                                <option value="50">≤ Lvl 50</option>
+                            </select>
                         </div>
                         <div class="quest-list-controls" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; margin-bottom: 8px; border-bottom: 1px solid var(--border-dark);">
                             <span class="text-sub small"><span id="selectedQuestCount">0</span> tasks selected</span>
@@ -2574,11 +2595,6 @@
                 renderPenMatrix();
             }
             
-            // Special handling for hideout tab
-            if (tabId === 'hideout' && !hideoutDataLoaded) {
-                loadHideoutData();
-            }
-            
             // Show/hide dashboard based on tab
             const dashboard = document.getElementById('inventoryDashboard');
             if (dashboard) {
@@ -3179,9 +3195,10 @@
                         const isCompleted = completedQuests.has(q.id);
                         const prereqs = getQuestPrereqs(q);
                         const prereqsHtml = renderPrereqsHtml(prereqs);
+                        const questLevel = q.minPlayerLevel || 1;
                         
                         html += `
-                            <div class="quest-row ${isSelected ? 'selected' : ''} ${isCompleted ? 'completed' : ''}" onclick="toggleSelection('${q.id}', this, event)" data-quest-id="${q.id}">
+                            <div class="quest-row ${isSelected ? 'selected' : ''} ${isCompleted ? 'completed' : ''}" onclick="toggleSelection('${q.id}', this, event)" data-quest-id="${q.id}" data-quest-level="${questLevel}">
                                 <input type="checkbox" id="cb-${q.id}" ${isSelected ? 'checked' : ''} data-parent-group="${groupId}" data-quest-name="${q.name}">
                                 <button class="complete-btn" onclick="toggleQuestCompleted('${q.id}', event)" title="${isCompleted ? 'Mark as not done' : 'Mark as done'}">${isCompleted ? '✓' : '○'}</button>
                                 <div class="quest-info">
@@ -3253,9 +3270,10 @@
                         const isCompleted = completedQuests.has(q.id);
                         const prereqs = getQuestPrereqs(q);
                         const prereqsHtml = renderPrereqsHtml(prereqs);
+                        const questLevel = q.minPlayerLevel || 1;
                         
                         html += `
-                            <div class="quest-row ${isSelected ? 'selected' : ''} ${isCompleted ? 'completed' : ''}" onclick="toggleSelection('${q.id}', this, event)" data-quest-id="${q.id}">
+                            <div class="quest-row ${isSelected ? 'selected' : ''} ${isCompleted ? 'completed' : ''}" onclick="toggleSelection('${q.id}', this, event)" data-quest-id="${q.id}" data-quest-level="${questLevel}">
                                 <input type="checkbox" id="cb-${q.id}" ${isSelected ? 'checked' : ''} data-parent-group="${groupId}" data-quest-name="${q.name}">
                                 <button class="complete-btn" onclick="toggleQuestCompleted('${q.id}', event)" title="${isCompleted ? 'Mark as not done' : 'Mark as done'}">${isCompleted ? '✓' : '○'}</button>
                                 <div class="quest-info">
@@ -3428,17 +3446,20 @@
         function filterQuests() {
             const search = document.getElementById('questSearch').value.toLowerCase();
             const hideCompleted = document.getElementById('hideCompletedToggle')?.checked || false;
+            const maxLevel = parseInt(document.getElementById('levelFilter')?.value) || 0;
             const completedQuests = getCompletedQuests();
             
             // Filter individual quest rows
             document.querySelectorAll('.quest-row').forEach(row => {
                 const name = row.querySelector('.quest-name').textContent.toLowerCase();
                 const questId = row.dataset.questId;
+                const questLevel = parseInt(row.dataset.questLevel) || 1;
                 const matchesSearch = name.includes(search);
                 const isCompleted = questId && completedQuests.has(questId);
+                const matchesLevel = maxLevel === 0 || questLevel <= maxLevel;
                 
-                // Show if: matches search AND (not hiding completed OR not completed)
-                const shouldShow = matchesSearch && (!hideCompleted || !isCompleted);
+                // Show if: matches search AND matches level AND (not hiding completed OR not completed)
+                const shouldShow = matchesSearch && matchesLevel && (!hideCompleted || !isCompleted);
                 row.style.display = shouldShow ? '' : 'none';
             });
             
@@ -3844,8 +3865,62 @@
                 </ul>
             `;
             
+            // Build Discord text
+            const neededKeys = new Set();
+            const neededItems = new Map();
+            
+            selectedQuests.forEach(q => {
+                // Collect keys
+                if (q.neededKeys) {
+                    q.neededKeys.forEach(g => {
+                        if (g.keys?.length > 0) {
+                            neededKeys.add(g.keys[0].name);
+                        }
+                    });
+                }
+                // Collect items from objectives
+                if (q.objectives) {
+                    q.objectives.forEach(o => {
+                        const item = o.item || o.markerItem;
+                        if (item) {
+                            const count = o.count || 1;
+                            if (neededItems.has(item.name)) {
+                                neededItems.set(item.name, neededItems.get(item.name) + count);
+                            } else {
+                                neededItems.set(item.name, count);
+                            }
+                        }
+                    });
+                }
+            });
+            
+            let discordText = `🎯 **${mapNames[currentMap] || currentMap} Raid Plan**\n`;
+            discordText += `━━━━━━━━━━━━━━━━━━━━━\n`;
+            discordText += `📋 **${selectedQuests.length} Tasks:**\n`;
+            selectedQuests.forEach(q => {
+                discordText += `• ${q.name}\n`;
+            });
+            
+            if (neededKeys.size > 0) {
+                discordText += `\n🔑 **Keys Needed:**\n`;
+                [...neededKeys].forEach(k => {
+                    discordText += `• ${k}\n`;
+                });
+            }
+            
+            if (neededItems.size > 0) {
+                discordText += `\n📦 **Items to Bring:**\n`;
+                [...neededItems.entries()].forEach(([name, count]) => {
+                    discordText += `• ${count}x ${name}\n`;
+                });
+            }
+            
+            discordText += `━━━━━━━━━━━━━━━━━━━━━\n`;
+            discordText += `📥 Import: \`${code.substring(0, 30)}...\``;
+            
             document.getElementById('raidShareSummary').innerHTML = summary;
             document.getElementById('raidShareCode').value = code;
+            document.getElementById('raidShareText').value = discordText;
             document.getElementById('raidShareModal').style.display = 'flex';
         }
         
@@ -3863,6 +3938,23 @@
             const btn = event.target;
             const originalText = btn.textContent;
             btn.textContent = '✓ Copied!';
+            btn.style.background = 'var(--eft-green)';
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.style.background = '';
+            }, 2000);
+        }
+        
+        function copyRaidText() {
+            const textarea = document.getElementById('raidShareText');
+            textarea.select();
+            document.execCommand('copy');
+            navigator.clipboard.writeText(textarea.value).catch(() => {});
+            
+            // Visual feedback
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = '✓ Copied to clipboard!';
             btn.style.background = 'var(--eft-green)';
             setTimeout(() => {
                 btn.textContent = originalText;
@@ -6647,6 +6739,7 @@
                 { name: 'Local Data', fn: async () => { loadSavedAmmo(); loadCollectedQuestItems(); } },
                 { name: 'Quest Locations', fn: loadQuestLocationsData },
                 { name: 'Quests', fn: loadQuests },
+                { name: 'Hideout Data', fn: loadHideoutData },
                 { name: 'Ammo Database', fn: loadAmmoData },
                 { name: 'Weapons Database', fn: loadWeaponsData },
                 { name: 'Gear Database', fn: loadGearData },
