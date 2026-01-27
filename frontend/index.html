@@ -6243,18 +6243,19 @@
         
         function convertGameCoordsToMap(gameX, gameZ, mapKey) {
             // Convert game coordinates (in meters) to map pixel coordinates
-            // flipX/flipZ: false - the y = currentMapHeight - pixelY line handles Y-flip for Leaflet
+            // flipX: true - mirrors left/right
+            // flipZ: false - y = currentMapHeight - pixelY handles vertical flip for Leaflet
             const mapBounds = {
-                shoreline: { minX: -1100, maxX: 600, minZ: -200, maxZ: 700, flipX: false, flipZ: false },
-                customs: { minX: -300, maxX: 500, minZ: -200, maxZ: 350, flipX: false, flipZ: false },
-                woods: { minX: -600, maxX: 600, minZ: -800, maxZ: 400, flipX: false, flipZ: false },
-                interchange: { minX: -200, maxX: 300, minZ: -300, maxZ: 200, flipX: false, flipZ: false },
-                reserve: { minX: -350, maxX: 250, minZ: -350, maxZ: 250, flipX: false, flipZ: false },
-                lighthouse: { minX: -300, maxX: 600, minZ: -500, maxZ: 200, flipX: false, flipZ: false },
-                streets: { minX: -350, maxX: 450, minZ: -400, maxZ: 400, flipX: false, flipZ: false },
-                groundzero: { minX: -200, maxX: 200, minZ: -200, maxZ: 200, flipX: false, flipZ: false },
-                factory: { minX: -60, maxX: 60, minZ: -60, maxZ: 60, flipX: false, flipZ: false },
-                labs: { minX: -200, maxX: 200, minZ: -200, maxZ: 200, flipX: false, flipZ: false }
+                shoreline: { minX: -1100, maxX: 600, minZ: -200, maxZ: 700, flipX: true, flipZ: false },
+                customs: { minX: -300, maxX: 500, minZ: -200, maxZ: 350, flipX: true, flipZ: false },
+                woods: { minX: -600, maxX: 600, minZ: -800, maxZ: 400, flipX: true, flipZ: false },
+                interchange: { minX: -200, maxX: 300, minZ: -300, maxZ: 200, flipX: true, flipZ: false },
+                reserve: { minX: -350, maxX: 250, minZ: -350, maxZ: 250, flipX: true, flipZ: false },
+                lighthouse: { minX: -300, maxX: 600, minZ: -500, maxZ: 200, flipX: true, flipZ: false },
+                streets: { minX: -350, maxX: 450, minZ: -400, maxZ: 400, flipX: true, flipZ: false },
+                groundzero: { minX: -200, maxX: 200, minZ: -200, maxZ: 200, flipX: true, flipZ: false },
+                factory: { minX: -60, maxX: 60, minZ: -60, maxZ: 60, flipX: true, flipZ: false },
+                labs: { minX: -200, maxX: 200, minZ: -200, maxZ: 200, flipX: true, flipZ: false }
             };
             
             const bounds = mapBounds[mapKey];
