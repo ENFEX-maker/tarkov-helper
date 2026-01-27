@@ -46,18 +46,16 @@
         .quest-row { display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--bg-dark); border: 1px solid var(--border-dark); margin-bottom: 6px; cursor: pointer; transition: all 0.15s ease; position: relative; }
         .quest-row:hover { background: var(--bg-hover); border-color: var(--eft-gold); }
         .quest-row.selected { background: rgba(158, 143, 107, 0.15); border-color: var(--eft-gold); }
-        .quest-row.completed { opacity: 0.5; background: rgba(74, 122, 74, 0.1); border-color: var(--eft-green); }
+        .quest-row.completed { opacity: 0.6; background: rgba(74, 122, 74, 0.1); border-color: var(--eft-green); }
         .quest-row.completed .quest-name { text-decoration: line-through; color: var(--text-sub); }
         .quest-row.completed .complete-btn { background: var(--eft-green); color: #fff; }
-        .quest-row.locked { opacity: 0.4; }
-        .quest-row.locked::before { content: '🔒'; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 0.9rem; }
         .quest-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--eft-gold); cursor: pointer; flex-shrink: 0; }
         .complete-btn { background: var(--bg-element); border: 1px solid var(--border-dark); color: var(--text-sub); padding: 2px 6px; font-size: 0.65rem; cursor: pointer; transition: all 0.15s; border-radius: 2px; flex-shrink: 0; }
         .complete-btn:hover { background: var(--eft-green); color: #fff; border-color: var(--eft-green); }
         .quest-prereqs { font-size: 0.7rem; color: var(--text-sub); margin-top: 3px; }
-        .quest-prereqs .prereq-tag { background: var(--bg-element); padding: 1px 5px; margin-right: 4px; border-radius: 2px; }
-        .quest-prereqs .prereq-done { color: var(--eft-green); }
-        .quest-prereqs .prereq-missing { color: var(--eft-red); }
+        .quest-prereqs .prereq-tag { background: var(--bg-element); padding: 1px 5px; margin-right: 4px; border-radius: 2px; display: inline-block; margin-bottom: 2px; }
+        .quest-prereqs .prereq-done { color: var(--eft-green); text-decoration: line-through; opacity: 0.7; }
+        .quest-prereqs .prereq-pending { color: var(--text-sub); }
         .quest-info { flex-grow: 1; min-width: 0; }
         .quest-name { font-weight: 600; color: var(--text-beige); font-size: 0.95rem; }
         .quest-name a { color: inherit; text-decoration: none; }
@@ -69,7 +67,12 @@
         .form-select-tarkov:focus, .form-control-tarkov:focus { background: var(--bg-hover); border-color: var(--eft-gold); color: var(--text-main); box-shadow: none; outline: none; }
         .form-select-tarkov option { background: var(--bg-dark); color: var(--text-main); }
         .form-select-tarkov option:disabled { color: var(--text-sub); opacity: 0.5; }
-        #map { height: 600px; background: var(--bg-dark); border: 1px solid var(--border-dark); }
+        #map { height: 600px; background: var(--bg-dark); border: 1px solid var(--border-dark); overflow: visible !important; }
+        .leaflet-container { overflow: hidden; }
+        .leaflet-pane { overflow: visible !important; }
+        .leaflet-map-pane { overflow: visible !important; }
+        .leaflet-tooltip-pane { overflow: visible !important; z-index: 9999 !important; }
+        .leaflet-popup-pane { overflow: visible !important; z-index: 9998 !important; }
         .map-controls { display: flex; align-items: center; gap: 15px; padding: 10px 15px; background: var(--bg-element); border: 1px solid var(--border-dark); border-bottom: none; font-size: 0.85rem; color: var(--text-sub); }
         .map-controls .btn-tarkov { padding: 5px 12px; font-size: 0.8rem; }
         .marker-count { margin-left: auto; color: var(--eft-gold); font-weight: 600; }
@@ -2530,8 +2533,9 @@
         function renderPrereqsHtml(prereqs) {
             if (!prereqs || prereqs.length === 0) return '';
             
+            // Just show prerequisite names - purely informational
             const prereqHtml = prereqs.map(p => 
-                `<span class="prereq-tag ${p.isDone ? 'prereq-done' : 'prereq-missing'}">${p.isDone ? '✓' : '⚠'} ${p.name}</span>`
+                `<span class="prereq-tag ${p.isDone ? 'prereq-done' : 'prereq-pending'}">${p.name}</span>`
             ).join('');
             
             return `<div class="quest-prereqs">Requires: ${prereqHtml}</div>`;
@@ -2621,11 +2625,10 @@
                         const isSelected = savedQuests.has(q.id);
                         const isCompleted = completedQuests.has(q.id);
                         const prereqs = getQuestPrereqs(q);
-                        const isLocked = prereqs.length > 0 && prereqs.some(p => !p.isDone);
                         const prereqsHtml = renderPrereqsHtml(prereqs);
                         
                         html += `
-                            <div class="quest-row ${isSelected ? 'selected' : ''} ${isCompleted ? 'completed' : ''} ${isLocked ? 'locked' : ''}" onclick="toggleSelection('${q.id}', this, event)" data-quest-id="${q.id}">
+                            <div class="quest-row ${isSelected ? 'selected' : ''} ${isCompleted ? 'completed' : ''}" onclick="toggleSelection('${q.id}', this, event)" data-quest-id="${q.id}">
                                 <input type="checkbox" id="cb-${q.id}" ${isSelected ? 'checked' : ''} data-parent-group="${groupId}" data-quest-name="${q.name}">
                                 <button class="complete-btn" onclick="toggleQuestCompleted('${q.id}', event)" title="${isCompleted ? 'Mark as not done' : 'Mark as done'}">${isCompleted ? '✓' : '○'}</button>
                                 <div class="quest-info">
@@ -2696,11 +2699,10 @@
                         const isSelected = savedQuests.has(q.id);
                         const isCompleted = completedQuests.has(q.id);
                         const prereqs = getQuestPrereqs(q);
-                        const isLocked = prereqs.length > 0 && prereqs.some(p => !p.isDone);
                         const prereqsHtml = renderPrereqsHtml(prereqs);
                         
                         html += `
-                            <div class="quest-row ${isSelected ? 'selected' : ''} ${isCompleted ? 'completed' : ''} ${isLocked ? 'locked' : ''}" onclick="toggleSelection('${q.id}', this, event)" data-quest-id="${q.id}">
+                            <div class="quest-row ${isSelected ? 'selected' : ''} ${isCompleted ? 'completed' : ''}" onclick="toggleSelection('${q.id}', this, event)" data-quest-id="${q.id}">
                                 <input type="checkbox" id="cb-${q.id}" ${isSelected ? 'checked' : ''} data-parent-group="${groupId}" data-quest-name="${q.name}">
                                 <button class="complete-btn" onclick="toggleQuestCompleted('${q.id}', event)" title="${isCompleted ? 'Mark as not done' : 'Mark as done'}">${isCompleted ? '✓' : '○'}</button>
                                 <div class="quest-info">
