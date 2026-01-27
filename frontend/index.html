@@ -316,35 +316,30 @@
         .map-tab.active { background: var(--bg-panel); color: var(--eft-gold); border-bottom: 2px solid var(--eft-gold); }
         .map-tab .tab-quest-count { font-size: 0.7rem; margin-left: 6px; padding: 2px 6px; background: rgba(158, 143, 107, 0.3); border-radius: 3px; }
         
-        /* Spawn Layer Controls */
+        /* Map Overlay Controls */
         .map-overlay-controls { display: flex; align-items: center; gap: 15px; padding: 8px 15px; background: var(--bg-dark); border: 1px solid var(--border-dark); border-bottom: none; flex-wrap: wrap; }
-        .overlay-title { color: var(--text-sub); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
         .overlay-toggle { display: flex; align-items: center; gap: 6px; cursor: pointer; padding: 4px 10px; background: var(--bg-element); border: 1px solid var(--border-dark); transition: all 0.15s; font-size: 0.8rem; color: var(--text-sub); }
         .overlay-toggle:hover { border-color: var(--eft-gold); color: var(--text-beige); }
         .overlay-toggle:has(input:checked) { background: rgba(158, 143, 107, 0.2); border-color: var(--eft-gold); color: var(--eft-gold); }
         .overlay-toggle input { display: none; }
         .overlay-icon { font-size: 1rem; }
-        .overlay-icon.extract-pmc { color: #4CAF50; }
-        .overlay-icon.extract-scav { color: #FF9800; }
-        .overlay-icon.hazard { color: #f44336; }
-        .overlay-icon.locks { color: #9C27B0; }
         
-        /* Map Overlay Markers */
-        .overlay-marker { border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.4); transition: transform 0.15s; cursor: pointer; }
-        .overlay-marker:hover { transform: scale(1.15); z-index: 1000 !important; }
-        .overlay-marker.extract-pmc { background: rgba(76, 175, 80, 0.9); border: 2px solid #81C784; color: #fff; }
-        .overlay-marker.extract-scav { background: rgba(255, 152, 0, 0.9); border: 2px solid #FFB74D; color: #fff; }
-        .overlay-marker.hazard { background: rgba(244, 67, 54, 0.9); border: 2px solid #E57373; color: #fff; }
-        .overlay-marker.lock { background: rgba(156, 39, 176, 0.9); border: 2px solid #BA68C8; color: #fff; }
-        .overlay-popup { min-width: 180px; }
-        .overlay-popup h6 { color: var(--eft-gold); margin-bottom: 6px; font-size: 0.95rem; }
-        .overlay-popup .overlay-type { font-size: 0.7rem; padding: 2px 6px; display: inline-block; margin-bottom: 6px; border-radius: 2px; }
-        .overlay-popup .overlay-type.pmc { background: #4CAF50; color: #fff; }
-        .overlay-popup .overlay-type.scav { background: #FF9800; color: #fff; }
-        .overlay-popup .overlay-type.shared { background: #2196F3; color: #fff; }
-        .overlay-popup .overlay-type.hazard { background: #f44336; color: #fff; }
-        .overlay-popup .overlay-type.lock { background: #9C27B0; color: #fff; }
-        .overlay-popup .overlay-detail { font-size: 0.8rem; color: var(--text-sub); margin-top: 4px; }
+        /* Extract Legend */
+        .extract-legend { display: flex; gap: 12px; align-items: center; margin-left: 10px; }
+        .legend-item { display: flex; align-items: center; gap: 4px; font-size: 0.75rem; color: var(--text-sub); }
+        .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+        .legend-dot.pmc { background: #4CAF50; }
+        .legend-dot.scav { background: #FFD700; }
+        .legend-dot.coop { background: #2196F3; }
+        .legend-dot.restricted { background: #f44336; }
+        
+        /* Extract Markers on Map */
+        .extract-marker { width: 22px; height: 22px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; box-shadow: 0 2px 6px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.15s; border: 2px solid; }
+        .extract-marker:hover { transform: scale(1.2); z-index: 1000 !important; }
+        .extract-marker.pmc { background: rgba(76, 175, 80, 0.95); border-color: #81C784; color: #fff; }
+        .extract-marker.scav { background: rgba(255, 215, 0, 0.95); border-color: #FFE082; color: #000; }
+        .extract-marker.coop { background: rgba(33, 150, 243, 0.95); border-color: #64B5F6; color: #fff; }
+        .extract-marker.restricted { background: rgba(244, 67, 54, 0.95); border-color: #E57373; color: #fff; }
         
         /* Global Loading Screen */
         .global-loading-screen {
@@ -1005,27 +1000,17 @@
                         
                         <!-- Map Overlay Controls -->
                         <div class="map-overlay-controls">
-                            <span class="overlay-title">Map Overlays:</span>
-                            <label class="overlay-toggle" data-overlay="extracts_pmc">
-                                <input type="checkbox" id="overlay-extracts-pmc" onchange="toggleMapOverlay('extracts_pmc')">
-                                <span class="overlay-icon extract-pmc">🚪</span>
-                                <span>PMC Exits</span>
+                            <label class="overlay-toggle" data-overlay="extracts">
+                                <input type="checkbox" id="overlay-extracts" onchange="toggleExtracts()">
+                                <span class="overlay-icon">🚪</span>
+                                <span>Show Extracts</span>
                             </label>
-                            <label class="overlay-toggle" data-overlay="extracts_scav">
-                                <input type="checkbox" id="overlay-extracts-scav" onchange="toggleMapOverlay('extracts_scav')">
-                                <span class="overlay-icon extract-scav">🚪</span>
-                                <span>Scav Exits</span>
-                            </label>
-                            <label class="overlay-toggle" data-overlay="hazards">
-                                <input type="checkbox" id="overlay-hazards" onchange="toggleMapOverlay('hazards')">
-                                <span class="overlay-icon hazard">⚠️</span>
-                                <span>Hazards</span>
-                            </label>
-                            <label class="overlay-toggle" data-overlay="locks">
-                                <input type="checkbox" id="overlay-locks" onchange="toggleMapOverlay('locks')">
-                                <span class="overlay-icon locks">🔐</span>
-                                <span>Locked Doors</span>
-                            </label>
+                            <div class="extract-legend" id="extractLegend" style="display: none;">
+                                <span class="legend-item"><span class="legend-dot pmc"></span>PMC</span>
+                                <span class="legend-item"><span class="legend-dot scav"></span>Scav</span>
+                                <span class="legend-item"><span class="legend-dot coop"></span>Co-Op</span>
+                                <span class="legend-item"><span class="legend-dot restricted"></span>Restricted</span>
+                            </div>
                         </div>
                         
                         <div class="map-controls">
@@ -2569,11 +2554,11 @@
         function updateMarkerCount(questCount = null) {
             // If no count provided, calculate quest markers from DOM
             if (questCount === null) {
-                questCount = document.querySelectorAll('.leaflet-marker-icon:not(.overlay-marker)').length;
+                questCount = document.querySelectorAll('.leaflet-marker-icon:not(.extract-marker)').length;
             }
-            // Add overlay markers
-            const overlayCount = Object.values(overlayLayers).reduce((sum, layer) => sum + layer.markers.length, 0);
-            const total = questCount + overlayCount;
+            // Add extract markers
+            const extractCount = extractMarkers ? extractMarkers.length : 0;
+            const total = questCount + extractCount;
             document.getElementById('markerCount').textContent = total + ' marker' + (total !== 1 ? 's' : '');
         }
 
@@ -5773,381 +5758,238 @@
         }
 
 
+
         // ============================================================================
-        // MAP OVERLAY SYSTEM
+        // EXTRACT OVERLAY SYSTEM
         // ============================================================================
         
-        // Overlay data cache per map
-        let mapOverlayData = {};
-        let allMapsCache = null;
-        
-        // Overlay state
-        let overlayLayers = {
-            extracts_pmc: { enabled: false, markers: [] },
-            extracts_scav: { enabled: false, markers: [] },
-            hazards: { enabled: false, markers: [] },
-            locks: { enabled: false, markers: [] }
-        };
+        let extractMarkers = [];
+        let extractsEnabled = false;
         
         // Currently active map in multi-map mode
         let activeMapTab = null;
         let multiMapMode = false;
         let requiredMaps = [];
         
-        async function loadMapOverlayData(mapName) {
-            // Check cache first
-            if (mapOverlayData[mapName]) {
-                console.log('Using cached overlay data for:', mapName);
-                return mapOverlayData[mapName];
-            }
+        // Hardcoded extract data with percentage-based positions
+        // Positions are calibrated for TarkovTracker SVG maps
+        const EXTRACTS_DATA = {
+            customs: [
+                // PMC Extracts
+                { name: 'ZB-1011', x: 9, y: 52, type: 'pmc' },
+                { name: 'ZB-1012', x: 14, y: 75, type: 'pmc' },
+                { name: 'Crossroads', x: 6, y: 58, type: 'pmc' },
+                { name: 'Trailer Park', x: 7, y: 42, type: 'pmc' },
+                { name: 'RUAF Roadblock', x: 28, y: 18, type: 'restricted', note: 'Not always open' },
+                { name: 'Smuggler\'s Boat', x: 40, y: 12, type: 'restricted', note: 'Not always open' },
+                { name: 'Old Gas Station', x: 44, y: 48, type: 'restricted', note: 'Not always open' },
+                { name: 'Dorms V-Ex', x: 50, y: 32, type: 'restricted', note: 'Costs 7000₽' },
+                { name: 'ZB-013', x: 62, y: 18, type: 'restricted', note: 'Requires Factory Exit Key' },
+                { name: 'Railroad To Tarkov', x: 90, y: 35, type: 'pmc' },
+                { name: 'Railroad To Port', x: 92, y: 62, type: 'pmc' },
+                { name: 'Railroad To Military Base', x: 88, y: 78, type: 'pmc' },
+                { name: 'Trailer Park Workers\' Shack', x: 9, y: 45, type: 'restricted', note: 'Requires key' },
+                // Scav Extracts
+                { name: 'Old Road Gate', x: 78, y: 75, type: 'scav' },
+                { name: 'Sniper Roadblock', x: 65, y: 88, type: 'scav' },
+                { name: 'Warehouse 17', x: 82, y: 58, type: 'scav' },
+                { name: 'Factory Shacks', x: 86, y: 52, type: 'scav' },
+                { name: 'Military Base CP', x: 56, y: 92, type: 'scav' },
+                { name: 'Administration Gate', x: 72, y: 45, type: 'scav' },
+                // Co-Op
+                { name: 'Scav Checkpoint (Co-Op)', x: 55, y: 78, type: 'coop' }
+            ],
+            shoreline: [
+                // PMC Extracts
+                { name: 'Road to Customs', x: 6, y: 28, type: 'pmc' },
+                { name: 'CCP Temporary', x: 10, y: 48, type: 'restricted', note: 'Not always open' },
+                { name: 'Tunnel', x: 8, y: 78, type: 'pmc' },
+                { name: 'Ruined Road', x: 22, y: 90, type: 'restricted', note: 'Not always open' },
+                { name: 'Lighthouse', x: 92, y: 18, type: 'pmc' },
+                { name: 'Pier Boat', x: 85, y: 38, type: 'restricted', note: 'Not always open' },
+                { name: 'Admin Basement', x: 52, y: 42, type: 'restricted', note: 'Requires key' },
+                { name: 'Rock Passage', x: 65, y: 15, type: 'restricted', note: 'Not always open' },
+                // Scav Extracts
+                { name: 'Lighthouse (Scav)', x: 90, y: 22, type: 'scav' },
+                { name: 'Road to North', x: 42, y: 8, type: 'scav' },
+                { name: 'Ruined House Fence', x: 15, y: 35, type: 'scav' },
+                { name: 'South Fence Passage', x: 72, y: 88, type: 'scav' },
+                { name: 'Svetliy Dead End', x: 38, y: 5, type: 'scav' }
+            ],
+            woods: [
+                // PMC Extracts
+                { name: 'Outskirts', x: 8, y: 22, type: 'pmc' },
+                { name: 'RUAF Gate', x: 14, y: 48, type: 'restricted', note: 'Not always open' },
+                { name: 'ZB-014', x: 22, y: 72, type: 'restricted', note: 'Requires key' },
+                { name: 'ZB-016', x: 35, y: 85, type: 'pmc' },
+                { name: 'South V-Ex', x: 52, y: 92, type: 'restricted', note: 'Costs 3000₽' },
+                { name: 'Factory Gate', x: 75, y: 80, type: 'coop' },
+                { name: 'Old Station', x: 88, y: 58, type: 'pmc' },
+                { name: 'UN Roadblock', x: 92, y: 38, type: 'pmc' },
+                { name: 'Dead Man\'s Place', x: 82, y: 20, type: 'pmc' },
+                // Scav Extracts
+                { name: 'Mountain Stash', x: 62, y: 10, type: 'scav' },
+                { name: 'Scav House', x: 42, y: 15, type: 'scav' },
+                { name: 'The Boat', x: 25, y: 28, type: 'scav' },
+                { name: 'Scav Bridge', x: 85, y: 32, type: 'scav' },
+                { name: 'Eastern Rocks', x: 95, y: 48, type: 'scav' }
+            ],
+            interchange: [
+                // PMC Extracts  
+                { name: 'Emercom Checkpoint', x: 12, y: 78, type: 'pmc' },
+                { name: 'Railway Exfil', x: 88, y: 28, type: 'pmc' },
+                { name: 'Power Station V-Ex', x: 92, y: 58, type: 'restricted', note: 'Costs 3000₽' },
+                { name: 'Saferoom Exfil', x: 48, y: 52, type: 'restricted', note: 'Requires key + power' },
+                { name: 'Hole in Fence', x: 72, y: 88, type: 'restricted', note: 'No backpack' },
+                // Scav Extracts
+                { name: 'Scav Camp', x: 22, y: 18, type: 'scav' },
+                { name: 'Railway (Scav)', x: 85, y: 25, type: 'scav' },
+                { name: 'Emercom (Scav)', x: 15, y: 82, type: 'scav' },
+                // Co-Op
+                { name: 'Scav Camp (Co-Op)', x: 25, y: 15, type: 'coop' }
+            ],
+            reserve: [
+                // PMC Extracts
+                { name: 'Bunker Hermetic Door', x: 42, y: 58, type: 'restricted', note: 'Requires alarm' },
+                { name: 'Cliff Descent', x: 88, y: 45, type: 'restricted', note: 'Requires Paracord + RR' },
+                { name: 'Armored Train', x: 32, y: 40, type: 'restricted', note: 'Arrives randomly' },
+                { name: 'D-2', x: 48, y: 55, type: 'restricted', note: 'Requires power' },
+                { name: 'Heating Pipe', x: 70, y: 80, type: 'restricted', note: 'No backpack' },
+                { name: 'Sewer Manhole', x: 50, y: 70, type: 'restricted', note: 'No backpack' },
+                // Scav Extracts
+                { name: 'Hole in Fence (Reserve)', x: 12, y: 28, type: 'scav' },
+                { name: 'CP Fence', x: 8, y: 88, type: 'scav' },
+                { name: 'Depot Hermetic Door', x: 25, y: 65, type: 'scav' },
+                // Co-Op
+                { name: 'Scav Lands', x: 85, y: 78, type: 'coop' }
+            ],
+            lighthouse: [
+                // PMC Extracts
+                { name: 'Armored Train (Lighthouse)', x: 92, y: 48, type: 'restricted', note: 'Arrives randomly' },
+                { name: 'Side Tunnel', x: 88, y: 75, type: 'restricted', note: 'Requires key' },
+                { name: 'Path to Shoreline', x: 62, y: 92, type: 'pmc' },
+                { name: 'Southern Road', x: 32, y: 90, type: 'restricted', note: 'Not always open' },
+                { name: 'USEC Stash', x: 18, y: 22, type: 'restricted', note: 'USEC only' },
+                { name: 'BEAR Stash', x: 22, y: 25, type: 'restricted', note: 'BEAR only' },
+                // Scav Extracts
+                { name: 'Grotto', x: 12, y: 68, type: 'scav' },
+                { name: 'Industrial Zone Gates', x: 58, y: 88, type: 'scav' },
+                { name: 'Scav Hideout', x: 75, y: 35, type: 'scav' }
+            ],
+            streets: [
+                // PMC Extracts
+                { name: 'Primorsky Ave Taxi', x: 8, y: 25, type: 'restricted', note: 'Costs 5000₽' },
+                { name: 'Expo Checkpoint', x: 12, y: 58, type: 'pmc' },
+                { name: 'Scav Checkpoint (Streets)', x: 25, y: 80, type: 'pmc' },
+                { name: 'Collapsed Crane', x: 52, y: 90, type: 'pmc' },
+                { name: 'Klimov Street', x: 72, y: 75, type: 'pmc' },
+                { name: 'Sewer River', x: 88, y: 25, type: 'pmc' },
+                { name: 'Evacuation Zone', x: 62, y: 18, type: 'restricted', note: 'Flare required' },
+                { name: 'Stylobate Building Elevator', x: 80, y: 48, type: 'restricted', note: 'Requires key' },
+                { name: 'Cardinal Apartment Complex', x: 45, y: 38, type: 'restricted', note: 'Requires key' },
+                // Scav Extracts
+                { name: 'Entrance to Catacombs', x: 38, y: 72, type: 'scav' },
+                { name: 'Ventilation Shaft', x: 55, y: 45, type: 'scav' },
+                { name: 'Sewer Manhole (Streets)', x: 85, y: 62, type: 'scav' }
+            ],
+            groundzero: [
+                // PMC Extracts
+                { name: 'Police Checkpoint', x: 18, y: 38, type: 'pmc' },
+                { name: 'Mira Ave', x: 85, y: 68, type: 'pmc' },
+                { name: 'Scav Checkpoint (GZ)', x: 42, y: 88, type: 'restricted', note: 'Not always open' },
+                { name: 'Emercom Checkpoint (GZ)', x: 72, y: 25, type: 'restricted', note: 'Not always open' },
+                // Scav Extracts
+                { name: 'Police Checkpoint (Scav)', x: 15, y: 42, type: 'scav' },
+                { name: 'Mira Ave (Scav)', x: 88, y: 65, type: 'scav' }
+            ],
+            factory: [
+                // PMC Extracts
+                { name: 'Gate 0', x: 22, y: 38, type: 'restricted', note: 'Requires Factory Exit Key' },
+                { name: 'Gate 3', x: 75, y: 58, type: 'pmc' },
+                { name: 'Cellars', x: 42, y: 80, type: 'pmc' },
+                { name: 'Camera Bunker Door', x: 55, y: 25, type: 'restricted', note: 'Requires Factory Exit Key' },
+                // Scav Extracts
+                { name: 'Office Window', x: 32, y: 52, type: 'scav' },
+                { name: 'Gate m', x: 68, y: 42, type: 'scav' },
+                // Co-Op
+                { name: 'Gate m (Co-Op)', x: 72, y: 38, type: 'coop' }
+            ],
+            labs: [
+                // All restricted (keycards)
+                { name: 'Sewage Conduit', x: 18, y: 75, type: 'restricted', note: 'Requires power' },
+                { name: 'Ventilation Shaft', x: 82, y: 30, type: 'restricted', note: 'Requires power' },
+                { name: 'Main Elevator', x: 48, y: 52, type: 'restricted', note: 'Requires power' },
+                { name: 'Cargo Elevator', x: 32, y: 38, type: 'restricted', note: 'Requires power' },
+                { name: 'Parking Gate', x: 65, y: 78, type: 'restricted', note: 'Requires keycard' },
+                { name: 'Hangar Gate', x: 22, y: 48, type: 'restricted', note: 'Requires keycard' }
+            ]
+        };
+        
+        async function toggleExtracts() {
+            const checkbox = document.getElementById('overlay-extracts');
+            extractsEnabled = checkbox?.checked || false;
             
-            // Map key to API name mapping
-            const apiMapNames = {
-                customs: 'Customs',
-                woods: 'Woods',
-                shoreline: 'Shoreline',
-                interchange: 'Interchange',
-                reserve: 'Reserve',
-                lighthouse: 'Lighthouse',
-                streets: 'Streets of Tarkov',
-                groundzero: 'Ground Zero',
-                factory: 'Factory',
-                labs: 'The Lab'
-            };
+            // Show/hide legend
+            const legend = document.getElementById('extractLegend');
+            if (legend) legend.style.display = extractsEnabled ? 'flex' : 'none';
             
-            const apiMapName = apiMapNames[mapName] || mapName;
-            console.log('Loading overlay data for:', mapName);
-            
-            try {
-                // Use cached all-maps data or fetch new
-                let allMaps;
-                if (allMapsCache) {
-                    allMaps = allMapsCache;
-                } else {
-                    const query = `{
-                        maps {
-                            name
-                            normalizedName
-                            extracts {
-                                name
-                                faction
-                                position { x y z }
-                                outline { x y z }
-                                top
-                                bottom
-                                switches {
-                                    name
-                                    position { x y z }
-                                }
-                            }
-                            hazards {
-                                name
-                                position { x y z }
-                                outline { x y z }
-                                top
-                                bottom
-                            }
-                            locks {
-                                lockType
-                                key {
-                                    name
-                                    shortName
-                                }
-                                needsPower
-                                position { x y z }
-                                outline { x y z }
-                                top
-                                bottom
-                            }
-                        }
-                    }`;
-                    
-                    const response = await fetch('https://api.tarkov.dev/graphql', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ query })
-                    });
-                    
-                    if (!response.ok) {
-                        console.error('API error:', response.status);
-                        return null;
-                    }
-                    
-                    const data = await response.json();
-                    if (data.errors) {
-                        console.error('GraphQL errors:', data.errors);
-                        return null;
-                    }
-                    
-                    allMaps = data?.data?.maps || [];
-                    if (allMaps.length > 0) {
-                        allMapsCache = allMaps;
-                        console.log('Loaded', allMaps.length, 'maps from API');
-                    }
-                }
-                
-                // Find the correct map
-                const mapData = allMaps.find(m => 
-                    m.normalizedName === mapName || 
-                    m.name.toLowerCase() === apiMapName.toLowerCase()
-                );
-                
-                if (!mapData) {
-                    console.warn('Map not found:', mapName);
-                    return null;
-                }
-                
-                // Process overlay data
-                const processed = {
-                    extracts_pmc: [],
-                    extracts_scav: [],
-                    hazards: [],
-                    locks: []
-                };
-                
-                // Process extracts
-                if (mapData.extracts) {
-                    mapData.extracts.forEach(extract => {
-                        const pos = extract.position || (extract.outline && extract.outline[0]);
-                        if (!pos) return;
-                        
-                        const extractInfo = {
-                            name: extract.name,
-                            faction: extract.faction,
-                            x: pos.x,
-                            y: pos.z,
-                            switches: extract.switches || []
-                        };
-                        
-                        if (extract.faction === 'pmc' || extract.faction === 'all') {
-                            processed.extracts_pmc.push(extractInfo);
-                        }
-                        if (extract.faction === 'scav' || extract.faction === 'all') {
-                            processed.extracts_scav.push({...extractInfo});
-                        }
-                    });
-                }
-                
-                // Process hazards
-                if (mapData.hazards) {
-                    mapData.hazards.forEach(hazard => {
-                        const pos = hazard.position || (hazard.outline && hazard.outline[0]);
-                        if (!pos) return;
-                        
-                        processed.hazards.push({
-                            name: hazard.name,
-                            x: pos.x,
-                            y: pos.z
-                        });
-                    });
-                }
-                
-                // Process locks
-                if (mapData.locks) {
-                    mapData.locks.forEach(lock => {
-                        const pos = lock.position || (lock.outline && lock.outline[0]);
-                        if (!pos) return;
-                        
-                        processed.locks.push({
-                            name: lock.key?.name || 'Unknown',
-                            shortName: lock.key?.shortName || '',
-                            lockType: lock.lockType,
-                            needsPower: lock.needsPower,
-                            x: pos.x,
-                            y: pos.z
-                        });
-                    });
-                }
-                
-                mapOverlayData[mapName] = processed;
-                console.log('Overlay data for', mapName, '- PMC Exits:', processed.extracts_pmc.length, 
-                    'Scav Exits:', processed.extracts_scav.length,
-                    'Hazards:', processed.hazards.length, 
-                    'Locks:', processed.locks.length);
-                    
-                return processed;
-                
-            } catch (err) {
-                console.error('Error loading overlay data:', err);
-                return null;
-            }
+            await renderExtractMarkers();
         }
         
-        async function toggleMapOverlay(overlayType) {
-            const checkbox = document.getElementById('overlay-' + overlayType.replace('_', '-'));
-            overlayLayers[overlayType].enabled = checkbox?.checked || false;
-            
-            console.log(`toggleMapOverlay: ${overlayType} = ${overlayLayers[overlayType].enabled}`);
-            
-            await renderOverlayMarkers();
-        }
-        
-        async function renderOverlayMarkers() {
+        async function renderExtractMarkers() {
             const currentMap = activeMapTab || document.getElementById('mapSelect')?.value || 'customs';
-            console.log('renderOverlayMarkers for map:', currentMap);
             
-            // Clear existing overlay markers
-            Object.values(overlayLayers).forEach(layer => {
-                layer.markers.forEach(m => m.remove());
-                layer.markers = [];
+            // Clear existing markers
+            extractMarkers.forEach(m => m.remove());
+            extractMarkers = [];
+            
+            if (!extractsEnabled || !mapInstance) {
+                updateMarkerCount();
+                return;
+            }
+            
+            const extracts = EXTRACTS_DATA[currentMap] || [];
+            
+            extracts.forEach(ext => {
+                // Convert percentage to pixel coordinates
+                const x = (ext.x / 100) * currentMapWidth;
+                const y = (ext.y / 100) * currentMapHeight;
+                
+                // Create marker icon
+                const icon = L.divIcon({
+                    html: '🚪',
+                    className: `extract-marker ${ext.type}`,
+                    iconSize: [22, 22],
+                    iconAnchor: [11, 11]
+                });
+                
+                // Leaflet Y is inverted
+                const marker = L.marker([currentMapHeight - y, x], { icon })
+                    .addTo(mapInstance);
+                
+                // Build tooltip text
+                let typeLabel = ext.type.toUpperCase();
+                if (ext.type === 'coop') typeLabel = 'Co-Op';
+                if (ext.type === 'restricted') typeLabel = 'Restricted';
+                
+                let tooltipText = `${ext.name} (${typeLabel})`;
+                if (ext.note) tooltipText += ` - ${ext.note}`;
+                
+                marker.bindTooltip(tooltipText, {
+                    direction: 'auto',
+                    className: 'tarkov-tooltip'
+                });
+                
+                extractMarkers.push(marker);
             });
             
-            // Check if any overlays are enabled
-            const anyEnabled = Object.values(overlayLayers).some(l => l.enabled);
-            if (!anyEnabled) {
-                console.log('No overlays enabled');
-                updateMarkerCount();
-                return;
-            }
-            
-            // Load overlay data for current map
-            const overlays = await loadMapOverlayData(currentMap);
-            if (!overlays) {
-                console.warn('No overlay data for:', currentMap);
-                updateMarkerCount();
-                return;
-            }
-            
-            if (!mapInstance) {
-                console.warn('Map not ready');
-                return;
-            }
-            
-            // Render each enabled overlay
-            for (const [overlayType, layer] of Object.entries(overlayLayers)) {
-                if (!layer.enabled) continue;
-                
-                const points = overlays[overlayType] || [];
-                console.log(`${overlayType}: ${points.length} points`);
-                
-                points.forEach((point, idx) => {
-                    // Convert game coordinates to map coordinates
-                    const coords = convertGameCoordsToMap(point.x, point.y, currentMap);
-                    if (!coords) return;
-                    
-                    // Create marker icon based on type
-                    const icon = createOverlayIcon(overlayType, point);
-                    
-                    const marker = L.marker([coords.y, coords.x], { icon })
-                        .addTo(mapInstance);
-                    
-                    // Build popup content
-                    let popupHtml = '<div class="overlay-popup">';
-                    
-                    if (overlayType === 'extracts_pmc') {
-                        popupHtml += `<h6>🚪 ${point.name}</h6>`;
-                        popupHtml += `<span class="overlay-type pmc">PMC Exit</span>`;
-                        if (point.switches?.length > 0) {
-                            popupHtml += `<div class="overlay-detail">⚡ Requires switch activation</div>`;
-                        }
-                    } else if (overlayType === 'extracts_scav') {
-                        popupHtml += `<h6>🚪 ${point.name}</h6>`;
-                        popupHtml += `<span class="overlay-type scav">Scav Exit</span>`;
-                    } else if (overlayType === 'hazards') {
-                        popupHtml += `<h6>⚠️ ${point.name}</h6>`;
-                        popupHtml += `<span class="overlay-type hazard">Hazard Zone</span>`;
-                    } else if (overlayType === 'locks') {
-                        popupHtml += `<h6>🔐 ${point.shortName || point.name}</h6>`;
-                        popupHtml += `<span class="overlay-type lock">${point.lockType || 'Locked'}</span>`;
-                        if (point.needsPower) {
-                            popupHtml += `<div class="overlay-detail">⚡ Requires power</div>`;
-                        }
-                        popupHtml += `<div class="overlay-detail">Key: ${point.name}</div>`;
-                    }
-                    
-                    popupHtml += '</div>';
-                    
-                    marker.bindPopup(popupHtml, {
-                        className: 'tarkov-popup',
-                        maxWidth: 250
-                    });
-                    
-                    // Add tooltip
-                    marker.bindTooltip(point.name || overlayType, {
-                        direction: 'auto',
-                        className: 'tarkov-tooltip'
-                    });
-                    
-                    layer.markers.push(marker);
-                });
-            }
-            
+            console.log(`Rendered ${extractMarkers.length} extract markers for ${currentMap}`);
             updateMarkerCount();
         }
         
-        function createOverlayIcon(type, point) {
-            let html = '';
-            let className = 'overlay-marker';
-            
-            switch(type) {
-                case 'extracts_pmc':
-                    html = '🚪';
-                    className += ' extract-pmc';
-                    break;
-                case 'extracts_scav':
-                    html = '🚪';
-                    className += ' extract-scav';
-                    break;
-                case 'hazards':
-                    html = '⚠️';
-                    className += ' hazard';
-                    break;
-                case 'locks':
-                    html = '🔐';
-                    className += ' lock';
-                    break;
-            }
-            
-            return L.divIcon({
-                html: html,
-                className: className,
-                iconSize: [28, 28],
-                iconAnchor: [14, 14]
-            });
-        }
-        
-        function convertGameCoordsToMap(gameX, gameZ, mapKey) {
-            // Convert game coordinates (in meters) to map pixel coordinates
-            const mapBounds = {
-                shoreline: { minX: -1100, maxX: 600, minZ: -200, maxZ: 700, flipX: false, flipZ: true },
-                customs: { minX: -300, maxX: 500, minZ: -200, maxZ: 350, flipX: false, flipZ: true },
-                woods: { minX: -600, maxX: 600, minZ: -800, maxZ: 400, flipX: false, flipZ: true },
-                interchange: { minX: -200, maxX: 300, minZ: -300, maxZ: 200, flipX: false, flipZ: true },
-                reserve: { minX: -350, maxX: 250, minZ: -350, maxZ: 250, flipX: false, flipZ: true },
-                lighthouse: { minX: -300, maxX: 600, minZ: -500, maxZ: 200, flipX: false, flipZ: true },
-                streets: { minX: -350, maxX: 450, minZ: -400, maxZ: 400, flipX: false, flipZ: true },
-                groundzero: { minX: -200, maxX: 200, minZ: -200, maxZ: 200, flipX: false, flipZ: true },
-                factory: { minX: -60, maxX: 60, minZ: -60, maxZ: 60, flipX: false, flipZ: true },
-                labs: { minX: -200, maxX: 200, minZ: -200, maxZ: 200, flipX: false, flipZ: true }
-            };
-            
-            const bounds = mapBounds[mapKey];
-            if (!bounds) {
-                console.warn('No bounds defined for map:', mapKey);
-                return null;
-            }
-            
-            // Normalize to 0-1 range
-            let normalizedX = (gameX - bounds.minX) / (bounds.maxX - bounds.minX);
-            let normalizedZ = (gameZ - bounds.minZ) / (bounds.maxZ - bounds.minZ);
-            
-            // Apply flips if needed
-            if (bounds.flipX) normalizedX = 1 - normalizedX;
-            if (bounds.flipZ) normalizedZ = 1 - normalizedZ;
-            
-            // Clamp to 0-1 range
-            normalizedX = Math.max(0, Math.min(1, normalizedX));
-            normalizedZ = Math.max(0, Math.min(1, normalizedZ));
-            
-            // Convert to pixel coordinates
-            const pixelX = normalizedX * currentMapWidth;
-            const pixelY = normalizedZ * currentMapHeight;
-            
-            // For Leaflet with CRS.Simple, Y increases downward from top
-            return {
-                x: pixelX,
-                y: currentMapHeight - pixelY
-            };
+        // Alias for compatibility
+        async function renderOverlayMarkers() {
+            await renderExtractMarkers();
         }
 
         // ============================================================================
@@ -6275,22 +6117,20 @@
             
             activeMapTab = mapKey;
             
-            // Restore overlay settings for this map
-            if (perMapLayerSettings[mapKey]) {
-                Object.entries(perMapLayerSettings[mapKey]).forEach(([overlay, enabled]) => {
-                    if (overlayLayers[overlay]) {
-                        overlayLayers[overlay].enabled = enabled;
-                        const checkbox = document.getElementById('overlay-' + overlay.replace('_', '-'));
-                        if (checkbox) checkbox.checked = enabled;
-                    }
-                });
+            // Restore extract settings for this map
+            if (perMapLayerSettings[mapKey]?.extracts !== undefined) {
+                extractsEnabled = perMapLayerSettings[mapKey].extracts;
+                const checkbox = document.getElementById('overlay-extracts');
+                if (checkbox) checkbox.checked = extractsEnabled;
+                const legend = document.getElementById('extractLegend');
+                if (legend) legend.style.display = extractsEnabled ? 'flex' : 'none';
             }
             
             // Reload map with new content
             await initMap(mapKey, selectedQuestNamesForMarkers, selectedQuestsForMarkers);
             
-            // Render overlay markers for new map
-            await renderOverlayMarkers();
+            // Render extract markers for new map
+            await renderExtractMarkers();
         }
         
         function resetMultiMapMode() {
@@ -6313,12 +6153,12 @@
             const applyAllBtn = document.querySelector('.btn-apply-all');
             if (applyAllBtn) applyAllBtn.style.display = 'none';
             
-            // Reset overlay toggles
-            Object.keys(overlayLayers).forEach(overlay => {
-                overlayLayers[overlay].enabled = false;
-                const checkbox = document.getElementById('overlay-' + overlay.replace('_', '-'));
-                if (checkbox) checkbox.checked = false;
-            });
+            // Reset extract toggle
+            extractsEnabled = false;
+            const checkbox = document.getElementById('overlay-extracts');
+            if (checkbox) checkbox.checked = false;
+            const legend = document.getElementById('extractLegend');
+            if (legend) legend.style.display = 'none';
         }
 
         // ============================================================================
