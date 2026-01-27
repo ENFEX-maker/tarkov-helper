@@ -761,7 +761,7 @@
             <div style="display: flex; align-items: center; gap: 15px;">
                 <!-- Edit Mode Badge (hidden by default) -->
                 <div id="editModeBadge" class="edit-mode-badge" style="display: none;">
-                    ✏️ EDIT MODE
+                    ✏️ EDIT MODE - Drag markers to correct | Click for notes
                 </div>
                 <!-- Auth Buttons -->
                 <div id="authButtons" class="auth-buttons">
@@ -958,6 +958,29 @@
                 <p class="text-sub" style="font-size: 0.7rem; margin-top: 10px; text-align: center;">
                     Corrections help calibrate extract positions for the SVG maps.
                 </p>
+            </div>
+        </div>
+        
+        <!-- Marker Notes Dialog (for adding custom notes to markers) -->
+        <div id="markerNotesDialogOverlay" class="correction-dialog-overlay" style="display: none;">
+            <div class="correction-dialog" style="min-width: 400px;">
+                <h4>📝 Edit Marker Note</h4>
+                <div class="correction-quest-info">
+                    <strong id="markerNoteName">Marker Name</strong>
+                    <div class="text-sub" style="font-size: 0.8rem;" id="markerNoteType">Extract / Quest</div>
+                </div>
+                
+                <div style="margin: 15px 0;">
+                    <label style="font-size: 0.85rem; color: var(--text-sub); display: block; margin-bottom: 6px;">Custom Note:</label>
+                    <textarea id="markerNoteText" class="form-control-tarkov" rows="3" placeholder="e.g., Flare needed, Key XYZ required, Danger zone..." style="width: 100%; resize: vertical;"></textarea>
+                    <div class="text-sub" style="font-size: 0.7rem; margin-top: 4px;">This note will appear in the marker tooltip and popup.</div>
+                </div>
+                
+                <div class="correction-dialog-buttons">
+                    <button class="btn-tarkov" onclick="deleteMarkerNote()" id="deleteMarkerNoteBtn" style="background: var(--eft-red); margin-right: auto;">🗑️ Delete</button>
+                    <button class="btn-tarkov" onclick="cancelMarkerNote()" style="background: var(--bg-dark);">Cancel</button>
+                    <button class="btn-tarkov" onclick="saveMarkerNote()" id="saveMarkerNoteBtn">💾 Save Note</button>
+                </div>
             </div>
         </div>
         
@@ -1780,7 +1803,7 @@
             isEditMode = !isEditMode;
             updateEditModeUI();
             
-            // Make markers draggable/non-draggable
+            // Make quest markers draggable/non-draggable
             if (questMarkersLayer) {
                 questMarkersLayer.eachLayer(marker => {
                     if (marker.dragging) {
@@ -1793,6 +1816,24 @@
                         }
                     }
                 });
+            }
+            
+            // Make extract markers draggable/non-draggable
+            extractMarkers.forEach(marker => {
+                if (marker.dragging) {
+                    if (isEditMode) {
+                        marker.dragging.enable();
+                        marker._icon?.classList.add('extract-marker-draggable');
+                    } else {
+                        marker.dragging.disable();
+                        marker._icon?.classList.remove('extract-marker-draggable');
+                    }
+                }
+            });
+            
+            // Re-render extract markers to show/hide edit buttons in popups
+            if (extractsEnabled) {
+                renderExtractMarkers();
             }
             
             console.log('Edit mode:', isEditMode ? 'ON' : 'OFF');
@@ -6264,7 +6305,7 @@
             
             console.log('Total extracts to render:', allExtracts.length, 'Global offset:', globalOffsetX, globalOffsetY);
             
-            // Check if user is logged in (for drag functionality)
+            // Check if user is logged in (for potential drag functionality)
             const canEdit = !!currentUser;
             
             allExtracts.forEach((extract) => {
@@ -6303,8 +6344,8 @@
                     markerClass += ' extract-scav';
                 }
                 
-                // Add draggable class if logged in
-                if (canEdit) {
+                // Add draggable class only if in edit mode
+                if (isEditMode) {
                     markerClass += ' extract-marker-draggable';
                 }
                 
@@ -6315,10 +6356,17 @@
                     iconAnchor: [14, 14]
                 });
                 
+                // Create marker - always with draggable:true so we can enable/disable later
+                // But start with dragging disabled
                 const marker = L.marker([finalY, finalX], { 
                     icon,
                     draggable: canEdit
                 }).addTo(mapInstance);
+                
+                // Disable dragging by default - will be enabled via toggleEditMode
+                if (marker.dragging && !isEditMode) {
+                    marker.dragging.disable();
+                }
                 
                 // Store extract data on marker for correction dialog
                 marker._extractData = {
@@ -6331,12 +6379,16 @@
                     baseY: coords.y
                 };
                 
-                // Handle drag end
+                // Handle drag end (event registered even if dragging disabled)
                 if (canEdit) {
                     marker.on('dragend', (e) => {
                         showExtractCorrectionDialog(marker, e);
                     });
                 }
+                
+                // Get custom note for this extract
+                const extractNoteKey = `extract|${currentMap}|${extract.name}`;
+                const customNote = getMarkerNote('extract', `${currentMap}|${extract.name}`);
                 
                 // Build popup
                 let popupHtml = `<div class="overlay-popup">
@@ -6347,14 +6399,32 @@
                     popupHtml += `<div class="overlay-detail" style="margin-top: 6px;">⚡ Requires switch activation</div>`;
                 }
                 
-                if (canEdit) {
-                    popupHtml += `<div class="overlay-detail" style="margin-top: 8px; color: var(--eft-gold);">✏️ Drag to correct position</div>`;
+                // Show custom note if exists
+                if (customNote) {
+                    popupHtml += `<div class="overlay-detail" style="margin-top: 8px; padding: 6px 8px; background: rgba(158, 143, 107, 0.15); border-left: 2px solid var(--eft-gold);">📝 ${customNote}</div>`;
+                }
+                
+                // Show edit button in edit mode
+                if (isEditMode) {
+                    const escapedName = extract.name.replace(/'/g, "\\'");
+                    popupHtml += `<div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border-dark);">
+                        <button onclick="showMarkerNoteDialog('extract', '${currentMap}|${escapedName}', '${escapedName}', 'Extract - ${currentMap}')" 
+                                class="btn-tarkov" style="width: 100%; padding: 4px 8px; font-size: 0.75rem;">
+                            📝 ${customNote ? 'Edit Note' : 'Add Note'}
+                        </button>
+                    </div>`;
                 }
                 
                 popupHtml += '</div>';
                 
-                marker.bindPopup(popupHtml, { className: 'tarkov-popup', maxWidth: 280 });
-                marker.bindTooltip(`${extract.name} (${typeName})`, { direction: 'auto', className: 'tarkov-tooltip' });
+                // Build tooltip - include note if exists
+                let tooltipText = `${extract.name} (${typeName})`;
+                if (customNote) {
+                    tooltipText += ` - 📝 ${customNote}`;
+                }
+                
+                marker.bindPopup(popupHtml, { className: 'tarkov-popup', maxWidth: 300 });
+                marker.bindTooltip(tooltipText, { direction: 'auto', className: 'tarkov-tooltip' });
                 
                 extractMarkers.push(marker);
             });
@@ -6454,6 +6524,180 @@
             } finally {
                 btn.disabled = false;
                 btn.textContent = '💾 Save Correction';
+            }
+        }
+        
+        // ============================================================================
+        // MARKER NOTES SYSTEM
+        // ============================================================================
+        
+        let markerNotesCache = null;
+        let markerNotesCacheLoaded = false;
+        let pendingMarkerNote = null;
+        
+        async function loadMarkerNotes() {
+            if (markerNotesCacheLoaded && markerNotesCache) {
+                return markerNotesCache;
+            }
+            
+            if (!supabaseClient) {
+                console.log('Supabase not available, skipping marker notes load');
+                return {};
+            }
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('marker_notes')
+                    .select('*');
+                
+                if (error) throw error;
+                
+                // Build cache keyed by marker_type|marker_id
+                markerNotesCache = {};
+                (data || []).forEach(row => {
+                    const key = `${row.marker_type}|${row.marker_id}`;
+                    markerNotesCache[key] = row;
+                });
+                
+                markerNotesCacheLoaded = true;
+                console.log('Loaded marker notes:', Object.keys(markerNotesCache).length);
+                return markerNotesCache;
+            } catch (err) {
+                console.error('Error loading marker notes:', err);
+                return {};
+            }
+        }
+        
+        function clearMarkerNotesCache() {
+            markerNotesCache = null;
+            markerNotesCacheLoaded = false;
+        }
+        
+        function getMarkerNote(markerType, markerId) {
+            if (!markerNotesCache) return null;
+            const key = `${markerType}|${markerId}`;
+            return markerNotesCache[key]?.note_text || null;
+        }
+        
+        function showMarkerNoteDialog(markerType, markerId, markerName, typeLabel) {
+            if (!currentUser) {
+                showLoginModal();
+                return;
+            }
+            
+            const existingNote = getMarkerNote(markerType, markerId);
+            
+            pendingMarkerNote = {
+                markerType,
+                markerId,
+                markerName
+            };
+            
+            document.getElementById('markerNoteName').textContent = markerName;
+            document.getElementById('markerNoteType').textContent = typeLabel;
+            document.getElementById('markerNoteText').value = existingNote || '';
+            document.getElementById('deleteMarkerNoteBtn').style.display = existingNote ? 'block' : 'none';
+            
+            document.getElementById('markerNotesDialogOverlay').style.display = 'block';
+            document.getElementById('markerNoteText').focus();
+        }
+        
+        function cancelMarkerNote() {
+            pendingMarkerNote = null;
+            document.getElementById('markerNotesDialogOverlay').style.display = 'none';
+        }
+        
+        async function saveMarkerNote() {
+            if (!pendingMarkerNote || !currentUser || !supabaseClient) {
+                alert('Unable to save note. Please ensure you are logged in.');
+                return;
+            }
+            
+            const noteText = document.getElementById('markerNoteText').value.trim();
+            
+            const btn = document.getElementById('saveMarkerNoteBtn');
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+            
+            try {
+                if (noteText) {
+                    // Save or update note
+                    const noteData = {
+                        marker_type: pendingMarkerNote.markerType,
+                        marker_id: pendingMarkerNote.markerId,
+                        note_text: noteText,
+                        created_by: currentUser.id
+                    };
+                    
+                    const { data, error } = await supabaseClient
+                        .from('marker_notes')
+                        .upsert(noteData, { 
+                            onConflict: 'marker_type,marker_id'
+                        });
+                    
+                    if (error) throw error;
+                    console.log('Marker note saved:', noteData);
+                } else {
+                    // Delete note if empty
+                    await deleteMarkerNoteInternal();
+                }
+                
+                // Clear cache and re-render
+                clearMarkerNotesCache();
+                await loadMarkerNotes();
+                
+                // Re-render markers to show updated notes
+                if (extractsEnabled) {
+                    await renderExtractMarkers();
+                }
+                // Quest markers would need similar re-render
+                
+                pendingMarkerNote = null;
+                document.getElementById('markerNotesDialogOverlay').style.display = 'none';
+                
+            } catch (error) {
+                console.error('Error saving marker note:', error);
+                alert('Failed to save note: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '💾 Save Note';
+            }
+        }
+        
+        async function deleteMarkerNote() {
+            if (!pendingMarkerNote || !currentUser || !supabaseClient) {
+                return;
+            }
+            
+            if (!confirm('Delete this note?')) return;
+            
+            await deleteMarkerNoteInternal();
+            
+            clearMarkerNotesCache();
+            await loadMarkerNotes();
+            
+            if (extractsEnabled) {
+                await renderExtractMarkers();
+            }
+            
+            pendingMarkerNote = null;
+            document.getElementById('markerNotesDialogOverlay').style.display = 'none';
+        }
+        
+        async function deleteMarkerNoteInternal() {
+            if (!pendingMarkerNote || !supabaseClient) return;
+            
+            try {
+                const { error } = await supabaseClient
+                    .from('marker_notes')
+                    .delete()
+                    .eq('marker_type', pendingMarkerNote.markerType)
+                    .eq('marker_id', pendingMarkerNote.markerId);
+                
+                if (error) throw error;
+                console.log('Marker note deleted');
+            } catch (err) {
+                console.error('Error deleting marker note:', err);
             }
         }
         
@@ -7237,6 +7481,7 @@
                 { name: 'Quests', fn: loadQuests },
                 { name: 'Hideout Data', fn: loadHideoutData },
                 { name: 'Extract Data', fn: preloadAllExtractData },
+                { name: 'Marker Notes', fn: loadMarkerNotes },
                 { name: 'Ammo Database', fn: loadAmmoData },
                 { name: 'Weapons Database', fn: loadWeaponsData },
                 { name: 'Gear Database', fn: loadGearData },
