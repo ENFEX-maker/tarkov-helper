@@ -634,11 +634,11 @@
             <div style="display: flex; align-items: center; gap: 15px;">
                 <!-- Edit Mode Badge (hidden by default) -->
                 <div id="editModeBadge" class="edit-mode-badge" style="display: none;">
-                    âœï¸ EDIT MODE
+                    ✏️ EDIT MODE
                 </div>
                 <!-- Auth Buttons -->
                 <div id="authButtons" class="auth-buttons">
-                    <button id="loginBtn" class="btn-tarkov" onclick="showLoginModal()" style="padding: 6px 12px; font-size: 0.75rem;">ðŸ”‘ Login</button>
+                    <button id="loginBtn" class="btn-tarkov" onclick="showLoginModal()" style="padding: 6px 12px; font-size: 0.75rem;">🔑 Login</button>
                     <div id="userInfo" style="display: none; align-items: center; gap: 8px;">
                         <span id="userEmail" style="color: var(--text-sub); font-size: 0.75rem;"></span>
                         <button id="editModeBtn" class="edit-mode-toggle" onclick="toggleEditMode()" title="Toggle marker editing (Ctrl+Shift+E)">✏️ Edit Markers</button>
@@ -646,9 +646,9 @@
                     </div>
                 </div>
                 <div class="config-buttons" style="display: flex; gap: 8px;">
-                    <button class="btn-tarkov" onclick="exportConfig()" style="padding: 6px 12px; font-size: 0.75rem;" title="Export configuration">ðŸ“¥ Export</button>
-                    <button class="btn-tarkov" onclick="showImportModal()" style="padding: 6px 12px; font-size: 0.75rem;" title="Import configuration">ðŸ“¤ Import</button>
-                    <button class="btn-tarkov" onclick="toggleShortcutsHelp()" style="padding: 6px 12px; font-size: 0.75rem;" title="Keyboard shortcuts (?)">âŒ¨ï¸</button>
+                    <button class="btn-tarkov" onclick="exportConfig()" style="padding: 6px 12px; font-size: 0.75rem;" title="Export configuration">📥 Export</button>
+                    <button class="btn-tarkov" onclick="showImportModal()" style="padding: 6px 12px; font-size: 0.75rem;" title="Import configuration">📤 Import</button>
+                    <button class="btn-tarkov" onclick="toggleShortcutsHelp()" style="padding: 6px 12px; font-size: 0.75rem;" title="Keyboard shortcuts (?)">⌨️</button>
                 </div>
                 <div class="status-indicator">
                     <div class="status-dot" id="statusDot"></div>
@@ -660,7 +660,7 @@
         <!-- Login Modal -->
         <div id="loginModal" class="modal-overlay" style="display: none;">
             <div class="modal-content" style="max-width: 400px;">
-                <h5 style="color: var(--text-beige); margin-bottom: 20px;">ðŸ”‘ Contributor Login</h5>
+                <h5 style="color: var(--text-beige); margin-bottom: 20px;">🔑 Contributor Login</h5>
                 <div id="loginError" style="display: none; background: rgba(140, 59, 59, 0.3); border: 1px solid var(--eft-red); padding: 10px; margin-bottom: 15px; color: var(--eft-red); font-size: 0.85rem;"></div>
                 <div style="margin-bottom: 15px;">
                     <label style="color: var(--text-sub); font-size: 0.8rem; display: block; margin-bottom: 5px;">Email</label>
@@ -668,7 +668,7 @@
                 </div>
                 <div style="margin-bottom: 20px;">
                     <label style="color: var(--text-sub); font-size: 0.8rem; display: block; margin-bottom: 5px;">Password</label>
-                    <input type="password" id="loginPassword" class="form-control-tarkov w-100" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" style="padding: 10px;" onkeypress="if(event.key==='Enter')doLogin()">
+                    <input type="password" id="loginPassword" class="form-control-tarkov w-100" placeholder="••••••••" style="padding: 10px;" onkeypress="if(event.key==='Enter')doLogin()">
                 </div>
                 <div style="display: flex; gap: 10px; justify-content: flex-end;">
                     <button class="btn-tarkov" onclick="hideLoginModal()" style="padding: 8px 20px; background: var(--bg-dark);">Cancel</button>
@@ -689,10 +689,10 @@
                 <textarea id="importTextarea" style="width: 100%; height: 150px; background: var(--bg-dark); border: 1px solid var(--border-dark); color: var(--text-main); padding: 10px; font-family: monospace; font-size: 0.8rem; resize: vertical;" placeholder="Paste share code or JSON here..."></textarea>
                 <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
                     <label class="btn-tarkov" style="padding: 8px 15px; cursor: pointer;">
-                        ðŸ“ Upload File
+                        📁 Upload File
                         <input type="file" accept=".json" onchange="importFromFile(event)" style="display: none;">
                     </label>
-                    <button class="btn-tarkov" onclick="importFromText()" style="padding: 8px 15px;">âœ“ Apply</button>
+                    <button class="btn-tarkov" onclick="importFromText()" style="padding: 8px 15px;">✓ Apply</button>
                     <button class="btn-tarkov" onclick="hideImportModal()" style="padding: 8px 15px; background: var(--bg-dark);">Cancel</button>
                 </div>
             </div>
@@ -705,14 +705,14 @@
                 <p style="color: var(--text-sub); font-size: 0.85rem; margin-bottom: 10px;">Choose how to export your configuration:</p>
                 
                 <div style="margin-bottom: 20px;">
-                    <label style="color: var(--text-beige); font-size: 0.85rem; display: block; margin-bottom: 8px;">ðŸ“‹ Share Code (for Discord, etc.):</label>
+                    <label style="color: var(--text-beige); font-size: 0.85rem; display: block; margin-bottom: 8px;">📋 Share Code (for Discord, etc.):</label>
                     <textarea id="exportCode" readonly style="width: 100%; height: 80px; background: var(--bg-dark); border: 1px solid var(--border-dark); color: var(--text-main); padding: 10px; font-family: monospace; font-size: 0.75rem; resize: none;"></textarea>
-                    <button class="btn-tarkov" onclick="copyExportCode()" style="margin-top: 8px; padding: 6px 15px; font-size: 0.85rem;">ðŸ“‹ Copy Code</button>
+                    <button class="btn-tarkov" onclick="copyExportCode()" style="margin-top: 8px; padding: 6px 15px; font-size: 0.85rem;">📋 Copy Code</button>
                 </div>
                 
                 <div style="border-top: 1px solid var(--border-dark); padding-top: 15px; margin-top: 10px;">
-                    <label style="color: var(--text-beige); font-size: 0.85rem; display: block; margin-bottom: 8px;">ðŸ’¾ Download as file:</label>
-                    <button class="btn-tarkov" onclick="downloadExportFile()" style="padding: 8px 15px;">ðŸ“¥ Download .json</button>
+                    <label style="color: var(--text-beige); font-size: 0.85rem; display: block; margin-bottom: 8px;">💾 Download as file:</label>
+                    <button class="btn-tarkov" onclick="downloadExportFile()" style="padding: 8px 15px;">📥 Download .json</button>
                 </div>
                 
                 <div style="margin-top: 20px; text-align: right;">
@@ -765,8 +765,8 @@
         <!-- INVENTORY DASHBOARD -->
         <div id="inventoryDashboard" class="inventory-dashboard" style="display: none;">
             <div class="dashboard-toggle" onclick="toggleDashboard()">
-                <span>ðŸ“Š Inventory Overview</span>
-                <span id="dashboardArrow">â–¼</span>
+                <span>📊 Inventory Overview</span>
+                <span id="dashboardArrow">▼</span>
             </div>
             <div id="dashboardContent" class="dashboard-content">
                 <div class="dashboard-grid">
@@ -774,31 +774,31 @@
                         <span class="dash-label">Ammo</span>
                         <span class="dash-value" id="dash-ammo-count">0/0</span>
                         <span class="dash-percent" id="dash-ammo-pct">0%</span>
-                        <span class="dash-value-rub" id="dash-ammo-value">0 â‚½</span>
+                        <span class="dash-value-rub" id="dash-ammo-value">0 ₽</span>
                     </div>
                     <div class="dashboard-item">
                         <span class="dash-label">Weapons</span>
                         <span class="dash-value" id="dash-weapons-count">0/0</span>
                         <span class="dash-percent" id="dash-weapons-pct">0%</span>
-                        <span class="dash-value-rub" id="dash-weapons-value">0 â‚½</span>
+                        <span class="dash-value-rub" id="dash-weapons-value">0 ₽</span>
                     </div>
                     <div class="dashboard-item">
                         <span class="dash-label">Gear</span>
                         <span class="dash-value" id="dash-gear-count">0/0</span>
                         <span class="dash-percent" id="dash-gear-pct">0%</span>
-                        <span class="dash-value-rub" id="dash-gear-value">0 â‚½</span>
+                        <span class="dash-value-rub" id="dash-gear-value">0 ₽</span>
                     </div>
                     <div class="dashboard-item">
                         <span class="dash-label">Attachments</span>
                         <span class="dash-value" id="dash-attachments-count">0/0</span>
                         <span class="dash-percent" id="dash-attachments-pct">0%</span>
-                        <span class="dash-value-rub" id="dash-attachments-value">0 â‚½</span>
+                        <span class="dash-value-rub" id="dash-attachments-value">0 ₽</span>
                     </div>
                     <div class="dashboard-item dashboard-total">
                         <span class="dash-label">TOTAL</span>
                         <span class="dash-value" id="dash-total-count">0</span>
                         <span class="dash-percent" id="dash-total-pct">0%</span>
-                        <span class="dash-value-rub" id="dash-total-value">0 â‚½</span>
+                        <span class="dash-value-rub" id="dash-total-value">0 ₽</span>
                     </div>
                 </div>
             </div>
@@ -866,22 +866,22 @@
                             <span style="color: var(--eft-gold); font-size: 0.8rem; font-style: italic;">Coming Soon</span>
                             <label class="spawn-toggle" data-layer="scav" style="cursor: not-allowed;">
                                 <input type="checkbox" disabled>
-                                <span class="spawn-toggle-icon scav-icon">â˜ â˜ â˜ </span>
+                                <span class="spawn-toggle-icon scav-icon">☠☠☠</span>
                                 <span>Scavs</span>
                             </label>
                             <label class="spawn-toggle" data-layer="sniper" style="cursor: not-allowed;">
                                 <input type="checkbox" disabled>
-                                <span class="spawn-toggle-icon sniper-icon">âŒ–</span>
+                                <span class="spawn-toggle-icon sniper-icon">⌖</span>
                                 <span>Sniper</span>
                             </label>
                             <label class="spawn-toggle" data-layer="pmc" style="cursor: not-allowed;">
                                 <input type="checkbox" disabled>
-                                <span class="spawn-toggle-icon pmc-icon">âš”</span>
+                                <span class="spawn-toggle-icon pmc-icon">⚔</span>
                                 <span>PMC</span>
                             </label>
                             <label class="spawn-toggle" data-layer="boss" style="cursor: not-allowed;">
                                 <input type="checkbox" disabled>
-                                <span class="spawn-toggle-icon boss-icon">ðŸ’€</span>
+                                <span class="spawn-toggle-icon boss-icon">👀</span>
                                 <span>Boss</span>
                             </label>
                         </div>
@@ -951,7 +951,7 @@
                                 </div>
                             </div>
                             <div class="col-md-2">
-                                <button id="btn-load-ammo" class="btn-tarkov w-100" onclick="loadAmmoData()" style="display: none;">ðŸ”„ Refresh Data</button>
+                                <button id="btn-load-ammo" class="btn-tarkov w-100" onclick="loadAmmoData()" style="display: none;">🔄 Refresh Data</button>
                             </div>
                             <div class="col-md-2">
                                 <button id="bulk-toggle-ammo" class="btn-tarkov w-100" onclick="toggleBulkMode('ammo')" style="font-size: 0.75rem;">Bulk Select</button>
@@ -959,8 +959,8 @@
                         </div>
                         <div class="bulk-controls" id="bulk-controls-ammo">
                             <span id="bulk-count-ammo" class="text-beige">0 selected</span>
-                            <button class="btn-tarkov" onclick="bulkMarkOwned('ammo')" style="padding: 4px 10px; font-size: 0.75rem;">âœ“ Mark Owned</button>
-                            <button class="btn-tarkov" onclick="bulkUnmarkOwned('ammo')" style="padding: 4px 10px; font-size: 0.75rem;">âœ— Unmark</button>
+                            <button class="btn-tarkov" onclick="bulkMarkOwned('ammo')" style="padding: 4px 10px; font-size: 0.75rem;">✓ Mark Owned</button>
+                            <button class="btn-tarkov" onclick="bulkUnmarkOwned('ammo')" style="padding: 4px 10px; font-size: 0.75rem;">✗ Unmark</button>
                             <button class="btn-tarkov" onclick="bulkSelectAll('ammo')" style="padding: 4px 10px; font-size: 0.75rem; background: var(--bg-dark);">Select All</button>
                             <button class="btn-tarkov" onclick="bulkDeselectAll('ammo')" style="padding: 4px 10px; font-size: 0.75rem; background: var(--bg-dark);">Deselect All</button>
                         </div>
@@ -1086,7 +1086,7 @@
                                 <input type="text" class="form-control-tarkov w-100" placeholder="Search weapons..." id="weaponSearch" oninput="filterWeapons()">
                             </div>
                             <div class="col-md-3">
-                                <button id="btn-load-weapons" class="btn-tarkov w-100" onclick="loadWeaponsData()" style="display: none;">ðŸ”„ Refresh Data</button>
+                                <button id="btn-load-weapons" class="btn-tarkov w-100" onclick="loadWeaponsData()" style="display: none;">🔄 Refresh Data</button>
                             </div>
                             <div class="col-md-2">
                                 <button id="bulk-toggle-weapons" class="btn-tarkov w-100" onclick="toggleBulkMode('weapons')" style="font-size: 0.75rem;">Bulk Select</button>
@@ -1094,8 +1094,8 @@
                         </div>
                         <div class="bulk-controls" id="bulk-controls-weapons">
                             <span id="bulk-count-weapons" class="text-beige">0 selected</span>
-                            <button class="btn-tarkov" onclick="bulkMarkOwned('weapons')" style="padding: 4px 10px; font-size: 0.75rem;">âœ“ Mark Owned</button>
-                            <button class="btn-tarkov" onclick="bulkUnmarkOwned('weapons')" style="padding: 4px 10px; font-size: 0.75rem;">âœ— Unmark</button>
+                            <button class="btn-tarkov" onclick="bulkMarkOwned('weapons')" style="padding: 4px 10px; font-size: 0.75rem;">✓ Mark Owned</button>
+                            <button class="btn-tarkov" onclick="bulkUnmarkOwned('weapons')" style="padding: 4px 10px; font-size: 0.75rem;">✗ Unmark</button>
                             <button class="btn-tarkov" onclick="bulkSelectAll('weapons')" style="padding: 4px 10px; font-size: 0.75rem; background: var(--bg-dark);">Select All</button>
                             <button class="btn-tarkov" onclick="bulkDeselectAll('weapons')" style="padding: 4px 10px; font-size: 0.75rem; background: var(--bg-dark);">Deselect All</button>
                         </div>
@@ -1180,7 +1180,7 @@
                                 <input type="text" class="form-control-tarkov w-100" placeholder="Search gear..." id="gearSearch" oninput="filterGear()">
                             </div>
                             <div class="col-md-3">
-                                <button id="btn-load-gear" class="btn-tarkov w-100" onclick="loadGearData()" style="display: none;">ðŸ”„ Refresh Data</button>
+                                <button id="btn-load-gear" class="btn-tarkov w-100" onclick="loadGearData()" style="display: none;">🔄 Refresh Data</button>
                             </div>
                             <div class="col-md-2">
                                 <button id="bulk-toggle-gear" class="btn-tarkov w-100" onclick="toggleBulkMode('gear')" style="font-size: 0.75rem;">Bulk Select</button>
@@ -1188,8 +1188,8 @@
                         </div>
                         <div class="bulk-controls" id="bulk-controls-gear">
                             <span id="bulk-count-gear" class="text-beige">0 selected</span>
-                            <button class="btn-tarkov" onclick="bulkMarkOwned('gear')" style="padding: 4px 10px; font-size: 0.75rem;">âœ“ Mark Owned</button>
-                            <button class="btn-tarkov" onclick="bulkUnmarkOwned('gear')" style="padding: 4px 10px; font-size: 0.75rem;">âœ— Unmark</button>
+                            <button class="btn-tarkov" onclick="bulkMarkOwned('gear')" style="padding: 4px 10px; font-size: 0.75rem;">✓ Mark Owned</button>
+                            <button class="btn-tarkov" onclick="bulkUnmarkOwned('gear')" style="padding: 4px 10px; font-size: 0.75rem;">✗ Unmark</button>
                             <button class="btn-tarkov" onclick="bulkSelectAll('gear')" style="padding: 4px 10px; font-size: 0.75rem; background: var(--bg-dark);">Select All</button>
                             <button class="btn-tarkov" onclick="bulkDeselectAll('gear')" style="padding: 4px 10px; font-size: 0.75rem; background: var(--bg-dark);">Deselect All</button>
                         </div>
@@ -1269,7 +1269,7 @@
                                 <input type="text" class="form-control-tarkov w-100" placeholder="Search attachments..." id="attachmentSearch" oninput="filterAttachments()">
                             </div>
                             <div class="col-md-3">
-                                <button id="btn-load-attachments" class="btn-tarkov w-100" onclick="loadAttachmentsData()" style="display: none;">ðŸ”„ Refresh Data</button>
+                                <button id="btn-load-attachments" class="btn-tarkov w-100" onclick="loadAttachmentsData()" style="display: none;">🔄 Refresh Data</button>
                             </div>
                             <div class="col-md-2">
                                 <button id="bulk-toggle-attachments" class="btn-tarkov w-100" onclick="toggleBulkMode('attachments')" style="font-size: 0.75rem;">Bulk Select</button>
@@ -1277,8 +1277,8 @@
                         </div>
                         <div class="bulk-controls" id="bulk-controls-attachments">
                             <span id="bulk-count-attachments" class="text-beige">0 selected</span>
-                            <button class="btn-tarkov" onclick="bulkMarkOwned('attachments')" style="padding: 4px 10px; font-size: 0.75rem;">âœ“ Mark Owned</button>
-                            <button class="btn-tarkov" onclick="bulkUnmarkOwned('attachments')" style="padding: 4px 10px; font-size: 0.75rem;">âœ— Unmark</button>
+                            <button class="btn-tarkov" onclick="bulkMarkOwned('attachments')" style="padding: 4px 10px; font-size: 0.75rem;">✓ Mark Owned</button>
+                            <button class="btn-tarkov" onclick="bulkUnmarkOwned('attachments')" style="padding: 4px 10px; font-size: 0.75rem;">✗ Unmark</button>
                             <button class="btn-tarkov" onclick="bulkSelectAll('attachments')" style="padding: 4px 10px; font-size: 0.75rem; background: var(--bg-dark);">Select All</button>
                             <button class="btn-tarkov" onclick="bulkDeselectAll('attachments')" style="padding: 4px 10px; font-size: 0.75rem; background: var(--bg-dark);">Deselect All</button>
                         </div>
@@ -2241,10 +2241,10 @@
                         iconAnchor: [12, 12]
                     });
                     
-                    // Create marker with draggable option
+                    // Create marker with draggable option (disabled by default)
                     const marker = L.marker([leafletY, leafletX], { 
                         icon: icon,
-                        draggable: true  // Enable dragging (controlled by edit mode)
+                        draggable: false  // Disabled by default, enabled in edit mode
                     });
                     
                     // Store metadata for corrections system
@@ -2261,8 +2261,7 @@
                         hasDbCorrection: hasCorrection
                     };
                     
-                    // Disable dragging by default (enabled only in edit mode)
-                    marker.dragging.disable();
+                    // Note: dragging is controlled via toggleEditMode() after marker is added to map
                     
                     // Drag event handlers
                     marker.on('dragstart', function(e) {
@@ -2524,9 +2523,9 @@
                     
                     // Map icons
                     const mapIcons = {
-                        'Customs': 'ðŸ­', 'Woods': 'ðŸŒ²', 'Shoreline': 'ðŸ–ï¸', 'Interchange': 'ðŸ›’',
-                        'Reserve': 'ðŸ°', 'Lighthouse': 'ðŸ—¼', 'Streets of Tarkov': 'ðŸ™ï¸',
-                        'Ground Zero': 'â˜¢ï¸', 'Factory': 'ðŸ—ï¸', 'The Lab': 'ðŸ”¬', 'Any': 'ðŸŒ'
+                        'Customs': '🏭', 'Woods': '🌲', 'Shoreline': '🏖️', 'Interchange': '🛒',
+                        'Reserve': '🏰', 'Lighthouse': '🗼', 'Streets of Tarkov': '🏙️',
+                        'Ground Zero': '☢️', 'Factory': '🏗️', 'The Lab': 'ðŸ”¬', 'Any': '🌍'
                     };
                     const icon = mapIcons[mapName] || 'ðŸ“';
                     
@@ -3075,13 +3074,13 @@
                 renderAmmoList();
                 
                 content.classList.remove('d-none');
-                btn.textContent = 'ðŸ”„ Refresh Data';
+                btn.textContent = '🔄 Refresh Data';
                 btn.style.display = 'block';
                 
             } catch (err) {
                 error.innerHTML = `<strong>ERROR:</strong> ${err.message}`;
                 error.classList.remove('d-none');
-                btn.textContent = 'ðŸ”„ Retry';
+                btn.textContent = '🔄 Retry';
                 btn.style.display = 'block';
             } finally {
                 loading.classList.add('d-none');
@@ -3341,7 +3340,7 @@
             
             if (!statDef || !thresholds) return;
             
-            directionEl.textContent = statDef.direction === 'higher' ? 'â†‘ higher = better' : 'â†“ lower = better';
+            directionEl.textContent = statDef.direction === 'higher' ? '→ higher = better' : '↓ lower = better';
             directionEl.className = `threshold-direction ${statDef.direction}`;
             
             grid.innerHTML = ['S', 'A', 'B', 'C', 'D'].map(tier => `
@@ -3482,7 +3481,7 @@
             // Visual feedback
             const btn = event.target;
             const originalText = btn.textContent;
-            btn.textContent = 'âœ“ Copied!';
+            btn.textContent = '✓ Copied!';
             btn.style.background = 'var(--eft-green)';
             setTimeout(() => {
                 btn.textContent = originalText;
@@ -3792,7 +3791,7 @@
                 
                 loading.classList.add('d-none');
                 content.classList.remove('d-none');
-                btn.textContent = 'ðŸ”„ Refresh Data';
+                btn.textContent = '🔄 Refresh Data';
                 btn.style.display = 'block';
                 btn.disabled = false;
                 
@@ -3803,7 +3802,7 @@
                 loading.classList.add('d-none');
                 error.classList.remove('d-none');
                 error.textContent = 'Error loading weapons: ' + err.message;
-                btn.textContent = 'ðŸ”„ Retry';
+                btn.textContent = '🔄 Retry';
                 btn.style.display = 'block';
                 btn.disabled = false;
             }
@@ -4058,7 +4057,7 @@
                 
                 loading.classList.add('d-none');
                 content.classList.remove('d-none');
-                btn.textContent = 'ðŸ”„ Refresh Data';
+                btn.textContent = '🔄 Refresh Data';
                 btn.style.display = 'block';
                 btn.disabled = false;
                 
@@ -4069,7 +4068,7 @@
                 loading.classList.add('d-none');
                 error.classList.remove('d-none');
                 error.textContent = 'Error loading gear: ' + err.message;
-                btn.textContent = 'ðŸ”„ Retry';
+                btn.textContent = '🔄 Retry';
                 btn.style.display = 'block';
                 btn.disabled = false;
             }
@@ -4399,7 +4398,7 @@
                 
                 loading.classList.add('d-none');
                 content.classList.remove('d-none');
-                btn.textContent = 'ðŸ”„ Refresh Data';
+                btn.textContent = '🔄 Refresh Data';
                 btn.style.display = 'block';
                 btn.disabled = false;
                 
@@ -4410,7 +4409,7 @@
                 loading.classList.add('d-none');
                 error.classList.remove('d-none');
                 error.textContent = 'Error loading attachments: ' + err.message;
-                btn.textContent = 'ðŸ”„ Retry';
+                btn.textContent = '🔄 Retry';
                 btn.style.display = 'block';
                 btn.disabled = false;
             }
@@ -4638,19 +4637,19 @@
                         
                         if (pen >= classThreshold + 10) {
                             penClass = 'pen-high';
-                            penText = 'âœ“âœ“âœ“';
+                            penText = '✓✓✓';
                         } else if (pen >= classThreshold) {
                             penClass = 'pen-high';
-                            penText = 'âœ“âœ“';
+                            penText = '✓✓';
                         } else if (pen >= classThreshold - 10) {
                             penClass = 'pen-mid';
-                            penText = 'âœ“';
+                            penText = '✓';
                         } else if (pen >= classThreshold - 20) {
                             penClass = 'pen-low';
                             penText = '~';
                         } else {
                             penClass = 'pen-none';
-                            penText = 'âœ—';
+                            penText = '✗';
                         }
                         
                         html += `<td class="pen-cell ${penClass}">${penText}</td>`;
@@ -4673,7 +4672,7 @@
         function toggleDashboard() {
             dashboardCollapsed = !dashboardCollapsed;
             document.getElementById('dashboardContent').classList.toggle('collapsed', dashboardCollapsed);
-            document.getElementById('dashboardArrow').textContent = dashboardCollapsed ? 'â–¶' : 'â–¼';
+            document.getElementById('dashboardArrow').textContent = dashboardCollapsed ? 'â–¶' : '▼';
         }
         
         function updateDashboard() {
@@ -4702,7 +4701,7 @@
             for (const [cat, s] of Object.entries(stats)) {
                 document.getElementById(`dash-${cat}-count`).textContent = `${s.owned}/${s.total}`;
                 document.getElementById(`dash-${cat}-pct`).textContent = s.total > 0 ? `${Math.round(s.owned / s.total * 100)}%` : '-';
-                document.getElementById(`dash-${cat}-value`).textContent = s.value.toLocaleString() + ' â‚½';
+                document.getElementById(`dash-${cat}-value`).textContent = s.value.toLocaleString() + ' ₽';
             }
             
             // Totals
@@ -4712,7 +4711,7 @@
             
             document.getElementById('dash-total-count').textContent = totalOwned;
             document.getElementById('dash-total-pct').textContent = totalItems > 0 ? `${Math.round(totalOwned / totalItems * 100)}%` : '-';
-            document.getElementById('dash-total-value').textContent = totalValue.toLocaleString() + ' â‚½';
+            document.getElementById('dash-total-value').textContent = totalValue.toLocaleString() + ' ₽';
         }
 
         // ============================================================================
@@ -5031,16 +5030,16 @@
             
             switch(type) {
                 case 'scav':
-                    html = '<div class="spawn-marker-icon">â˜ â˜ </div>';
+                    html = '<div class="spawn-marker-icon">☠☠</div>';
                     break;
                 case 'sniper':
-                    html = '<div class="spawn-marker-icon">âŒ–</div>';
+                    html = '<div class="spawn-marker-icon">⌖</div>';
                     break;
                 case 'pmc':
-                    html = '<div class="spawn-marker-icon">âš”</div>';
+                    html = '<div class="spawn-marker-icon">⚔</div>';
                     break;
                 case 'boss':
-                    html = '<div class="spawn-marker-icon">ðŸ’€</div>';
+                    html = '<div class="spawn-marker-icon">👀</div>';
                     break;
             }
             
@@ -5545,8 +5544,8 @@
                 help.className = 'shortcuts-help';
                 help.innerHTML = `
                     <div style="margin-bottom: 5px; color: var(--text-beige); display: flex; justify-content: space-between; align-items: center;">
-                        <span>âŒ¨ï¸ Shortcuts</span>
-                        <span onclick="toggleShortcutsHelp()" style="cursor: pointer; opacity: 0.6; font-size: 1rem;">âœ•</span>
+                        <span>⌨️ Shortcuts</span>
+                        <span onclick="toggleShortcutsHelp()" style="cursor: pointer; opacity: 0.6; font-size: 1rem;">✕</span>
                     </div>
                     <div><kbd>1</kbd>-<kbd>6</kbd> Switch tabs</div>
                     <div><kbd>Ctrl</kbd>+<kbd>E</kbd> Export</div>
@@ -5701,7 +5700,7 @@
             for (const task of tasks) {
                 try {
                     loadingStatus.textContent = `Loading ${task.name}...`;
-                    loadingDetails.innerHTML = `<span class="loading-item active">â³ ${task.name}</span>`;
+                    loadingDetails.innerHTML = `<span class="loading-item active">⏳ ${task.name}</span>`;
                     
                     await task.fn();
                     
@@ -5709,10 +5708,10 @@
                     const progress = Math.round((completed / total) * 100);
                     loadingProgress.style.width = progress + '%';
                     
-                    loadingDetails.innerHTML = `<span class="loading-item done">âœ“ ${task.name}</span>`;
+                    loadingDetails.innerHTML = `<span class="loading-item done">✓ ${task.name}</span>`;
                 } catch (err) {
                     console.error(`Error loading ${task.name}:`, err);
-                    loadingDetails.innerHTML = `<span class="loading-item error">âœ— ${task.name} (failed)</span>`;
+                    loadingDetails.innerHTML = `<span class="loading-item error">✗ ${task.name} (failed)</span>`;
                     // Continue with other tasks even if one fails
                     completed++;
                     const progress = Math.round((completed / total) * 100);
