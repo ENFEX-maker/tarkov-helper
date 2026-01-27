@@ -110,12 +110,44 @@
         .form-select-tarkov:focus, .form-control-tarkov:focus { background: var(--bg-hover); border-color: var(--eft-gold); color: var(--text-main); box-shadow: none; outline: none; }
         .form-select-tarkov option { background: var(--bg-dark); color: var(--text-main); }
         .form-select-tarkov option:disabled { color: var(--text-sub); opacity: 0.5; }
-        #map { height: 600px; background: var(--bg-dark); border: 1px solid var(--border-dark); overflow: hidden; position: relative; }
-        .leaflet-container { overflow: hidden; }
-        /* Leaflet panes don't need overflow visible - tooltips work fine without it */
-        /* Map pane also doesn't need overflow visible */
-        .leaflet-tooltip-pane { z-index: 9999 !important; }
-        .leaflet-popup-pane { z-index: 9998 !important; }
+        /* Map container setup - overflow visible to allow tooltips */
+        .map-wrapper { 
+            height: 600px; 
+            position: relative; 
+            border: 1px solid var(--border-dark);
+            overflow: visible;
+        }
+        #map { 
+            height: 100%; 
+            width: 100%;
+            background: var(--bg-dark);
+            overflow: visible !important;
+        }
+        .leaflet-container { 
+            overflow: visible !important; 
+        }
+        /* Clip only the tile/overlay panes, not tooltip/popup */
+        .leaflet-tile-pane,
+        .leaflet-overlay-pane,
+        .leaflet-marker-pane,
+        .leaflet-shadow-pane {
+            /* These stay within bounds */
+        }
+        .leaflet-tooltip-pane, 
+        .leaflet-popup-pane { 
+            overflow: visible !important;
+            z-index: 9999 !important; 
+        }
+        .leaflet-tooltip { 
+            white-space: nowrap; 
+            z-index: 9999 !important;
+        }
+        .leaflet-popup { 
+            z-index: 9999 !important; 
+        }
+        /* Prevent map from overflowing visually but allow popups */
+        .leaflet-pane { overflow: visible !important; }
+        .leaflet-map-pane { overflow: visible !important; }
         .map-controls { display: flex; align-items: center; gap: 15px; padding: 10px 15px; background: var(--bg-element); border: 1px solid var(--border-dark); border-bottom: none; font-size: 0.85rem; color: var(--text-sub); }
         .map-controls .btn-tarkov { padding: 5px 12px; font-size: 0.8rem; }
         .marker-count { margin-left: auto; color: var(--eft-gold); font-weight: 600; }
@@ -1147,7 +1179,9 @@
                             <span class="marker-count" id="markerCount">0 markers</span>
                             <button class="btn-tarkov" onclick="resetMapView()">Reset View</button>
                         </div>
-                        <div id="map"></div>
+                        <div id="mapWrapper" class="map-wrapper">
+                            <div id="map"></div>
+                        </div>
                         <div id="mapLegend" class="map-legend" style="display: none;">
                             <div class="legend-title">Quest Colors</div>
                             <div id="legendItems" class="legend-items"></div>
