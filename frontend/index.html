@@ -691,6 +691,52 @@
             background: rgba(0,0,0,0.7);
             z-index: 99999;
         }
+        
+        /* Extract Correction Dialog */
+        .extract-correction-mode-toggle {
+            display: flex;
+            gap: 0;
+            margin-bottom: 15px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border-dark);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .extract-correction-mode-toggle button {
+            flex: 1;
+            padding: 8px 12px;
+            border: none;
+            background: transparent;
+            color: var(--text-sub);
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .extract-correction-mode-toggle button:hover {
+            background: var(--bg-element);
+            color: var(--text-main);
+        }
+        .extract-correction-mode-toggle button.active {
+            background: var(--eft-gold);
+            color: #000;
+            font-weight: 600;
+        }
+        .extract-move-all-info {
+            background: rgba(158, 143, 107, 0.15);
+            border: 1px solid var(--eft-gold);
+            padding: 10px;
+            margin-bottom: 15px;
+            font-size: 0.8rem;
+            color: var(--text-beige);
+        }
+        .extract-marker-draggable {
+            cursor: move !important;
+        }
+        .extract-marker-draggable:hover {
+            filter: brightness(1.3);
+            transform: scale(1.1);
+        }
     </style>
 </head>
 <body>
@@ -876,6 +922,41 @@
                 </div>
                 <p class="text-sub" style="font-size: 0.7rem; margin-top: 10px; text-align: center;">
                     Corrections are saved to the database and help improve marker accuracy for everyone.
+                </p>
+            </div>
+        </div>
+        
+        <!-- Extract Correction Dialog -->
+        <div id="extractCorrectionDialogOverlay" class="correction-dialog-overlay" style="display: none;">
+            <div class="correction-dialog">
+                <h4>🚪 Save Extract Correction</h4>
+                <div class="correction-quest-info">
+                    <strong id="extractCorrectionName">Extract Name</strong>
+                    <div class="text-sub" style="font-size: 0.8rem;" id="extractCorrectionMap">Map: Shoreline</div>
+                </div>
+                
+                <div class="extract-correction-mode-toggle">
+                    <button id="extractModeSingle" class="active" onclick="setExtractCorrectionMode('single')">Single Extract</button>
+                    <button id="extractModeAll" onclick="setExtractCorrectionMode('all')">All Extracts (Map)</button>
+                </div>
+                
+                <div id="extractMoveAllInfo" class="extract-move-all-info" style="display: none;">
+                    ⚠️ This will apply the same offset to ALL extracts on this map. Use this if all markers are shifted by the same amount.
+                </div>
+                
+                <div class="correction-coords">
+                    <div class="coord-row">
+                        <span class="label">Delta (pixels):</span>
+                        <span class="text-gold" id="extractCorrectionDelta">(+0, +0)</span>
+                    </div>
+                </div>
+                
+                <div class="correction-dialog-buttons">
+                    <button class="btn-tarkov" onclick="cancelExtractCorrection()" style="background: var(--bg-dark);">Cancel</button>
+                    <button class="btn-tarkov" onclick="saveExtractCorrection()" id="saveExtractCorrectionBtn">💾 Save Correction</button>
+                </div>
+                <p class="text-sub" style="font-size: 0.7rem; margin-top: 10px; text-align: center;">
+                    Corrections help calibrate extract positions for the SVG maps.
                 </p>
             </div>
         </div>
@@ -6019,6 +6100,57 @@
         }
         
         // New simplified render function for extracts only
+        // Extract correction system
+        let extractCorrectionsCache = null;
+        let extractCorrectionsCacheLoaded = false;
+        let pendingExtractCorrection = null;
+        let extractCorrectionMode = 'single'; // 'single' or 'all'
+        
+        async function loadExtractCorrections(mapKey) {
+            if (extractCorrectionsCacheLoaded && extractCorrectionsCache) {
+                return extractCorrectionsCache;
+            }
+            
+            if (!supabaseClient) {
+                console.log('Supabase not available, skipping extract corrections load');
+                return {};
+            }
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('extract_corrections')
+                    .select('*');
+                
+                if (error) throw error;
+                
+                // Build cache keyed by map_key|extract_name or map_key (for global offsets)
+                extractCorrectionsCache = {};
+                (data || []).forEach(row => {
+                    if (row.extract_name) {
+                        // Single extract correction
+                        const key = `${row.map_key}|${row.extract_name}`;
+                        extractCorrectionsCache[key] = row;
+                    } else {
+                        // Global map offset
+                        const key = `${row.map_key}|__GLOBAL__`;
+                        extractCorrectionsCache[key] = row;
+                    }
+                });
+                
+                extractCorrectionsCacheLoaded = true;
+                console.log('Loaded extract corrections:', Object.keys(extractCorrectionsCache).length);
+                return extractCorrectionsCache;
+            } catch (err) {
+                console.error('Error loading extract corrections:', err);
+                return {};
+            }
+        }
+        
+        function clearExtractCorrectionsCache() {
+            extractCorrectionsCache = null;
+            extractCorrectionsCacheLoaded = false;
+        }
+        
         async function renderExtractMarkers() {
             const currentMap = activeMapTab || document.getElementById('mapSelect')?.value || 'customs';
             console.log('renderExtractMarkers for map:', currentMap);
@@ -6045,6 +6177,12 @@
                 return;
             }
             
+            // Load corrections from Supabase
+            const corrections = await loadExtractCorrections(currentMap);
+            const globalCorrection = corrections[`${currentMap}|__GLOBAL__`];
+            const globalOffsetX = globalCorrection?.offset_x || 0;
+            const globalOffsetY = globalCorrection?.offset_y || 0;
+            
             // Combine all extracts with their faction info
             const allExtracts = [
                 ...(overlays.extracts_pmc || []).map(e => ({ ...e, faction: 'pmc' })),
@@ -6052,11 +6190,25 @@
                 ...(overlays.extracts_shared || []).map(e => ({ ...e, faction: 'shared' }))
             ];
             
-            console.log('Total extracts to render:', allExtracts.length);
+            console.log('Total extracts to render:', allExtracts.length, 'Global offset:', globalOffsetX, globalOffsetY);
+            
+            // Check if user is logged in (for drag functionality)
+            const canEdit = !!currentUser;
             
             allExtracts.forEach((extract) => {
                 const coords = convertGameCoordsToMap(extract.x, extract.y, currentMap);
                 if (!coords) return;
+                
+                // Apply global offset
+                let finalX = coords.x + globalOffsetX;
+                let finalY = coords.y + globalOffsetY;
+                
+                // Check for individual correction
+                const singleCorrection = corrections[`${currentMap}|${extract.name}`];
+                if (singleCorrection) {
+                    finalX += singleCorrection.offset_x || 0;
+                    finalY += singleCorrection.offset_y || 0;
+                }
                 
                 // Determine marker class based on faction and conditions
                 let markerClass = 'overlay-marker';
@@ -6064,7 +6216,6 @@
                 let typeName = extract.faction === 'pmc' ? 'PMC' : 
                                extract.faction === 'scav' ? 'Scav' : 'Co-Op';
                 
-                // Check if extract has special conditions (switches, etc.)
                 const hasConditions = extract.switches?.length > 0;
                 if (hasConditions) {
                     markerClass += ' extract-restricted';
@@ -6078,6 +6229,11 @@
                     markerClass += ' extract-scav';
                 }
                 
+                // Add draggable class if logged in
+                if (canEdit) {
+                    markerClass += ' extract-marker-draggable';
+                }
+                
                 const icon = L.divIcon({
                     html: '🚪',
                     className: markerClass,
@@ -6085,7 +6241,28 @@
                     iconAnchor: [14, 14]
                 });
                 
-                const marker = L.marker([coords.y, coords.x], { icon }).addTo(mapInstance);
+                const marker = L.marker([finalY, finalX], { 
+                    icon,
+                    draggable: canEdit
+                }).addTo(mapInstance);
+                
+                // Store extract data on marker for correction dialog
+                marker._extractData = {
+                    name: extract.name,
+                    faction: extract.faction,
+                    mapKey: currentMap,
+                    originalX: finalX,
+                    originalY: finalY,
+                    baseX: coords.x,  // Position before any corrections
+                    baseY: coords.y
+                };
+                
+                // Handle drag end
+                if (canEdit) {
+                    marker.on('dragend', (e) => {
+                        showExtractCorrectionDialog(marker, e);
+                    });
+                }
                 
                 // Build popup
                 let popupHtml = `<div class="overlay-popup">
@@ -6094,6 +6271,10 @@
                 
                 if (hasConditions) {
                     popupHtml += `<div class="overlay-detail">⚡ Requires activation</div>`;
+                }
+                
+                if (canEdit) {
+                    popupHtml += `<div class="overlay-detail" style="margin-top: 8px; color: var(--eft-gold);">✏️ Drag to correct position</div>`;
                 }
                 
                 popupHtml += '</div>';
@@ -6105,6 +6286,99 @@
             });
             
             updateMarkerCount();
+        }
+        
+        function setExtractCorrectionMode(mode) {
+            extractCorrectionMode = mode;
+            document.getElementById('extractModeSingle').classList.toggle('active', mode === 'single');
+            document.getElementById('extractModeAll').classList.toggle('active', mode === 'all');
+            document.getElementById('extractMoveAllInfo').style.display = mode === 'all' ? 'block' : 'none';
+        }
+        
+        function showExtractCorrectionDialog(marker, dragEvent) {
+            const data = marker._extractData;
+            if (!data) return;
+            
+            const newLatLng = marker.getLatLng();
+            const deltaX = newLatLng.lng - data.originalX;
+            const deltaY = newLatLng.lat - data.originalY;
+            
+            pendingExtractCorrection = {
+                marker,
+                extractName: data.name,
+                mapKey: data.mapKey,
+                deltaX: Math.round(deltaX),
+                deltaY: Math.round(deltaY),
+                baseX: data.baseX,
+                baseY: data.baseY
+            };
+            
+            document.getElementById('extractCorrectionName').textContent = data.name;
+            document.getElementById('extractCorrectionMap').textContent = `Map: ${data.mapKey.charAt(0).toUpperCase() + data.mapKey.slice(1)}`;
+            document.getElementById('extractCorrectionDelta').textContent = `(${deltaX >= 0 ? '+' : ''}${Math.round(deltaX)}, ${deltaY >= 0 ? '+' : ''}${Math.round(deltaY)})`;
+            
+            // Reset mode to single
+            setExtractCorrectionMode('single');
+            
+            document.getElementById('extractCorrectionDialogOverlay').style.display = 'block';
+        }
+        
+        function cancelExtractCorrection() {
+            // Reset marker to original position
+            if (pendingExtractCorrection?.marker) {
+                const data = pendingExtractCorrection.marker._extractData;
+                pendingExtractCorrection.marker.setLatLng([data.originalY, data.originalX]);
+            }
+            pendingExtractCorrection = null;
+            document.getElementById('extractCorrectionDialogOverlay').style.display = 'none';
+        }
+        
+        async function saveExtractCorrection() {
+            if (!pendingExtractCorrection || !currentUser || !supabaseClient) {
+                alert('Unable to save correction. Please ensure you are logged in.');
+                return;
+            }
+            
+            const btn = document.getElementById('saveExtractCorrectionBtn');
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+            
+            try {
+                const correctionData = {
+                    map_key: pendingExtractCorrection.mapKey,
+                    extract_name: extractCorrectionMode === 'all' ? null : pendingExtractCorrection.extractName,
+                    offset_x: pendingExtractCorrection.deltaX,
+                    offset_y: pendingExtractCorrection.deltaY,
+                    corrected_by: currentUser.id
+                };
+                
+                // Determine conflict key based on mode
+                const onConflict = extractCorrectionMode === 'all' 
+                    ? 'map_key' 
+                    : 'map_key,extract_name';
+                
+                const { data, error } = await supabaseClient
+                    .from('extract_corrections')
+                    .upsert(correctionData, { onConflict });
+                
+                if (error) throw error;
+                
+                console.log('Extract correction saved:', correctionData);
+                
+                // Clear cache and re-render
+                clearExtractCorrectionsCache();
+                await renderExtractMarkers();
+                
+                pendingExtractCorrection = null;
+                document.getElementById('extractCorrectionDialogOverlay').style.display = 'none';
+                
+            } catch (error) {
+                console.error('Error saving extract correction:', error);
+                alert('Failed to save correction: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '💾 Save Correction';
+            }
         }
         
         // Legacy toggle function (deprecated, kept for compatibility)
@@ -6245,6 +6519,7 @@
             // Convert game coordinates (in meters) to map pixel coordinates
             // flipX: true - mirrors left/right
             // flipZ: false - y = currentMapHeight - pixelY handles vertical flip for Leaflet
+            // Note: Fine-tuning offsets are now loaded from Supabase extract_corrections table
             const mapBounds = {
                 shoreline: { minX: -1100, maxX: 600, minZ: -200, maxZ: 700, flipX: true, flipZ: false },
                 customs: { minX: -300, maxX: 500, minZ: -200, maxZ: 350, flipX: true, flipZ: false },
