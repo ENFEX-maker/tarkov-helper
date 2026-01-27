@@ -466,6 +466,150 @@
             padding: 25px;
             width: 90%;
         }
+        
+        /* Custom Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-dark);
+            border: 1px solid var(--border-dark);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--bg-hover);
+            border: 1px solid var(--border-dark);
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--eft-gold);
+            border-color: var(--eft-gold);
+        }
+        ::-webkit-scrollbar-corner {
+            background: var(--bg-dark);
+        }
+        /* Firefox scrollbar */
+        #quest-list, .analysis-list, #ammo-list, #weapons-list, #gear-list, #attachments-list {
+            scrollbar-width: thin;
+            scrollbar-color: var(--bg-hover) var(--bg-dark);
+        }
+        
+        /* Leaflet Zoom Controls Styling */
+        .leaflet-control-zoom {
+            border: 1px solid var(--border-gold) !important;
+            border-radius: 0 !important;
+            overflow: hidden;
+        }
+        .leaflet-control-zoom a {
+            background: var(--bg-element) !important;
+            color: var(--eft-gold) !important;
+            border: none !important;
+            border-bottom: 1px solid var(--border-dark) !important;
+            width: 30px !important;
+            height: 30px !important;
+            line-height: 30px !important;
+            font-size: 16px !important;
+            font-weight: 600 !important;
+        }
+        .leaflet-control-zoom a:last-child {
+            border-bottom: none !important;
+        }
+        .leaflet-control-zoom a:hover {
+            background: var(--eft-gold) !important;
+            color: #000 !important;
+        }
+        .leaflet-control-zoom-in,
+        .leaflet-control-zoom-out {
+            font-family: 'Rajdhani', sans-serif !important;
+        }
+        
+        /* Draggable Marker Styles (Edit Mode) */
+        .leaflet-marker-draggable {
+            cursor: move !important;
+        }
+        .leaflet-marker-draggable > div > div:first-child {
+            box-shadow: 0 0 8px 2px var(--eft-gold) !important;
+            animation: marker-glow 1.5s ease-in-out infinite;
+        }
+        @keyframes marker-glow {
+            0%, 100% { box-shadow: 0 0 8px 2px var(--eft-gold); }
+            50% { box-shadow: 0 0 15px 4px var(--eft-gold-bright); }
+        }
+        .leaflet-marker-icon.marker-dragging {
+            z-index: 10000 !important;
+            opacity: 0.8;
+        }
+        
+        /* Edit Mode Button */
+        .edit-mode-toggle {
+            background: var(--bg-element);
+            border: 1px solid var(--border-dark);
+            color: var(--text-sub);
+            padding: 6px 12px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .edit-mode-toggle:hover {
+            border-color: var(--eft-gold);
+            color: var(--text-beige);
+        }
+        .edit-mode-toggle.active {
+            background: rgba(158, 143, 107, 0.3);
+            border-color: var(--eft-gold);
+            color: var(--eft-gold);
+        }
+        
+        /* Correction Save Dialog */
+        .correction-dialog {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--bg-panel);
+            border: 2px solid var(--eft-gold);
+            padding: 20px;
+            z-index: 100000;
+            min-width: 320px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+        }
+        .correction-dialog h4 {
+            margin: 0 0 15px 0;
+            font-size: 1rem;
+        }
+        .correction-coords {
+            background: var(--bg-dark);
+            border: 1px solid var(--border-dark);
+            padding: 10px;
+            margin-bottom: 15px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.85rem;
+        }
+        .correction-coords .label {
+            color: var(--text-sub);
+            font-size: 0.75rem;
+            margin-bottom: 3px;
+        }
+        .correction-coords .old-coords {
+            color: var(--eft-red);
+            text-decoration: line-through;
+        }
+        .correction-coords .new-coords {
+            color: var(--eft-green);
+        }
+        .correction-dialog-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        .correction-dialog-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 99999;
+        }
     </style>
 </head>
 <body>
@@ -490,20 +634,21 @@
             <div style="display: flex; align-items: center; gap: 15px;">
                 <!-- Edit Mode Badge (hidden by default) -->
                 <div id="editModeBadge" class="edit-mode-badge" style="display: none;">
-                    ✏️ EDIT MODE
+                    âœï¸ EDIT MODE
                 </div>
                 <!-- Auth Buttons -->
                 <div id="authButtons" class="auth-buttons">
-                    <button id="loginBtn" class="btn-tarkov" onclick="showLoginModal()" style="padding: 6px 12px; font-size: 0.75rem;">🔑 Login</button>
+                    <button id="loginBtn" class="btn-tarkov" onclick="showLoginModal()" style="padding: 6px 12px; font-size: 0.75rem;">ðŸ”‘ Login</button>
                     <div id="userInfo" style="display: none; align-items: center; gap: 8px;">
                         <span id="userEmail" style="color: var(--text-sub); font-size: 0.75rem;"></span>
+                        <button id="editModeBtn" class="edit-mode-toggle" onclick="toggleEditMode()" title="Toggle marker editing (Ctrl+Shift+E)">✏️ Edit Markers</button>
                         <button class="btn-tarkov" onclick="logout()" style="padding: 6px 12px; font-size: 0.75rem;">Logout</button>
                     </div>
                 </div>
                 <div class="config-buttons" style="display: flex; gap: 8px;">
-                    <button class="btn-tarkov" onclick="exportConfig()" style="padding: 6px 12px; font-size: 0.75rem;" title="Export configuration">📥 Export</button>
-                    <button class="btn-tarkov" onclick="showImportModal()" style="padding: 6px 12px; font-size: 0.75rem;" title="Import configuration">📤 Import</button>
-                    <button class="btn-tarkov" onclick="toggleShortcutsHelp()" style="padding: 6px 12px; font-size: 0.75rem;" title="Keyboard shortcuts (?)">⌨️</button>
+                    <button class="btn-tarkov" onclick="exportConfig()" style="padding: 6px 12px; font-size: 0.75rem;" title="Export configuration">ðŸ“¥ Export</button>
+                    <button class="btn-tarkov" onclick="showImportModal()" style="padding: 6px 12px; font-size: 0.75rem;" title="Import configuration">ðŸ“¤ Import</button>
+                    <button class="btn-tarkov" onclick="toggleShortcutsHelp()" style="padding: 6px 12px; font-size: 0.75rem;" title="Keyboard shortcuts (?)">âŒ¨ï¸</button>
                 </div>
                 <div class="status-indicator">
                     <div class="status-dot" id="statusDot"></div>
@@ -515,7 +660,7 @@
         <!-- Login Modal -->
         <div id="loginModal" class="modal-overlay" style="display: none;">
             <div class="modal-content" style="max-width: 400px;">
-                <h5 style="color: var(--text-beige); margin-bottom: 20px;">🔑 Contributor Login</h5>
+                <h5 style="color: var(--text-beige); margin-bottom: 20px;">ðŸ”‘ Contributor Login</h5>
                 <div id="loginError" style="display: none; background: rgba(140, 59, 59, 0.3); border: 1px solid var(--eft-red); padding: 10px; margin-bottom: 15px; color: var(--eft-red); font-size: 0.85rem;"></div>
                 <div style="margin-bottom: 15px;">
                     <label style="color: var(--text-sub); font-size: 0.8rem; display: block; margin-bottom: 5px;">Email</label>
@@ -523,7 +668,7 @@
                 </div>
                 <div style="margin-bottom: 20px;">
                     <label style="color: var(--text-sub); font-size: 0.8rem; display: block; margin-bottom: 5px;">Password</label>
-                    <input type="password" id="loginPassword" class="form-control-tarkov w-100" placeholder="••••••••" style="padding: 10px;" onkeypress="if(event.key==='Enter')doLogin()">
+                    <input type="password" id="loginPassword" class="form-control-tarkov w-100" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" style="padding: 10px;" onkeypress="if(event.key==='Enter')doLogin()">
                 </div>
                 <div style="display: flex; gap: 10px; justify-content: flex-end;">
                     <button class="btn-tarkov" onclick="hideLoginModal()" style="padding: 8px 20px; background: var(--bg-dark);">Cancel</button>
@@ -544,10 +689,10 @@
                 <textarea id="importTextarea" style="width: 100%; height: 150px; background: var(--bg-dark); border: 1px solid var(--border-dark); color: var(--text-main); padding: 10px; font-family: monospace; font-size: 0.8rem; resize: vertical;" placeholder="Paste share code or JSON here..."></textarea>
                 <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
                     <label class="btn-tarkov" style="padding: 8px 15px; cursor: pointer;">
-                        📁 Upload File
+                        ðŸ“ Upload File
                         <input type="file" accept=".json" onchange="importFromFile(event)" style="display: none;">
                     </label>
-                    <button class="btn-tarkov" onclick="importFromText()" style="padding: 8px 15px;">✓ Apply</button>
+                    <button class="btn-tarkov" onclick="importFromText()" style="padding: 8px 15px;">âœ“ Apply</button>
                     <button class="btn-tarkov" onclick="hideImportModal()" style="padding: 8px 15px; background: var(--bg-dark);">Cancel</button>
                 </div>
             </div>
@@ -560,19 +705,51 @@
                 <p style="color: var(--text-sub); font-size: 0.85rem; margin-bottom: 10px;">Choose how to export your configuration:</p>
                 
                 <div style="margin-bottom: 20px;">
-                    <label style="color: var(--text-beige); font-size: 0.85rem; display: block; margin-bottom: 8px;">📋 Share Code (for Discord, etc.):</label>
+                    <label style="color: var(--text-beige); font-size: 0.85rem; display: block; margin-bottom: 8px;">ðŸ“‹ Share Code (for Discord, etc.):</label>
                     <textarea id="exportCode" readonly style="width: 100%; height: 80px; background: var(--bg-dark); border: 1px solid var(--border-dark); color: var(--text-main); padding: 10px; font-family: monospace; font-size: 0.75rem; resize: none;"></textarea>
-                    <button class="btn-tarkov" onclick="copyExportCode()" style="margin-top: 8px; padding: 6px 15px; font-size: 0.85rem;">📋 Copy Code</button>
+                    <button class="btn-tarkov" onclick="copyExportCode()" style="margin-top: 8px; padding: 6px 15px; font-size: 0.85rem;">ðŸ“‹ Copy Code</button>
                 </div>
                 
                 <div style="border-top: 1px solid var(--border-dark); padding-top: 15px; margin-top: 10px;">
-                    <label style="color: var(--text-beige); font-size: 0.85rem; display: block; margin-bottom: 8px;">💾 Download as file:</label>
-                    <button class="btn-tarkov" onclick="downloadExportFile()" style="padding: 8px 15px;">📥 Download .json</button>
+                    <label style="color: var(--text-beige); font-size: 0.85rem; display: block; margin-bottom: 8px;">ðŸ’¾ Download as file:</label>
+                    <button class="btn-tarkov" onclick="downloadExportFile()" style="padding: 8px 15px;">ðŸ“¥ Download .json</button>
                 </div>
                 
                 <div style="margin-top: 20px; text-align: right;">
                     <button class="btn-tarkov" onclick="hideExportModal()" style="padding: 8px 15px; background: var(--bg-dark);">Close</button>
                 </div>
+            </div>
+        </div>
+        
+        <!-- Correction Dialog (for editing marker positions) -->
+        <div id="correctionDialogOverlay" class="correction-dialog-overlay" style="display: none;">
+            <div class="correction-dialog">
+                <h4>📍 Save Marker Correction</h4>
+                <div class="correction-quest-info">
+                    <strong id="correctionQuestName">Quest Name</strong>
+                    <div class="text-sub" style="font-size: 0.8rem;" id="correctionObjective">Objective description</div>
+                </div>
+                <div class="correction-coords">
+                    <div class="coord-row">
+                        <span class="label">Original:</span>
+                        <span class="old-coords" id="correctionOldCoords">(0.0%, 0.0%)</span>
+                    </div>
+                    <div class="coord-row">
+                        <span class="label">New:</span>
+                        <span class="new-coords" id="correctionNewCoords">(0.0%, 0.0%)</span>
+                    </div>
+                    <div class="coord-row" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border-dark);">
+                        <span class="label">Delta:</span>
+                        <span class="text-gold" id="correctionDelta">(+0.0%, +0.0%)</span>
+                    </div>
+                </div>
+                <div class="correction-dialog-buttons">
+                    <button class="btn-tarkov" onclick="cancelCorrection()" style="background: var(--bg-dark);">Cancel</button>
+                    <button class="btn-tarkov" onclick="saveCorrection()" id="saveCorrectionBtn">💾 Save Correction</button>
+                </div>
+                <p class="text-sub" style="font-size: 0.7rem; margin-top: 10px; text-align: center;">
+                    Corrections are saved to the database and help improve marker accuracy for everyone.
+                </p>
             </div>
         </div>
         
@@ -588,8 +765,8 @@
         <!-- INVENTORY DASHBOARD -->
         <div id="inventoryDashboard" class="inventory-dashboard" style="display: none;">
             <div class="dashboard-toggle" onclick="toggleDashboard()">
-                <span>📊 Inventory Overview</span>
-                <span id="dashboardArrow">▼</span>
+                <span>ðŸ“Š Inventory Overview</span>
+                <span id="dashboardArrow">â–¼</span>
             </div>
             <div id="dashboardContent" class="dashboard-content">
                 <div class="dashboard-grid">
@@ -597,31 +774,31 @@
                         <span class="dash-label">Ammo</span>
                         <span class="dash-value" id="dash-ammo-count">0/0</span>
                         <span class="dash-percent" id="dash-ammo-pct">0%</span>
-                        <span class="dash-value-rub" id="dash-ammo-value">0 ₽</span>
+                        <span class="dash-value-rub" id="dash-ammo-value">0 â‚½</span>
                     </div>
                     <div class="dashboard-item">
                         <span class="dash-label">Weapons</span>
                         <span class="dash-value" id="dash-weapons-count">0/0</span>
                         <span class="dash-percent" id="dash-weapons-pct">0%</span>
-                        <span class="dash-value-rub" id="dash-weapons-value">0 ₽</span>
+                        <span class="dash-value-rub" id="dash-weapons-value">0 â‚½</span>
                     </div>
                     <div class="dashboard-item">
                         <span class="dash-label">Gear</span>
                         <span class="dash-value" id="dash-gear-count">0/0</span>
                         <span class="dash-percent" id="dash-gear-pct">0%</span>
-                        <span class="dash-value-rub" id="dash-gear-value">0 ₽</span>
+                        <span class="dash-value-rub" id="dash-gear-value">0 â‚½</span>
                     </div>
                     <div class="dashboard-item">
                         <span class="dash-label">Attachments</span>
                         <span class="dash-value" id="dash-attachments-count">0/0</span>
                         <span class="dash-percent" id="dash-attachments-pct">0%</span>
-                        <span class="dash-value-rub" id="dash-attachments-value">0 ₽</span>
+                        <span class="dash-value-rub" id="dash-attachments-value">0 â‚½</span>
                     </div>
                     <div class="dashboard-item dashboard-total">
                         <span class="dash-label">TOTAL</span>
                         <span class="dash-value" id="dash-total-count">0</span>
                         <span class="dash-percent" id="dash-total-pct">0%</span>
-                        <span class="dash-value-rub" id="dash-total-value">0 ₽</span>
+                        <span class="dash-value-rub" id="dash-total-value">0 â‚½</span>
                     </div>
                 </div>
             </div>
@@ -632,12 +809,12 @@
             <div class="row">
                 <div class="col-lg-5">
                     <div class="tarkov-panel">
-                        <h5>Select Operations</h5>
+                        <h5>Select Tasks</h5>
                         <div class="search-box">
-                            <input type="text" class="form-control-tarkov w-100" placeholder="Search quests..." id="questSearch" oninput="filterQuests()">
+                            <input type="text" class="form-control-tarkov w-100" placeholder="Search tasks..." id="questSearch" oninput="filterQuests()">
                         </div>
                         <div class="quest-list-controls" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; margin-bottom: 8px; border-bottom: 1px solid var(--border-dark);">
-                            <span class="text-sub small"><span id="selectedQuestCount">0</span> quests selected</span>
+                            <span class="text-sub small"><span id="selectedQuestCount">0</span> tasks selected</span>
                             <div style="display: flex; gap: 8px; align-items: center;">
                                 <div class="group-toggle" style="display: flex; background: var(--bg-dark); border: 1px solid var(--border-dark); border-radius: 3px; overflow: hidden;">
                                     <button id="groupByTrader" class="group-toggle-btn active" onclick="setQuestGrouping('trader')" style="padding: 3px 8px; font-size: 0.7rem; border: none; background: var(--eft-gold); color: #000; cursor: pointer;">Trader</button>
@@ -689,22 +866,22 @@
                             <span style="color: var(--eft-gold); font-size: 0.8rem; font-style: italic;">Coming Soon</span>
                             <label class="spawn-toggle" data-layer="scav" style="cursor: not-allowed;">
                                 <input type="checkbox" disabled>
-                                <span class="spawn-toggle-icon scav-icon">☠☠☠</span>
+                                <span class="spawn-toggle-icon scav-icon">â˜ â˜ â˜ </span>
                                 <span>Scavs</span>
                             </label>
                             <label class="spawn-toggle" data-layer="sniper" style="cursor: not-allowed;">
                                 <input type="checkbox" disabled>
-                                <span class="spawn-toggle-icon sniper-icon">⌖</span>
+                                <span class="spawn-toggle-icon sniper-icon">âŒ–</span>
                                 <span>Sniper</span>
                             </label>
                             <label class="spawn-toggle" data-layer="pmc" style="cursor: not-allowed;">
                                 <input type="checkbox" disabled>
-                                <span class="spawn-toggle-icon pmc-icon">⚔</span>
+                                <span class="spawn-toggle-icon pmc-icon">âš”</span>
                                 <span>PMC</span>
                             </label>
                             <label class="spawn-toggle" data-layer="boss" style="cursor: not-allowed;">
                                 <input type="checkbox" disabled>
-                                <span class="spawn-toggle-icon boss-icon">💀</span>
+                                <span class="spawn-toggle-icon boss-icon">ðŸ’€</span>
                                 <span>Boss</span>
                             </label>
                         </div>
@@ -774,7 +951,7 @@
                                 </div>
                             </div>
                             <div class="col-md-2">
-                                <button id="btn-load-ammo" class="btn-tarkov w-100" onclick="loadAmmoData()" style="display: none;">🔄 Refresh Data</button>
+                                <button id="btn-load-ammo" class="btn-tarkov w-100" onclick="loadAmmoData()" style="display: none;">ðŸ”„ Refresh Data</button>
                             </div>
                             <div class="col-md-2">
                                 <button id="bulk-toggle-ammo" class="btn-tarkov w-100" onclick="toggleBulkMode('ammo')" style="font-size: 0.75rem;">Bulk Select</button>
@@ -782,8 +959,8 @@
                         </div>
                         <div class="bulk-controls" id="bulk-controls-ammo">
                             <span id="bulk-count-ammo" class="text-beige">0 selected</span>
-                            <button class="btn-tarkov" onclick="bulkMarkOwned('ammo')" style="padding: 4px 10px; font-size: 0.75rem;">✓ Mark Owned</button>
-                            <button class="btn-tarkov" onclick="bulkUnmarkOwned('ammo')" style="padding: 4px 10px; font-size: 0.75rem;">✗ Unmark</button>
+                            <button class="btn-tarkov" onclick="bulkMarkOwned('ammo')" style="padding: 4px 10px; font-size: 0.75rem;">âœ“ Mark Owned</button>
+                            <button class="btn-tarkov" onclick="bulkUnmarkOwned('ammo')" style="padding: 4px 10px; font-size: 0.75rem;">âœ— Unmark</button>
                             <button class="btn-tarkov" onclick="bulkSelectAll('ammo')" style="padding: 4px 10px; font-size: 0.75rem; background: var(--bg-dark);">Select All</button>
                             <button class="btn-tarkov" onclick="bulkDeselectAll('ammo')" style="padding: 4px 10px; font-size: 0.75rem; background: var(--bg-dark);">Deselect All</button>
                         </div>
@@ -909,7 +1086,7 @@
                                 <input type="text" class="form-control-tarkov w-100" placeholder="Search weapons..." id="weaponSearch" oninput="filterWeapons()">
                             </div>
                             <div class="col-md-3">
-                                <button id="btn-load-weapons" class="btn-tarkov w-100" onclick="loadWeaponsData()" style="display: none;">🔄 Refresh Data</button>
+                                <button id="btn-load-weapons" class="btn-tarkov w-100" onclick="loadWeaponsData()" style="display: none;">ðŸ”„ Refresh Data</button>
                             </div>
                             <div class="col-md-2">
                                 <button id="bulk-toggle-weapons" class="btn-tarkov w-100" onclick="toggleBulkMode('weapons')" style="font-size: 0.75rem;">Bulk Select</button>
@@ -917,8 +1094,8 @@
                         </div>
                         <div class="bulk-controls" id="bulk-controls-weapons">
                             <span id="bulk-count-weapons" class="text-beige">0 selected</span>
-                            <button class="btn-tarkov" onclick="bulkMarkOwned('weapons')" style="padding: 4px 10px; font-size: 0.75rem;">✓ Mark Owned</button>
-                            <button class="btn-tarkov" onclick="bulkUnmarkOwned('weapons')" style="padding: 4px 10px; font-size: 0.75rem;">✗ Unmark</button>
+                            <button class="btn-tarkov" onclick="bulkMarkOwned('weapons')" style="padding: 4px 10px; font-size: 0.75rem;">âœ“ Mark Owned</button>
+                            <button class="btn-tarkov" onclick="bulkUnmarkOwned('weapons')" style="padding: 4px 10px; font-size: 0.75rem;">âœ— Unmark</button>
                             <button class="btn-tarkov" onclick="bulkSelectAll('weapons')" style="padding: 4px 10px; font-size: 0.75rem; background: var(--bg-dark);">Select All</button>
                             <button class="btn-tarkov" onclick="bulkDeselectAll('weapons')" style="padding: 4px 10px; font-size: 0.75rem; background: var(--bg-dark);">Deselect All</button>
                         </div>
@@ -1003,7 +1180,7 @@
                                 <input type="text" class="form-control-tarkov w-100" placeholder="Search gear..." id="gearSearch" oninput="filterGear()">
                             </div>
                             <div class="col-md-3">
-                                <button id="btn-load-gear" class="btn-tarkov w-100" onclick="loadGearData()" style="display: none;">🔄 Refresh Data</button>
+                                <button id="btn-load-gear" class="btn-tarkov w-100" onclick="loadGearData()" style="display: none;">ðŸ”„ Refresh Data</button>
                             </div>
                             <div class="col-md-2">
                                 <button id="bulk-toggle-gear" class="btn-tarkov w-100" onclick="toggleBulkMode('gear')" style="font-size: 0.75rem;">Bulk Select</button>
@@ -1011,8 +1188,8 @@
                         </div>
                         <div class="bulk-controls" id="bulk-controls-gear">
                             <span id="bulk-count-gear" class="text-beige">0 selected</span>
-                            <button class="btn-tarkov" onclick="bulkMarkOwned('gear')" style="padding: 4px 10px; font-size: 0.75rem;">✓ Mark Owned</button>
-                            <button class="btn-tarkov" onclick="bulkUnmarkOwned('gear')" style="padding: 4px 10px; font-size: 0.75rem;">✗ Unmark</button>
+                            <button class="btn-tarkov" onclick="bulkMarkOwned('gear')" style="padding: 4px 10px; font-size: 0.75rem;">âœ“ Mark Owned</button>
+                            <button class="btn-tarkov" onclick="bulkUnmarkOwned('gear')" style="padding: 4px 10px; font-size: 0.75rem;">âœ— Unmark</button>
                             <button class="btn-tarkov" onclick="bulkSelectAll('gear')" style="padding: 4px 10px; font-size: 0.75rem; background: var(--bg-dark);">Select All</button>
                             <button class="btn-tarkov" onclick="bulkDeselectAll('gear')" style="padding: 4px 10px; font-size: 0.75rem; background: var(--bg-dark);">Deselect All</button>
                         </div>
@@ -1092,7 +1269,7 @@
                                 <input type="text" class="form-control-tarkov w-100" placeholder="Search attachments..." id="attachmentSearch" oninput="filterAttachments()">
                             </div>
                             <div class="col-md-3">
-                                <button id="btn-load-attachments" class="btn-tarkov w-100" onclick="loadAttachmentsData()" style="display: none;">🔄 Refresh Data</button>
+                                <button id="btn-load-attachments" class="btn-tarkov w-100" onclick="loadAttachmentsData()" style="display: none;">ðŸ”„ Refresh Data</button>
                             </div>
                             <div class="col-md-2">
                                 <button id="bulk-toggle-attachments" class="btn-tarkov w-100" onclick="toggleBulkMode('attachments')" style="font-size: 0.75rem;">Bulk Select</button>
@@ -1100,8 +1277,8 @@
                         </div>
                         <div class="bulk-controls" id="bulk-controls-attachments">
                             <span id="bulk-count-attachments" class="text-beige">0 selected</span>
-                            <button class="btn-tarkov" onclick="bulkMarkOwned('attachments')" style="padding: 4px 10px; font-size: 0.75rem;">✓ Mark Owned</button>
-                            <button class="btn-tarkov" onclick="bulkUnmarkOwned('attachments')" style="padding: 4px 10px; font-size: 0.75rem;">✗ Unmark</button>
+                            <button class="btn-tarkov" onclick="bulkMarkOwned('attachments')" style="padding: 4px 10px; font-size: 0.75rem;">âœ“ Mark Owned</button>
+                            <button class="btn-tarkov" onclick="bulkUnmarkOwned('attachments')" style="padding: 4px 10px; font-size: 0.75rem;">âœ— Unmark</button>
                             <button class="btn-tarkov" onclick="bulkSelectAll('attachments')" style="padding: 4px 10px; font-size: 0.75rem; background: var(--bg-dark);">Select All</button>
                             <button class="btn-tarkov" onclick="bulkDeselectAll('attachments')" style="padding: 4px 10px; font-size: 0.75rem; background: var(--bg-dark);">Deselect All</button>
                         </div>
@@ -1318,11 +1495,233 @@
         
         function updateEditModeUI() {
             const badge = document.getElementById('editModeBadge');
+            const btn = document.getElementById('editModeBtn');
+            
             if (isEditMode) {
                 badge.style.display = 'block';
+                if (btn) {
+                    btn.classList.add('active');
+                    btn.innerHTML = '✏️ Exit Edit Mode';
+                }
             } else {
                 badge.style.display = 'none';
+                if (btn) {
+                    btn.classList.remove('active');
+                    btn.innerHTML = '✏️ Edit Markers';
+                }
             }
+        }
+        
+        // ============================================================================
+        // MARKER CORRECTION SYSTEM
+        // ============================================================================
+        
+        let pendingCorrection = null; // Stores marker data during correction dialog
+        
+        function showCorrectionDialog(marker, dragEvent) {
+            const data = marker._questData;
+            if (!data) {
+                console.error('No quest data on marker');
+                return;
+            }
+            
+            // Get new position from marker
+            const newLatLng = marker.getLatLng();
+            const mapKey = document.getElementById('mapSelect')?.value || activeMapTab || 'customs';
+            const mapCfg = MAP_CONFIG[mapKey] || { scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true };
+            
+            // Convert Leaflet coordinates back to percent
+            // Reverse the conversion from drawQuestMarkers
+            let pixelX = newLatLng.lng;
+            let pixelY = mapCfg.invertLeafletY !== false ? (currentMapHeight - newLatLng.lat) : newLatLng.lat;
+            
+            // Convert pixel to percent
+            let newLeftPercent = (pixelX / currentMapWidth) * 100;
+            let newTopPercent = (pixelY / currentMapHeight) * 100;
+            
+            // Reverse map-specific corrections
+            if (mapCfg.flipY) {
+                newTopPercent = 100 - newTopPercent;
+            }
+            newLeftPercent = (newLeftPercent - mapCfg.offsetX) / mapCfg.scaleX;
+            newTopPercent = (newTopPercent - mapCfg.offsetY) / mapCfg.scaleY;
+            
+            // Calculate delta
+            const deltaLeft = newLeftPercent - data.originalLeftPercent;
+            const deltaTop = newTopPercent - data.originalTopPercent;
+            
+            // Store pending correction
+            pendingCorrection = {
+                marker: marker,
+                questId: data.questId,
+                questName: data.questName,
+                objectiveId: data.objectiveId,
+                objectiveIndex: data.objectiveIndex,
+                mapKey: mapKey,
+                originalLeftPercent: data.originalLeftPercent,
+                originalTopPercent: data.originalTopPercent,
+                newLeftPercent: newLeftPercent,
+                newTopPercent: newTopPercent,
+                deltaLeft: deltaLeft,
+                deltaTop: deltaTop
+            };
+            
+            // Populate dialog
+            document.getElementById('correctionQuestName').textContent = data.questName;
+            document.getElementById('correctionObjective').textContent = `#${data.objectiveIndex}: ${data.description || 'Objective'}`;
+            document.getElementById('correctionOldCoords').textContent = `(${data.originalLeftPercent.toFixed(2)}%, ${data.originalTopPercent.toFixed(2)}%)`;
+            document.getElementById('correctionNewCoords').textContent = `(${newLeftPercent.toFixed(2)}%, ${newTopPercent.toFixed(2)}%)`;
+            
+            const deltaLeftStr = deltaLeft >= 0 ? `+${deltaLeft.toFixed(2)}` : deltaLeft.toFixed(2);
+            const deltaTopStr = deltaTop >= 0 ? `+${deltaTop.toFixed(2)}` : deltaTop.toFixed(2);
+            document.getElementById('correctionDelta').textContent = `(${deltaLeftStr}%, ${deltaTopStr}%)`;
+            
+            // Show dialog
+            document.getElementById('correctionDialogOverlay').style.display = 'block';
+        }
+        
+        function cancelCorrection() {
+            // Reset marker to original position
+            if (pendingCorrection && pendingCorrection.marker) {
+                const data = pendingCorrection.marker._questData;
+                const mapKey = pendingCorrection.mapKey;
+                const mapCfg = MAP_CONFIG[mapKey] || { scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true };
+                
+                // Recalculate original position
+                let correctedLeftPct = data.originalLeftPercent * mapCfg.scaleX + mapCfg.offsetX;
+                let correctedTopPct = data.originalTopPercent * mapCfg.scaleY + mapCfg.offsetY;
+                if (mapCfg.flipY) {
+                    correctedTopPct = 100 - correctedTopPct;
+                }
+                const pixelX = (correctedLeftPct / 100) * currentMapWidth;
+                const pixelY = (correctedTopPct / 100) * currentMapHeight;
+                const leafletY = mapCfg.invertLeafletY !== false ? (currentMapHeight - pixelY) : pixelY;
+                
+                pendingCorrection.marker.setLatLng([leafletY, pixelX]);
+            }
+            
+            pendingCorrection = null;
+            document.getElementById('correctionDialogOverlay').style.display = 'none';
+        }
+        
+        async function saveCorrection() {
+            if (!pendingCorrection || !currentUser || !supabaseClient) {
+                alert('Unable to save correction. Please ensure you are logged in.');
+                return;
+            }
+            
+            const btn = document.getElementById('saveCorrectionBtn');
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+            
+            try {
+                // Build correction record matching existing schema
+                const correctionData = {
+                    quest_id: pendingCorrection.questId,
+                    objective_index: pendingCorrection.objectiveIndex,
+                    original_left_percent: pendingCorrection.originalLeftPercent,
+                    original_top_percent: pendingCorrection.originalTopPercent,
+                    corrected_left_percent: pendingCorrection.newLeftPercent,
+                    corrected_top_percent: pendingCorrection.newTopPercent,
+                    corrected_by: currentUser.id,
+                    notes: `Map: ${pendingCorrection.mapKey}, Delta: (${pendingCorrection.deltaLeft.toFixed(2)}%, ${pendingCorrection.deltaTop.toFixed(2)}%)`
+                };
+                
+                // Upsert to Supabase (insert or update on conflict)
+                const { data, error } = await supabaseClient
+                    .from('marker_corrections')
+                    .upsert(correctionData, {
+                        onConflict: 'quest_id,objective_index'
+                    });
+                
+                if (error) throw error;
+                
+                // Update marker's stored data with new position
+                if (pendingCorrection.marker._questData) {
+                    pendingCorrection.marker._questData.originalLeftPercent = pendingCorrection.newLeftPercent;
+                    pendingCorrection.marker._questData.originalTopPercent = pendingCorrection.newTopPercent;
+                    pendingCorrection.marker._questData.hasDbCorrection = true;
+                }
+                
+                // Clear cache so next load gets fresh data
+                clearCorrectionsCache();
+                
+                console.log('Correction saved:', correctionData);
+                
+                // Close dialog
+                pendingCorrection = null;
+                document.getElementById('correctionDialogOverlay').style.display = 'none';
+                
+            } catch (error) {
+                console.error('Error saving correction:', error);
+                alert('Failed to save correction: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '💾 Save Correction';
+            }
+        }
+        
+        // Cache for loaded marker corrections (global, keyed by quest_id|objective_index)
+        let markerCorrectionsCache = null;
+        let correctionsCacheLoaded = false;
+        
+        async function loadMarkerCorrections(mapKey) {
+            // Check cache first - corrections are global (not per-map)
+            if (correctionsCacheLoaded && markerCorrectionsCache) {
+                console.log(`Using cached corrections: ${Object.keys(markerCorrectionsCache).length} entries`);
+                return markerCorrectionsCache;
+            }
+            
+            if (!supabaseClient) {
+                console.log('Supabase not available, skipping corrections load');
+                return {};
+            }
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('marker_corrections')
+                    .select('*');
+                
+                if (error) {
+                    console.error('Error loading corrections:', error);
+                    return {};
+                }
+                
+                // Build lookup table: quest_id|objective_index -> correction
+                markerCorrectionsCache = {};
+                (data || []).forEach(c => {
+                    const key = `${c.quest_id}|${c.objective_index}`;
+                    markerCorrectionsCache[key] = {
+                        correctedLeftPercent: parseFloat(c.corrected_left_percent),
+                        correctedTopPercent: parseFloat(c.corrected_top_percent),
+                        originalLeftPercent: parseFloat(c.original_left_percent),
+                        originalTopPercent: parseFloat(c.original_top_percent),
+                        correctedBy: c.corrected_by,
+                        correctedAt: c.corrected_at,
+                        notes: c.notes
+                    };
+                });
+                
+                correctionsCacheLoaded = true;
+                console.log(`Loaded ${Object.keys(markerCorrectionsCache).length} marker corrections from database`);
+                return markerCorrectionsCache;
+                
+            } catch (err) {
+                console.error('Exception loading corrections:', err);
+                return {};
+            }
+        }
+        
+        function getMarkerCorrection(questId, objectiveIndex) {
+            if (!markerCorrectionsCache) return null;
+            const key = `${questId}|${objectiveIndex}`;
+            return markerCorrectionsCache[key] || null;
+        }
+        
+        function clearCorrectionsCache() {
+            markerCorrectionsCache = null;
+            correctionsCacheLoaded = false;
+            console.log('Corrections cache cleared');
         }
         
         // Check auth state on page load
@@ -1576,7 +1975,7 @@
         // STATUS INDICATOR
         // ============================================================================
         
-        function updateStatus(connected, version = '1.0β') {
+        function updateStatus(connected, version = '1.0Î²') {
             const dot = document.getElementById('statusDot');
             const text = document.getElementById('statusText');
             if (connected) {
@@ -1706,7 +2105,7 @@
         
         let currentQuestColors = {};
         
-        function drawQuestMarkers(mapKey, mapWidth, mapHeight, questNames = [], selectedQuests = []) {
+        async function drawQuestMarkers(mapKey, mapWidth, mapHeight, questNames = [], selectedQuests = []) {
             if (!questMarkersLayer) {
                 questMarkersLayer = L.layerGroup();
             }
@@ -1717,6 +2116,9 @@
             
             // Get map config for coordinate corrections
             const mapCfg = MAP_CONFIG[mapKey] || { scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false };
+            
+            // Load marker corrections from database
+            const corrections = await loadMarkerCorrections(mapKey);
             
             // Only draw markers if we have selected quests
             if (!questLocationsData || questNames.length === 0) {
@@ -1777,9 +2179,25 @@
                     
                     if (!shouldDraw) return;
                     
+                    // Check for database correction for this marker (keyed by quest_id|objective_index)
+                    const correctionKey = `${loc.questId}|${loc.objectiveIndex}`;
+                    const correction = corrections[correctionKey];
+                    
+                    // Use corrected coordinates if available, otherwise original
+                    let baseLeftPercent = loc.leftPercent;
+                    let baseTopPercent = loc.topPercent;
+                    let hasCorrection = false;
+                    
+                    if (correction) {
+                        baseLeftPercent = correction.correctedLeftPercent;
+                        baseTopPercent = correction.correctedTopPercent;
+                        hasCorrection = true;
+                        console.log(`Applied correction for ${loc.questName} #${loc.objectiveIndex} (${loc.questId})`);
+                    }
+                    
                     // Apply map-specific coordinate corrections
-                    let correctedLeftPct = loc.leftPercent * mapCfg.scaleX + mapCfg.offsetX;
-                    let correctedTopPct = loc.topPercent * mapCfg.scaleY + mapCfg.offsetY;
+                    let correctedLeftPct = baseLeftPercent * mapCfg.scaleX + mapCfg.offsetX;
+                    let correctedTopPct = baseTopPercent * mapCfg.scaleY + mapCfg.offsetY;
                     
                     // Optional Y-axis flip (before pixel conversion)
                     if (mapCfg.flipY) {
@@ -1823,7 +2241,40 @@
                         iconAnchor: [12, 12]
                     });
                     
-                    const marker = L.marker([leafletY, leafletX], { icon: icon });
+                    // Create marker with draggable option
+                    const marker = L.marker([leafletY, leafletX], { 
+                        icon: icon,
+                        draggable: true  // Enable dragging (controlled by edit mode)
+                    });
+                    
+                    // Store metadata for corrections system
+                    // Use corrected coordinates as base if available
+                    marker._questData = {
+                        questId: loc.questId,
+                        questName: loc.questName,
+                        objectiveId: loc.objectiveId,
+                        objectiveIndex: loc.objectiveIndex,
+                        mapKey: mapKey,
+                        originalLeftPercent: baseLeftPercent,  // Use corrected coords if available
+                        originalTopPercent: baseTopPercent,
+                        description: loc.description,
+                        hasDbCorrection: hasCorrection
+                    };
+                    
+                    // Disable dragging by default (enabled only in edit mode)
+                    marker.dragging.disable();
+                    
+                    // Drag event handlers
+                    marker.on('dragstart', function(e) {
+                        this._icon?.classList.add('marker-dragging');
+                    });
+                    
+                    marker.on('dragend', function(e) {
+                        this._icon?.classList.remove('marker-dragging');
+                        if (isEditMode && currentUser) {
+                            showCorrectionDialog(this, e);
+                        }
+                    });
                     
                     // Build tooltip text: short and informative
                     const typeLabel = loc.type.charAt(0).toUpperCase() + loc.type.slice(1);
@@ -1960,7 +2411,7 @@
                 allQuestsGlobal = Array.isArray(data) ? data : (data.quests || []);
                 
                 // Update connection status
-                updateStatus(true, '1.0β');
+                updateStatus(true, '1.0Î²');
                 
                 // Render quest list
                 renderQuestList();
@@ -1994,7 +2445,7 @@
             const savedQuests = getSavedQuests();
             
             if (!allQuestsGlobal || allQuestsGlobal.length === 0) {
-                list.innerHTML = '<div class="text-sub text-center p-3">No quests loaded</div>';
+                list.innerHTML = '<div class="text-sub text-center p-3">No tasks loaded</div>';
                 return;
             }
             
@@ -2073,11 +2524,11 @@
                     
                     // Map icons
                     const mapIcons = {
-                        'Customs': '🏭', 'Woods': '🌲', 'Shoreline': '🏖️', 'Interchange': '🛒',
-                        'Reserve': '🏰', 'Lighthouse': '🗼', 'Streets of Tarkov': '🏙️',
-                        'Ground Zero': '☢️', 'Factory': '🏗️', 'The Lab': '🔬', 'Any': '🌍'
+                        'Customs': 'ðŸ­', 'Woods': 'ðŸŒ²', 'Shoreline': 'ðŸ–ï¸', 'Interchange': 'ðŸ›’',
+                        'Reserve': 'ðŸ°', 'Lighthouse': 'ðŸ—¼', 'Streets of Tarkov': 'ðŸ™ï¸',
+                        'Ground Zero': 'â˜¢ï¸', 'Factory': 'ðŸ—ï¸', 'The Lab': 'ðŸ”¬', 'Any': 'ðŸŒ'
                     };
-                    const icon = mapIcons[mapName] || '📍';
+                    const icon = mapIcons[mapName] || 'ðŸ“';
                     
                     html += `
                         <div class="trader-group">
@@ -2195,7 +2646,7 @@
             // If no specific maps found (all "any" quests), enable all
             if (requiredMapsForQuests.size === 0) {
                 Array.from(mapSelect.options).forEach(opt => opt.disabled = false);
-                mapHint.textContent = 'Selected quests can be completed on any map';
+                mapHint.textContent = 'Selected tasks can be completed on any map';
                 mapHint.className = 'map-hint';
                 mapHint.style.display = 'block';
                 return;
@@ -2223,10 +2674,10 @@
             
             // Show hint
             if (requiredMapsForQuests.size === 1) {
-                mapHint.textContent = `Quest location: ${mapNames[0]}`;
+                mapHint.textContent = `Task location: ${mapNames[0]}`;
                 mapHint.className = 'map-hint';
             } else {
-                mapHint.textContent = `Quests require ${requiredMapsForQuests.size} maps: ${mapNames.join(', ')}`;
+                mapHint.textContent = `Tasks require ${requiredMapsForQuests.size} maps: ${mapNames.join(', ')}`;
                 mapHint.className = 'map-hint warning';
             }
             mapHint.style.display = 'block';
@@ -2262,9 +2713,38 @@
         
         function filterQuests() {
             const search = document.getElementById('questSearch').value.toLowerCase();
+            
+            // Filter individual quest rows
             document.querySelectorAll('.quest-row').forEach(row => {
                 const name = row.querySelector('.quest-name').textContent.toLowerCase();
-                row.style.display = name.includes(search) ? '' : 'none';
+                const matches = name.includes(search);
+                row.style.display = matches ? '' : 'none';
+            });
+            
+            // Hide/show groups based on whether they have visible quests
+            document.querySelectorAll('.trader-group').forEach(group => {
+                const allRows = group.querySelectorAll('.quest-row');
+                let hasVisible = false;
+                
+                allRows.forEach(row => {
+                    if (row.style.display !== 'none') {
+                        hasVisible = true;
+                    }
+                });
+                
+                group.style.display = hasVisible ? '' : 'none';
+                
+                // Auto-expand groups that have matches when searching
+                if (search && hasVisible) {
+                    const questsContainer = group.querySelector('.trader-quests');
+                    if (questsContainer) questsContainer.classList.add('show');
+                }
+                
+                // Collapse groups when search is cleared
+                if (!search) {
+                    const questsContainer = group.querySelector('.trader-quests');
+                    if (questsContainer) questsContainer.classList.remove('show');
+                }
             });
         }
 
@@ -2348,7 +2828,7 @@
             questMarkersLayer = L.layerGroup().addTo(mapInstance);
             
             // Draw quest markers only for selected quests
-            drawQuestMarkers(mapName, currentMapWidth, currentMapHeight, questNames, selectedQuests);
+            await drawQuestMarkers(mapName, currentMapWidth, currentMapHeight, questNames, selectedQuests);
             
             setTimeout(() => mapInstance.invalidateSize(), 200);
         }
@@ -2377,7 +2857,7 @@
             const savedQuests = getSavedQuests();
             
             if (savedQuests.size === 0) {
-                alert('No operations selected. Please select at least one quest.');
+                alert('No tasks selected. Please select at least one task.');
                 return;
             }
             
@@ -2595,13 +3075,13 @@
                 renderAmmoList();
                 
                 content.classList.remove('d-none');
-                btn.textContent = '🔄 Refresh Data';
+                btn.textContent = 'ðŸ”„ Refresh Data';
                 btn.style.display = 'block';
                 
             } catch (err) {
                 error.innerHTML = `<strong>ERROR:</strong> ${err.message}`;
                 error.classList.remove('d-none');
-                btn.textContent = '🔄 Retry';
+                btn.textContent = 'ðŸ”„ Retry';
                 btn.style.display = 'block';
             } finally {
                 loading.classList.add('d-none');
@@ -2861,7 +3341,7 @@
             
             if (!statDef || !thresholds) return;
             
-            directionEl.textContent = statDef.direction === 'higher' ? '↑ higher = better' : '↓ lower = better';
+            directionEl.textContent = statDef.direction === 'higher' ? 'â†‘ higher = better' : 'â†“ lower = better';
             directionEl.className = `threshold-direction ${statDef.direction}`;
             
             grid.innerHTML = ['S', 'A', 'B', 'C', 'D'].map(tier => `
@@ -3002,7 +3482,7 @@
             // Visual feedback
             const btn = event.target;
             const originalText = btn.textContent;
-            btn.textContent = '✓ Copied!';
+            btn.textContent = 'âœ“ Copied!';
             btn.style.background = 'var(--eft-green)';
             setTimeout(() => {
                 btn.textContent = originalText;
@@ -3312,7 +3792,7 @@
                 
                 loading.classList.add('d-none');
                 content.classList.remove('d-none');
-                btn.textContent = '🔄 Refresh Data';
+                btn.textContent = 'ðŸ”„ Refresh Data';
                 btn.style.display = 'block';
                 btn.disabled = false;
                 
@@ -3323,7 +3803,7 @@
                 loading.classList.add('d-none');
                 error.classList.remove('d-none');
                 error.textContent = 'Error loading weapons: ' + err.message;
-                btn.textContent = '🔄 Retry';
+                btn.textContent = 'ðŸ”„ Retry';
                 btn.style.display = 'block';
                 btn.disabled = false;
             }
@@ -3578,7 +4058,7 @@
                 
                 loading.classList.add('d-none');
                 content.classList.remove('d-none');
-                btn.textContent = '🔄 Refresh Data';
+                btn.textContent = 'ðŸ”„ Refresh Data';
                 btn.style.display = 'block';
                 btn.disabled = false;
                 
@@ -3589,7 +4069,7 @@
                 loading.classList.add('d-none');
                 error.classList.remove('d-none');
                 error.textContent = 'Error loading gear: ' + err.message;
-                btn.textContent = '🔄 Retry';
+                btn.textContent = 'ðŸ”„ Retry';
                 btn.style.display = 'block';
                 btn.disabled = false;
             }
@@ -3919,7 +4399,7 @@
                 
                 loading.classList.add('d-none');
                 content.classList.remove('d-none');
-                btn.textContent = '🔄 Refresh Data';
+                btn.textContent = 'ðŸ”„ Refresh Data';
                 btn.style.display = 'block';
                 btn.disabled = false;
                 
@@ -3930,7 +4410,7 @@
                 loading.classList.add('d-none');
                 error.classList.remove('d-none');
                 error.textContent = 'Error loading attachments: ' + err.message;
-                btn.textContent = '🔄 Retry';
+                btn.textContent = 'ðŸ”„ Retry';
                 btn.style.display = 'block';
                 btn.disabled = false;
             }
@@ -4158,19 +4638,19 @@
                         
                         if (pen >= classThreshold + 10) {
                             penClass = 'pen-high';
-                            penText = '✓✓✓';
+                            penText = 'âœ“âœ“âœ“';
                         } else if (pen >= classThreshold) {
                             penClass = 'pen-high';
-                            penText = '✓✓';
+                            penText = 'âœ“âœ“';
                         } else if (pen >= classThreshold - 10) {
                             penClass = 'pen-mid';
-                            penText = '✓';
+                            penText = 'âœ“';
                         } else if (pen >= classThreshold - 20) {
                             penClass = 'pen-low';
                             penText = '~';
                         } else {
                             penClass = 'pen-none';
-                            penText = '✗';
+                            penText = 'âœ—';
                         }
                         
                         html += `<td class="pen-cell ${penClass}">${penText}</td>`;
@@ -4193,7 +4673,7 @@
         function toggleDashboard() {
             dashboardCollapsed = !dashboardCollapsed;
             document.getElementById('dashboardContent').classList.toggle('collapsed', dashboardCollapsed);
-            document.getElementById('dashboardArrow').textContent = dashboardCollapsed ? '▶' : '▼';
+            document.getElementById('dashboardArrow').textContent = dashboardCollapsed ? 'â–¶' : 'â–¼';
         }
         
         function updateDashboard() {
@@ -4222,7 +4702,7 @@
             for (const [cat, s] of Object.entries(stats)) {
                 document.getElementById(`dash-${cat}-count`).textContent = `${s.owned}/${s.total}`;
                 document.getElementById(`dash-${cat}-pct`).textContent = s.total > 0 ? `${Math.round(s.owned / s.total * 100)}%` : '-';
-                document.getElementById(`dash-${cat}-value`).textContent = s.value.toLocaleString() + ' ₽';
+                document.getElementById(`dash-${cat}-value`).textContent = s.value.toLocaleString() + ' â‚½';
             }
             
             // Totals
@@ -4232,7 +4712,7 @@
             
             document.getElementById('dash-total-count').textContent = totalOwned;
             document.getElementById('dash-total-pct').textContent = totalItems > 0 ? `${Math.round(totalOwned / totalItems * 100)}%` : '-';
-            document.getElementById('dash-total-value').textContent = totalValue.toLocaleString() + ' ₽';
+            document.getElementById('dash-total-value').textContent = totalValue.toLocaleString() + ' â‚½';
         }
 
         // ============================================================================
@@ -4551,16 +5031,16 @@
             
             switch(type) {
                 case 'scav':
-                    html = '<div class="spawn-marker-icon">☠☠</div>';
+                    html = '<div class="spawn-marker-icon">â˜ â˜ </div>';
                     break;
                 case 'sniper':
-                    html = '<div class="spawn-marker-icon">⌖</div>';
+                    html = '<div class="spawn-marker-icon">âŒ–</div>';
                     break;
                 case 'pmc':
-                    html = '<div class="spawn-marker-icon">⚔</div>';
+                    html = '<div class="spawn-marker-icon">âš”</div>';
                     break;
                 case 'boss':
-                    html = '<div class="spawn-marker-icon">💀</div>';
+                    html = '<div class="spawn-marker-icon">ðŸ’€</div>';
                     break;
             }
             
@@ -5065,8 +5545,8 @@
                 help.className = 'shortcuts-help';
                 help.innerHTML = `
                     <div style="margin-bottom: 5px; color: var(--text-beige); display: flex; justify-content: space-between; align-items: center;">
-                        <span>⌨️ Shortcuts</span>
-                        <span onclick="toggleShortcutsHelp()" style="cursor: pointer; opacity: 0.6; font-size: 1rem;">✕</span>
+                        <span>âŒ¨ï¸ Shortcuts</span>
+                        <span onclick="toggleShortcutsHelp()" style="cursor: pointer; opacity: 0.6; font-size: 1rem;">âœ•</span>
                     </div>
                     <div><kbd>1</kbd>-<kbd>6</kbd> Switch tabs</div>
                     <div><kbd>Ctrl</kbd>+<kbd>E</kbd> Export</div>
@@ -5221,7 +5701,7 @@
             for (const task of tasks) {
                 try {
                     loadingStatus.textContent = `Loading ${task.name}...`;
-                    loadingDetails.innerHTML = `<span class="loading-item active">⏳ ${task.name}</span>`;
+                    loadingDetails.innerHTML = `<span class="loading-item active">â³ ${task.name}</span>`;
                     
                     await task.fn();
                     
@@ -5229,10 +5709,10 @@
                     const progress = Math.round((completed / total) * 100);
                     loadingProgress.style.width = progress + '%';
                     
-                    loadingDetails.innerHTML = `<span class="loading-item done">✓ ${task.name}</span>`;
+                    loadingDetails.innerHTML = `<span class="loading-item done">âœ“ ${task.name}</span>`;
                 } catch (err) {
                     console.error(`Error loading ${task.name}:`, err);
-                    loadingDetails.innerHTML = `<span class="loading-item error">✗ ${task.name} (failed)</span>`;
+                    loadingDetails.innerHTML = `<span class="loading-item error">âœ— ${task.name} (failed)</span>`;
                     // Continue with other tasks even if one fails
                     completed++;
                     const progress = Math.round((completed / total) * 100);
