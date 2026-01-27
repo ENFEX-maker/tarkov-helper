@@ -110,12 +110,12 @@
         .form-select-tarkov:focus, .form-control-tarkov:focus { background: var(--bg-hover); border-color: var(--eft-gold); color: var(--text-main); box-shadow: none; outline: none; }
         .form-select-tarkov option { background: var(--bg-dark); color: var(--text-main); }
         .form-select-tarkov option:disabled { color: var(--text-sub); opacity: 0.5; }
-        #map { height: 600px; background: var(--bg-dark); border: 1px solid var(--border-dark); overflow: visible !important; }
+        #map { height: 600px; background: var(--bg-dark); border: 1px solid var(--border-dark); overflow: hidden; position: relative; }
         .leaflet-container { overflow: hidden; }
-        .leaflet-pane { overflow: visible !important; }
-        .leaflet-map-pane { overflow: visible !important; }
-        .leaflet-tooltip-pane { overflow: visible !important; z-index: 9999 !important; }
-        .leaflet-popup-pane { overflow: visible !important; z-index: 9998 !important; }
+        /* Leaflet panes don't need overflow visible - tooltips work fine without it */
+        /* Map pane also doesn't need overflow visible */
+        .leaflet-tooltip-pane { z-index: 9999 !important; }
+        .leaflet-popup-pane { z-index: 9998 !important; }
         .map-controls { display: flex; align-items: center; gap: 15px; padding: 10px 15px; background: var(--bg-element); border: 1px solid var(--border-dark); border-bottom: none; font-size: 0.85rem; color: var(--text-sub); }
         .map-controls .btn-tarkov { padding: 5px 12px; font-size: 0.8rem; }
         .marker-count { margin-left: auto; color: var(--eft-gold); font-weight: 600; }
