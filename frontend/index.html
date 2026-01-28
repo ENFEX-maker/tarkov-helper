@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -620,6 +619,39 @@
             opacity: 0.8;
         }
         
+        /* Marker Creator Panel */
+        .marker-creator-panel {
+            background: var(--bg-panel);
+            border: 2px solid var(--eft-gold);
+            padding: 15px;
+            margin-bottom: 10px;
+            display: none;
+        }
+        .marker-creator-panel.active { display: block; }
+        .marker-creator-panel h6 { color: var(--eft-gold); margin-bottom: 12px; font-size: 0.9rem; }
+        .marker-creator-panel .objective-select {
+            width: 100%;
+            background: var(--bg-element);
+            border: 1px solid var(--border-dark);
+            color: var(--text-main);
+            padding: 8px 10px;
+            font-size: 0.85rem;
+            margin-bottom: 10px;
+        }
+        .marker-creator-panel .objective-select option { background: var(--bg-dark); }
+        .marker-creator-panel .creator-hint {
+            font-size: 0.8rem;
+            color: var(--eft-gold);
+            padding: 8px;
+            background: rgba(158, 143, 107, 0.15);
+            border-left: 3px solid var(--eft-gold);
+            margin-bottom: 10px;
+        }
+        .marker-creator-panel .btn-row { display: flex; gap: 8px; }
+        .marker-creator-panel .btn-row button { flex: 1; font-size: 0.8rem; padding: 6px 10px; }
+        .placing-marker-mode #map { cursor: crosshair !important; }
+        .placing-marker-mode .leaflet-container { cursor: crosshair !important; }
+        
         /* Edit Mode Button */
         .edit-mode-toggle {
             background: var(--bg-element);
@@ -1142,9 +1174,25 @@
                             </div>
                         </div>
                         
+                        <!-- Marker Creator Panel -->
+                        <div id="markerCreatorPanel" class="marker-creator-panel">
+                            <h6>🎯 Create Quest Marker</h6>
+                            <div class="creator-hint" id="markerCreatorHint">
+                                Select an objective below, then click on the map to place the marker.
+                            </div>
+                            <select id="objectiveSelect" class="objective-select" onchange="onObjectiveSelectChange()">
+                                <option value="">-- Select a quest objective --</option>
+                            </select>
+                            <div class="btn-row">
+                                <button class="btn-tarkov" onclick="cancelMarkerCreation()">❌ Cancel</button>
+                                <button class="btn-tarkov" id="deleteMarkerBtn" onclick="deleteSelectedMarker()" style="display: none; background: rgba(140, 59, 59, 0.3);">🗑️ Delete</button>
+                            </div>
+                        </div>
+                        
                         <div class="map-controls">
                             <span>Scroll to zoom | Drag to pan | Click markers for details</span>
                             <span class="marker-count" id="markerCount">0 markers</span>
+                            <button class="btn-tarkov" onclick="toggleMarkerCreator()" id="markerCreatorBtn" title="Create new quest markers">🎯 Add Markers</button>
                             <button class="btn-tarkov" onclick="resetMapView()">Reset View</button>
                         </div>
                         <div id="map"></div>
@@ -1702,6 +1750,12 @@
         let currentUser = null;
         let isEditMode = false;
         
+        // Marker Creator state
+        let isMarkerCreatorActive = false;
+        let selectedObjectiveForPlacement = null;
+        let manualMarkersCache = null;
+        let manualMarkersCacheLoaded = false;
+        
         // ============================================================================
         // AUTH FUNCTIONS
         // ============================================================================
@@ -1859,8 +1913,351 @@
         }
         
         // ============================================================================
-        // MARKER CORRECTION SYSTEM
+        // MARKER CREATOR SYSTEM - Manually place quest markers
         // ============================================================================
+        
+        function toggleMarkerCreator() {
+            if (!currentUser) {
+                alert('Please login to create markers.');
+                showLoginModal();
+                return;
+            }
+            
+            const panel = document.getElementById('markerCreatorPanel');
+            const btn = document.getElementById('markerCreatorBtn');
+            
+            isMarkerCreatorActive = !isMarkerCreatorActive;
+            
+            if (isMarkerCreatorActive) {
+                panel.classList.add('active');
+                btn.classList.add('active');
+                btn.innerHTML = '🎯 Creating...';
+                document.body.classList.add('placing-marker-mode');
+                populateObjectiveSelect();
+                
+                // Add click handler to map
+                if (mapInstance) {
+                    mapInstance.on('click', onMapClickForMarker);
+                }
+            } else {
+                cancelMarkerCreation();
+            }
+        }
+        
+        function cancelMarkerCreation() {
+            const panel = document.getElementById('markerCreatorPanel');
+            const btn = document.getElementById('markerCreatorBtn');
+            
+            isMarkerCreatorActive = false;
+            selectedObjectiveForPlacement = null;
+            
+            panel.classList.remove('active');
+            if (btn) {
+                btn.classList.remove('active');
+                btn.innerHTML = '🎯 Add Markers';
+            }
+            document.body.classList.remove('placing-marker-mode');
+            
+            // Remove click handler
+            if (mapInstance) {
+                mapInstance.off('click', onMapClickForMarker);
+            }
+            
+            // Reset select
+            const select = document.getElementById('objectiveSelect');
+            if (select) select.value = '';
+            
+            document.getElementById('deleteMarkerBtn').style.display = 'none';
+        }
+        
+        function populateObjectiveSelect() {
+            const select = document.getElementById('objectiveSelect');
+            const mapKey = document.getElementById('mapSelect')?.value || 'customs';
+            
+            select.innerHTML = '<option value="">-- Select a quest objective --</option>';
+            
+            // Get selected quests
+            const selectedQuests = selectedQuestsForMarkers || [];
+            
+            if (selectedQuests.length === 0) {
+                select.innerHTML = '<option value="">-- No quests selected --</option>';
+                document.getElementById('markerCreatorHint').innerHTML = 
+                    '⚠️ Please select some quests first, then use "Plan Raid" to load them.';
+                return;
+            }
+            
+            // Build options grouped by quest
+            selectedQuests.forEach((quest, qIndex) => {
+                if (!quest.objectives || quest.objectives.length === 0) return;
+                
+                const optGroup = document.createElement('optgroup');
+                optGroup.label = quest.name;
+                
+                quest.objectives.forEach((obj, objIndex) => {
+                    // Only show objectives that have map requirements matching current map
+                    // or objectives without specific map (applicable to any)
+                    const objMaps = obj.maps?.map(m => m.normalizedName || mapNameToKey(m.name)) || [];
+                    const questMap = quest.map?.normalizedName || (quest.map?.name ? mapNameToKey(quest.map.name) : null);
+                    
+                    // Show if: no specific maps, or quest map matches, or obj maps include current
+                    const shouldShow = objMaps.length === 0 || 
+                                      (questMap && questMap === mapKey) ||
+                                      objMaps.includes(mapKey);
+                    
+                    if (shouldShow) {
+                        const option = document.createElement('option');
+                        option.value = JSON.stringify({
+                            questId: quest.id,
+                            questName: quest.name,
+                            objectiveId: obj.id,
+                            objectiveIndex: objIndex + 1,
+                            type: obj.type || 'unknown',
+                            description: obj.description || `Objective ${objIndex + 1}`,
+                            mapKey: mapKey,
+                            color: QUEST_COLORS[qIndex % QUEST_COLORS.length]
+                        });
+                        
+                        const shortDesc = obj.description?.length > 50 
+                            ? obj.description.substring(0, 47) + '...' 
+                            : (obj.description || 'Objective');
+                        option.textContent = `#${objIndex + 1}: ${shortDesc}`;
+                        optGroup.appendChild(option);
+                    }
+                });
+                
+                if (optGroup.children.length > 0) {
+                    select.appendChild(optGroup);
+                }
+            });
+            
+            document.getElementById('markerCreatorHint').innerHTML = 
+                '📍 Select an objective below, then <strong>click on the map</strong> to place the marker.';
+        }
+        
+        function onObjectiveSelectChange() {
+            const select = document.getElementById('objectiveSelect');
+            const deleteBtn = document.getElementById('deleteMarkerBtn');
+            
+            if (select.value) {
+                selectedObjectiveForPlacement = JSON.parse(select.value);
+                document.getElementById('markerCreatorHint').innerHTML = 
+                    `✅ Ready! Click on the map to place marker for: <strong>${selectedObjectiveForPlacement.description}</strong>`;
+                
+                // Check if this objective already has a marker
+                checkExistingMarker(selectedObjectiveForPlacement).then(exists => {
+                    deleteBtn.style.display = exists ? 'inline-block' : 'none';
+                });
+            } else {
+                selectedObjectiveForPlacement = null;
+                document.getElementById('markerCreatorHint').innerHTML = 
+                    '📍 Select an objective below, then <strong>click on the map</strong> to place the marker.';
+                deleteBtn.style.display = 'none';
+            }
+        }
+        
+        async function checkExistingMarker(objective) {
+            if (!supabaseClient || !objective) return false;
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('quest_marker_positions')
+                    .select('id')
+                    .eq('quest_id', objective.questId)
+                    .eq('objective_id', objective.objectiveId)
+                    .eq('map_name', objective.mapKey)
+                    .single();
+                
+                return !!data;
+            } catch (e) {
+                return false;
+            }
+        }
+        
+        async function onMapClickForMarker(e) {
+            if (!isMarkerCreatorActive || !selectedObjectiveForPlacement) {
+                return;
+            }
+            
+            if (!currentUser) {
+                alert('Please login to create markers.');
+                return;
+            }
+            
+            const mapKey = document.getElementById('mapSelect')?.value || 'customs';
+            const mapCfg = MAP_CONFIG[mapKey] || { scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true };
+            
+            // Get click coordinates
+            const leafletX = e.latlng.lng;
+            const leafletY = e.latlng.lat;
+            
+            // Convert Leaflet coords back to percent
+            let pixelX = leafletX;
+            let pixelY = mapCfg.invertLeafletY !== false ? (currentMapHeight - leafletY) : leafletY;
+            
+            let leftPercent = (pixelX / currentMapWidth) * 100;
+            let topPercent = (pixelY / currentMapHeight) * 100;
+            
+            // Reverse map-specific corrections
+            if (mapCfg.flipY) {
+                topPercent = 100 - topPercent;
+            }
+            leftPercent = (leftPercent - mapCfg.offsetX) / mapCfg.scaleX;
+            topPercent = (topPercent - mapCfg.offsetY) / mapCfg.scaleY;
+            
+            // Save to database
+            await saveManualMarker(selectedObjectiveForPlacement, leftPercent, topPercent, mapKey);
+        }
+        
+        async function saveManualMarker(objective, leftPercent, topPercent, mapKey) {
+            if (!supabaseClient || !currentUser) {
+                alert('Unable to save. Please ensure you are logged in.');
+                return;
+            }
+            
+            const hint = document.getElementById('markerCreatorHint');
+            hint.innerHTML = '💾 Saving marker...';
+            
+            try {
+                const markerData = {
+                    user_id: currentUser.id,
+                    quest_id: objective.questId,
+                    objective_id: objective.objectiveId,
+                    objective_index: objective.objectiveIndex,
+                    map_name: mapKey,
+                    left_percent: leftPercent,
+                    top_percent: topPercent,
+                    quest_name: objective.questName,
+                    objective_description: objective.description
+                };
+                
+                const { data, error } = await supabaseClient
+                    .from('quest_marker_positions')
+                    .upsert(markerData, {
+                        onConflict: 'quest_id,objective_id,map_name'
+                    });
+                
+                if (error) throw error;
+                
+                // Clear cache and refresh markers
+                clearManualMarkersCache();
+                
+                hint.innerHTML = `✅ Marker saved for: <strong>${objective.description}</strong>. Select another or click Cancel.`;
+                
+                // Refresh the map markers
+                await refreshQuestMarkers();
+                
+                // Show delete button now that marker exists
+                document.getElementById('deleteMarkerBtn').style.display = 'inline-block';
+                
+                console.log('Manual marker saved:', markerData);
+                
+            } catch (error) {
+                console.error('Error saving manual marker:', error);
+                hint.innerHTML = `❌ Error: ${error.message}. Please try again.`;
+            }
+        }
+        
+        async function deleteSelectedMarker() {
+            if (!selectedObjectiveForPlacement || !supabaseClient || !currentUser) {
+                return;
+            }
+            
+            const mapKey = document.getElementById('mapSelect')?.value || 'customs';
+            const hint = document.getElementById('markerCreatorHint');
+            
+            if (!confirm(`Delete marker for "${selectedObjectiveForPlacement.description}"?`)) {
+                return;
+            }
+            
+            hint.innerHTML = '🗑️ Deleting marker...';
+            
+            try {
+                const { error } = await supabaseClient
+                    .from('quest_marker_positions')
+                    .delete()
+                    .eq('quest_id', selectedObjectiveForPlacement.questId)
+                    .eq('objective_id', selectedObjectiveForPlacement.objectiveId)
+                    .eq('map_name', mapKey);
+                
+                if (error) throw error;
+                
+                clearManualMarkersCache();
+                hint.innerHTML = `✅ Marker deleted. Select an objective to place a new marker.`;
+                document.getElementById('deleteMarkerBtn').style.display = 'none';
+                
+                // Refresh markers
+                await refreshQuestMarkers();
+                
+            } catch (error) {
+                console.error('Error deleting marker:', error);
+                hint.innerHTML = `❌ Error: ${error.message}`;
+            }
+        }
+        
+        function clearManualMarkersCache() {
+            manualMarkersCache = null;
+            manualMarkersCacheLoaded = false;
+        }
+        
+        async function loadManualMarkers(mapKey) {
+            // Check cache first
+            if (manualMarkersCacheLoaded && manualMarkersCache) {
+                const mapMarkers = manualMarkersCache[mapKey] || [];
+                console.log(`Using cached manual markers for ${mapKey}: ${mapMarkers.length} entries`);
+                return mapMarkers;
+            }
+            
+            if (!supabaseClient) {
+                console.log('Supabase not available, skipping manual markers load');
+                return [];
+            }
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('quest_marker_positions')
+                    .select('*');
+                
+                if (error) {
+                    console.error('Error loading manual markers:', error);
+                    return [];
+                }
+                
+                // Build lookup table by map
+                manualMarkersCache = {};
+                (data || []).forEach(m => {
+                    if (!manualMarkersCache[m.map_name]) {
+                        manualMarkersCache[m.map_name] = [];
+                    }
+                    manualMarkersCache[m.map_name].push({
+                        questId: m.quest_id,
+                        questName: m.quest_name,
+                        objectiveId: m.objective_id,
+                        objectiveIndex: m.objective_index,
+                        description: m.objective_description,
+                        leftPercent: parseFloat(m.left_percent),
+                        topPercent: parseFloat(m.top_percent),
+                        mapKey: m.map_name,
+                        source: 'manual'
+                    });
+                });
+                
+                manualMarkersCacheLoaded = true;
+                const mapMarkers = manualMarkersCache[mapKey] || [];
+                console.log(`Loaded manual markers: ${Object.values(manualMarkersCache).flat().length} total, ${mapMarkers.length} for ${mapKey}`);
+                return mapMarkers;
+                
+            } catch (err) {
+                console.error('Exception loading manual markers:', err);
+                return [];
+            }
+        }
+        
+        async function refreshQuestMarkers() {
+            const mapKey = document.getElementById('mapSelect')?.value || activeMapTab || 'customs';
+            if (questMarkersLayer && mapInstance) {
+                await drawQuestMarkers(mapKey, currentMapWidth, currentMapHeight, selectedQuestNamesForMarkers, selectedQuestsForMarkers);
+            }
+        }
         
         let pendingCorrection = null; // Stores marker data during correction dialog
         
@@ -2341,127 +2738,9 @@
         const TARKOVDATA_QUESTS_URL = 'https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/quests.json';
         
         async function loadQuestLocationsData() {
-            try {
-                // First, try to load from tarkov.dev API (has game coordinates in zones)
-                const query = `{
-                    tasks {
-                        id
-                        name
-                        objectives {
-                            id
-                            type
-                            description
-                            maps {
-                                id
-                                name
-                                normalizedName
-                            }
-                            zones {
-                                id
-                                map {
-                                    id
-                                    normalizedName
-                                }
-                                position {
-                                    x
-                                    y
-                                    z
-                                }
-                            }
-                        }
-                    }
-                }`;
-                
-                const response = await fetch('https://api.tarkov.dev/graphql', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ query })
-                });
-                
-                if (!response.ok) throw new Error('Failed to load from tarkov.dev');
-                
-                const data = await response.json();
-                
-                if (data.errors) {
-                    console.error('GraphQL errors:', data.errors);
-                    throw new Error('GraphQL errors');
-                }
-                
-                const tasks = data?.data?.tasks || [];
-                
-                // Parse quest locations
-                questLocationsData = { byMap: {}, byQuestName: {} };
-                let totalLocations = 0;
-                let questsWithZones = 0;
-                
-                tasks.forEach(task => {
-                    const questTitle = (task.name || '').toLowerCase().trim();
-                    let objIndex = 0;
-                    
-                    if (task.objectives) {
-                        task.objectives.forEach(obj => {
-                            // Check if objective has zones with positions
-                            if (obj.zones && obj.zones.length > 0) {
-                                obj.zones.forEach((zone, zoneIndex) => {
-                                    if (zone.position && zone.map) {
-                                        objIndex++;
-                                        const mapKey = zone.map.normalizedName || getMapKeyFromName(zone.map.name);
-                                        if (!mapKey) return;
-                                        
-                                        // Store game coordinates - will be converted when drawing markers
-                                        const locData = {
-                                            questId: task.id,
-                                            questName: task.name,
-                                            objectiveIndex: objIndex,
-                                            objectiveId: obj.id,
-                                            type: obj.type || 'unknown',
-                                            description: obj.description || `${obj.type || 'Objective'} #${objIndex}`,
-                                            target: '',
-                                            tool: '',
-                                            // Store game coordinates for conversion at render time
-                                            gameX: zone.position.x,
-                                            gameZ: zone.position.z,
-                                            useGameCoords: true,
-                                            floor: 'Ground_Level',
-                                            mapKey: mapKey,
-                                            source: 'tarkov.dev'
-                                        };
-                                        
-                                        // Index by map
-                                        if (!questLocationsData.byMap[mapKey]) {
-                                            questLocationsData.byMap[mapKey] = [];
-                                        }
-                                        questLocationsData.byMap[mapKey].push(locData);
-                                        
-                                        // Index by quest name (lowercase for matching)
-                                        if (!questLocationsData.byQuestName[questTitle]) {
-                                            questLocationsData.byQuestName[questTitle] = [];
-                                        }
-                                        questLocationsData.byQuestName[questTitle].push(locData);
-                                        
-                                        totalLocations++;
-                                    }
-                                });
-                                if (objIndex > 0) questsWithZones++;
-                            } else if (obj.maps && obj.maps.length > 0) {
-                                // Objective has maps but no specific zones - store without coords
-                                // These won't show markers but will be used for map filtering
-                            }
-                        });
-                    }
-                });
-                
-                console.log('Quest locations loaded from tarkov.dev:', totalLocations, 'objectives from', questsWithZones, 'quests with zones');
-                
-                // Also try to supplement with tarkovdata for quests that have GPS percentages
-                await supplementWithTarkovdata();
-                
-                return questLocationsData;
-            } catch (error) {
-                console.error('Error loading quest locations from tarkov.dev:', error);
-                // Fallback to tarkovdata only
-                return await loadQuestLocationsFromTarkovdata();
-            }
+            // Load from tarkovdata (has GPS percentages for ~197 objectives)
+            // tarkov.dev API does NOT have zone/position data for quest objectives
+            return await loadQuestLocationsFromTarkovdata();
         }
         
         async function supplementWithTarkovdata() {
@@ -2666,8 +2945,18 @@
             // Load marker corrections from database
             const corrections = await loadMarkerCorrections(mapKey);
             
+            // Load manually placed markers from database (primary source)
+            const manualMarkers = await loadManualMarkers(mapKey);
+            
+            // Build lookup for manual markers: questId|objectiveId -> marker data
+            const manualMarkerLookup = {};
+            manualMarkers.forEach(m => {
+                const key = `${m.questId}|${m.objectiveId}`;
+                manualMarkerLookup[key] = m;
+            });
+            
             // Only draw markers if we have selected quests
-            if (!questLocationsData || questNames.length === 0) {
+            if (questNames.length === 0) {
                 updateMarkerCount(0);
                 legend.style.display = 'none';
                 return;
@@ -2699,246 +2988,207 @@
             legend.style.display = 'block';
             
             let markerCount = 0;
+            const drawnObjectives = new Set(); // Track what we've drawn to avoid duplicates
             
-            // Draw markers only for selected quests
-            questNames.forEach((qName, questIndex) => {
-                const normalizedName = qName.toLowerCase().trim();
-                const locations = questLocationsData.byQuestName[normalizedName] || [];
+            // PHASE 1: Draw manually placed markers first (highest priority)
+            selectedQuests.forEach((quest, questIndex) => {
+                const normalizedName = quest.name.toLowerCase().trim();
                 const color = QUEST_COLORS[questIndex % QUEST_COLORS.length];
                 
-                // Get the authoritative API map for this quest (if any)
-                const apiMapKey = questApiMaps[normalizedName];
+                if (!quest.objectives) return;
                 
-                locations.forEach(loc => {
-                    // Determine if we should draw this marker:
-                    // 1. If quest has a specific API map, draw ALL its locations on that map (trust API over tarkovdata location IDs)
-                    // 2. If quest is "any" map, use the tarkovdata location ID
-                    let shouldDraw = false;
+                quest.objectives.forEach((obj, objIdx) => {
+                    const manualKey = `${quest.id}|${obj.id}`;
+                    const manualMarker = manualMarkerLookup[manualKey];
                     
-                    if (apiMapKey) {
-                        // Quest has specific map from API - draw all locations if we're on that map
-                        shouldDraw = (mapKey === apiMapKey);
-                    } else {
-                        // Quest is "any" - use tarkovdata location ID
-                        shouldDraw = (loc.mapKey === mapKey);
-                    }
-                    
-                    if (!shouldDraw) return;
-                    
-                    // Check for database correction for this marker (keyed by quest_id|objective_index)
-                    const correctionKey = `${loc.questId}|${loc.objectiveIndex}`;
-                    const correction = corrections[correctionKey];
-                    
-                    // Handle game coordinates from tarkov.dev API
-                    let baseLeftPercent, baseTopPercent;
-                    
-                    if (loc.useGameCoords && loc.gameX !== undefined && loc.gameZ !== undefined) {
-                        // Convert game coordinates to pixel coordinates
-                        const coords = convertGameCoordsToMap(loc.gameX, loc.gameZ, mapKey);
-                        if (!coords) return;
+                    if (manualMarker) {
+                        // Draw this manual marker
+                        const objectiveKey = `${quest.id}|${obj.id}|${mapKey}`;
+                        if (drawnObjectives.has(objectiveKey)) return;
+                        drawnObjectives.add(objectiveKey);
                         
-                        // Convert to percentage
-                        baseLeftPercent = (coords.x / mapWidth) * 100;
-                        baseTopPercent = (coords.y / mapHeight) * 100;
-                        
-                        // For game coords, skip the scale/offset/flip since convertGameCoordsToMap handles it
-                        // Go directly to leaflet coords
-                        const leafletX = coords.x;
-                        const leafletY = coords.y;
-                        
-                        markerCount++;
-                        
-                        // Create marker for game-coords location
-                        const markerHtml = `
-                            <div style="position: relative; width: 24px; height: 24px;">
-                                <div style="width: 24px; height: 24px; border-radius: 50%; background: ${color.fill}; border: 3px solid ${color.border};"></div>
-                                <div style="position: absolute; top: -6px; right: -6px; background: #c4b896; color: #000; font-weight: 700; font-size: 10px; width: 14px; height: 14px; line-height: 14px; text-align: center; border-radius: 50%;">${loc.objectiveIndex || markerCount}</div>
-                            </div>
-                        `;
-                        
-                        const icon = L.divIcon({
-                            html: markerHtml,
-                            className: 'quest-marker-icon',
-                            iconSize: [24, 24],
-                            iconAnchor: [12, 12]
-                        });
-                        
-                        const marker = L.marker([leafletY, leafletX], { 
-                            icon: icon,
-                            draggable: false
-                        });
-                        
-                        marker._questData = {
-                            questId: loc.questId,
-                            questName: loc.questName,
-                            objectiveIndex: loc.objectiveIndex,
-                            description: loc.description,
-                            originalLeftPercent: baseLeftPercent,
-                            originalTopPercent: baseTopPercent,
+                        const loc = {
+                            questId: quest.id,
+                            questName: quest.name,
+                            objectiveIndex: manualMarker.objectiveIndex || (objIdx + 1),
+                            objectiveId: obj.id,
+                            type: obj.type || 'unknown',
+                            description: manualMarker.description || obj.description || `Objective ${objIdx + 1}`,
+                            leftPercent: manualMarker.leftPercent,
+                            topPercent: manualMarker.topPercent,
                             mapKey: mapKey,
-                            hasDbCorrection: false,
-                            source: loc.source
+                            source: 'manual'
                         };
                         
-                        if (isEditMode && marker.dragging) {
-                            marker.dragging.enable();
-                            marker._icon?.classList.add('leaflet-marker-draggable');
-                        }
-                        
-                        marker.on('dragend', (e) => showCorrectionDialog(marker, e));
-                        
-                        const popupContent = `
-                            <div style="min-width: 180px;">
-                                <div style="background: ${color.fill}; color: #000; padding: 4px 8px; margin: -12px -15px 10px; font-weight: 600; font-size: 0.85rem;">
-                                    #${loc.objectiveIndex} <span style="font-weight: normal;">MARK</span>
-                                </div>
-                                <strong>${qName}</strong><br>
-                                <span style="color: #a0a0a0; font-size: 0.85rem;">${loc.description}</span>
-                            </div>
-                        `;
-                        marker.bindPopup(popupContent, { className: 'tarkov-popup', maxWidth: 300 });
-                        marker.bindTooltip(`${qName} #${loc.objectiveIndex}`, { direction: 'top' });
-                        
-                        questMarkersLayer.addLayer(marker);
-                        return;
+                        drawSingleQuestMarker(loc, color, mapCfg, mapWidth, mapHeight, corrections, markerCount);
+                        markerCount++;
                     }
-                    
-                    // Original percent-based coordinates from tarkovdata
-                    baseLeftPercent = loc.leftPercent;
-                    baseTopPercent = loc.topPercent;
-                    let hasCorrection = false;
-                    
-                    if (correction) {
-                        baseLeftPercent = correction.correctedLeftPercent;
-                        baseTopPercent = correction.correctedTopPercent;
-                        hasCorrection = true;
-                        console.log(`Applied correction for ${loc.questName} #${loc.objectiveIndex} (${loc.questId})`);
-                    }
-                    
-                    // Apply map-specific coordinate corrections
-                    let correctedLeftPct = baseLeftPercent * mapCfg.scaleX + mapCfg.offsetX;
-                    let correctedTopPct = baseTopPercent * mapCfg.scaleY + mapCfg.offsetY;
-                    
-                    // Optional Y-axis flip (before pixel conversion)
-                    if (mapCfg.flipY) {
-                        correctedTopPct = 100 - correctedTopPct;
-                    }
-                    
-                    // Convert percent to pixel coordinates
-                    const pixelX = (correctedLeftPct / 100) * mapWidth;
-                    const pixelY = (correctedTopPct / 100) * mapHeight;
-                    
-                    // Leaflet CRS.Simple: optionally invert Y
-                    const leafletX = pixelX;
-                    const leafletY = mapCfg.invertLeafletY !== false ? (mapHeight - pixelY) : pixelY;
-                    
-                    // Debug logging for coordinate issues
-                    if (markerCount < 3) {
-                        console.log(`Quest marker ${qName} #${markerCount+1}:`, {
-                            original: { leftPercent: loc.leftPercent, topPercent: loc.topPercent },
-                            corrected: { leftPct: correctedLeftPct, topPct: correctedTopPct },
-                            mapSize: { width: mapWidth, height: mapHeight },
-                            pixel: { x: pixelX, y: pixelY },
-                            leaflet: { x: leafletX, y: leafletY },
-                            mapCfg: { flipY: mapCfg.flipY, invertLeafletY: mapCfg.invertLeafletY }
-                        });
-                    }
-                    
-                    markerCount++;
-                    
-                    // Create custom div icon with number
-                    const markerHtml = `
-                        <div style="position: relative; width: 24px; height: 24px;">
-                            <div style="width: 24px; height: 24px; border-radius: 50%; background: ${color.fill}; border: 3px solid ${color.border};"></div>
-                            <div style="position: absolute; top: -6px; right: -6px; background: #c4b896; color: #000; font-weight: 700; font-size: 10px; width: 14px; height: 14px; line-height: 14px; text-align: center; border-radius: 50%;">${loc.objectiveIndex || markerCount}</div>
-                        </div>
-                    `;
-                    
-                    const icon = L.divIcon({
-                        html: markerHtml,
-                        className: 'quest-marker-icon',
-                        iconSize: [24, 24],
-                        iconAnchor: [12, 12]
-                    });
-                    
-                    // Create marker with draggable option (disabled by default)
-                    const marker = L.marker([leafletY, leafletX], { 
-                        icon: icon,
-                        draggable: false  // Disabled by default, enabled in edit mode
-                    });
-                    
-                    // Store metadata for corrections system
-                    // Use corrected coordinates as base if available
-                    marker._questData = {
-                        questId: loc.questId,
-                        questName: loc.questName,
-                        objectiveId: loc.objectiveId,
-                        objectiveIndex: loc.objectiveIndex,
-                        mapKey: mapKey,
-                        originalLeftPercent: baseLeftPercent,  // Use corrected coords if available
-                        originalTopPercent: baseTopPercent,
-                        description: loc.description,
-                        hasDbCorrection: hasCorrection
-                    };
-                    
-                    // Note: dragging is controlled via toggleEditMode() after marker is added to map
-                    
-                    // Drag event handlers
-                    marker.on('dragstart', function(e) {
-                        this._icon?.classList.add('marker-dragging');
-                    });
-                    
-                    marker.on('dragend', function(e) {
-                        this._icon?.classList.remove('marker-dragging');
-                        if (isEditMode && currentUser) {
-                            showCorrectionDialog(this, e);
-                        }
-                    });
-                    
-                    // Build tooltip text: short and informative
-                    const typeLabels = {
-                        'mark': 'MARK', 'find': 'FIND', 'pickup': 'PICKUP', 'place': 'PLACE',
-                        'locate': 'LOCATE', 'key': 'KEY', 'shoot': 'SHOOT', 'kill': 'KILL',
-                        'extract': 'EXTRACT', 'visit': 'VISIT', 'plantItem': 'PLANT', 'giveItem': 'GIVE'
-                    };
-                    const typeLabel = typeLabels[loc.type] || loc.type.toUpperCase();
-                    const shortDesc = loc.description.length > 40 ? loc.description.substring(0, 37) + '...' : loc.description;
-                    const tooltipText = `${loc.questName}`;
-                    
-                    // Get appropriate color class for objective type
-                    const typeColorClass = {
-                        'mark': 'obj-mark', 'find': 'obj-find', 'pickup': 'obj-pickup', 'place': 'obj-place',
-                        'locate': 'obj-locate', 'kill': 'obj-kill', 'shoot': 'obj-kill',
-                        'key': 'obj-find', 'visit': 'obj-locate', 'plantItem': 'obj-place', 'giveItem': 'obj-place'
-                    }[loc.type] || 'obj-find';
-                    
-                    const popupContent = `
-                        <div class="quest-marker-popup">
-                            <span class="obj-num">#${loc.objectiveIndex || markerCount}</span>
-                            <span class="obj-type ${typeColorClass}">${typeLabel}</span>
-                            <h6>${loc.questName}</h6>
-                            <p>${loc.description}</p>
-                            ${loc.floor && loc.floor !== 'Ground_Level' ? `<div class="popup-footer">📍 Floor: ${loc.floor.replace(/_/g, ' ')}</div>` : ''}
-                        </div>
-                    `;
-                    
-                    marker.bindPopup(popupContent);
-                    marker.bindTooltip(tooltipText, { 
-                        direction: 'auto',  // Auto-adjust direction to avoid clipping
-                        className: 'marker-label', 
-                        offset: [0, -10],
-                        sticky: false
-                    });
-                    
-                    questMarkersLayer.addLayer(marker);
                 });
             });
+            
+            // PHASE 2: Draw tarkovdata markers for objectives that don't have manual markers
+            if (questLocationsData) {
+                questNames.forEach((qName, questIndex) => {
+                    const normalizedName = qName.toLowerCase().trim();
+                    const locations = questLocationsData.byQuestName[normalizedName] || [];
+                    const color = QUEST_COLORS[questIndex % QUEST_COLORS.length];
+                    
+                    // Get the authoritative API map for this quest (if any)
+                    const apiMapKey = questApiMaps[normalizedName];
+                    
+                    locations.forEach(loc => {
+                        // Check if we already drew this objective manually
+                        const objectiveKey = `${loc.questId}|${loc.objectiveId}|${mapKey}`;
+                        if (drawnObjectives.has(objectiveKey)) return;
+                        
+                        // Determine if we should draw this marker
+                        let shouldDraw = false;
+                        
+                        if (apiMapKey) {
+                            shouldDraw = (mapKey === apiMapKey);
+                        } else {
+                            shouldDraw = (loc.mapKey === mapKey);
+                        }
+                        
+                        if (!shouldDraw) return;
+                        
+                        drawnObjectives.add(objectiveKey);
+                        drawSingleQuestMarker(loc, color, mapCfg, mapWidth, mapHeight, corrections, markerCount);
+                        markerCount++;
+                    });
+                });
+            }
             
             if (mapInstance) {
                 questMarkersLayer.addTo(mapInstance);
             }
             
             updateMarkerCount(markerCount);
+            console.log(`Drew ${markerCount} quest markers (${manualMarkers.length} manual, rest from tarkovdata)`);
+        }
+        
+        function drawSingleQuestMarker(loc, color, mapCfg, mapWidth, mapHeight, corrections, markerIndex) {
+            // Check for database correction for this marker
+            const correctionKey = `${loc.questId}|${loc.objectiveIndex}`;
+            const correction = corrections[correctionKey];
+            
+            let baseLeftPercent = loc.leftPercent;
+            let baseTopPercent = loc.topPercent;
+            let hasCorrection = false;
+            
+            if (correction) {
+                baseLeftPercent = correction.correctedLeftPercent;
+                baseTopPercent = correction.correctedTopPercent;
+                hasCorrection = true;
+            }
+            
+            // Apply map-specific coordinate corrections
+            let correctedLeftPct = baseLeftPercent * mapCfg.scaleX + mapCfg.offsetX;
+            let correctedTopPct = baseTopPercent * mapCfg.scaleY + mapCfg.offsetY;
+            
+            // Optional Y-axis flip (before pixel conversion)
+            if (mapCfg.flipY) {
+                correctedTopPct = 100 - correctedTopPct;
+            }
+            
+            // Convert percent to pixel coordinates
+            const pixelX = (correctedLeftPct / 100) * mapWidth;
+            const pixelY = (correctedTopPct / 100) * mapHeight;
+            
+            // Leaflet CRS.Simple: optionally invert Y
+            const leafletX = pixelX;
+            const leafletY = mapCfg.invertLeafletY !== false ? (mapHeight - pixelY) : pixelY;
+            
+            // Create custom div icon with number
+            const sourceIndicator = loc.source === 'manual' ? '✓' : '';
+            const markerHtml = `
+                <div style="position: relative; width: 24px; height: 24px;">
+                    <div style="width: 24px; height: 24px; border-radius: 50%; background: ${color.fill}; border: 3px solid ${color.border};"></div>
+                    <div style="position: absolute; top: -6px; right: -6px; background: #c4b896; color: #000; font-weight: 700; font-size: 10px; width: 14px; height: 14px; line-height: 14px; text-align: center; border-radius: 50%;">${loc.objectiveIndex || (markerIndex + 1)}</div>
+                    ${loc.source === 'manual' ? '<div style="position: absolute; bottom: -4px; left: -4px; background: #4CAF50; color: #fff; font-size: 8px; width: 12px; height: 12px; line-height: 12px; text-align: center; border-radius: 50%;">✓</div>' : ''}
+                </div>
+            `;
+            
+            const icon = L.divIcon({
+                html: markerHtml,
+                className: 'quest-marker-icon',
+                iconSize: [24, 24],
+                iconAnchor: [12, 12]
+            });
+            
+            // Create marker with draggable option (disabled by default)
+            const marker = L.marker([leafletY, leafletX], { 
+                icon: icon,
+                draggable: false
+            });
+            
+            // Store metadata for corrections system
+            marker._questData = {
+                questId: loc.questId,
+                questName: loc.questName,
+                objectiveId: loc.objectiveId,
+                objectiveIndex: loc.objectiveIndex,
+                mapKey: loc.mapKey,
+                originalLeftPercent: baseLeftPercent,
+                originalTopPercent: baseTopPercent,
+                description: loc.description,
+                hasDbCorrection: hasCorrection,
+                source: loc.source
+            };
+            
+            // Enable dragging if in edit mode
+            if (isEditMode && marker.dragging) {
+                marker.dragging.enable();
+            }
+            
+            // Drag event handlers
+            marker.on('dragstart', function(e) {
+                this._icon?.classList.add('marker-dragging');
+            });
+            
+            marker.on('dragend', function(e) {
+                this._icon?.classList.remove('marker-dragging');
+                if (isEditMode && currentUser) {
+                    showCorrectionDialog(this, e);
+                }
+            });
+            
+            // Build tooltip and popup
+            const typeLabels = {
+                'mark': 'MARK', 'find': 'FIND', 'pickup': 'PICKUP', 'place': 'PLACE',
+                'locate': 'LOCATE', 'key': 'KEY', 'shoot': 'SHOOT', 'kill': 'KILL',
+                'extract': 'EXTRACT', 'visit': 'VISIT', 'plantItem': 'PLANT', 'giveItem': 'GIVE'
+            };
+            const typeLabel = typeLabels[loc.type] || (loc.type ? loc.type.toUpperCase() : 'OBJECTIVE');
+            
+            const typeColorClass = {
+                'mark': 'obj-mark', 'find': 'obj-find', 'pickup': 'obj-pickup', 'place': 'obj-place',
+                'locate': 'obj-locate', 'kill': 'obj-kill', 'shoot': 'obj-kill',
+                'key': 'obj-find', 'visit': 'obj-locate', 'plantItem': 'obj-place', 'giveItem': 'obj-place'
+            }[loc.type] || 'obj-find';
+            
+            const sourceLabel = loc.source === 'manual' ? '<span style="color: #4CAF50; font-size: 0.7rem;">✓ Manual</span>' : '';
+            
+            const popupContent = `
+                <div class="quest-marker-popup">
+                    <span class="obj-num">#${loc.objectiveIndex || (markerIndex + 1)}</span>
+                    <span class="obj-type ${typeColorClass}">${typeLabel}</span>
+                    ${sourceLabel}
+                    <h6>${loc.questName}</h6>
+                    <p>${loc.description}</p>
+                    ${loc.floor && loc.floor !== 'Ground_Level' ? `<div class="popup-footer">📍 Floor: ${loc.floor.replace(/_/g, ' ')}</div>` : ''}
+                </div>
+            `;
+            
+            marker.bindPopup(popupContent);
+            marker.bindTooltip(loc.questName, { 
+                direction: 'auto',
+                className: 'marker-label', 
+                offset: [0, -10],
+                sticky: false
+            });
+            
+            questMarkersLayer.addLayer(marker);
         }
         
         function updateMarkerCount(questCount = null) {
