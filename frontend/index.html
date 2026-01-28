@@ -109,8 +109,8 @@
         .form-select-tarkov:focus, .form-control-tarkov:focus { background: var(--bg-hover); border-color: var(--eft-gold); color: var(--text-main); box-shadow: none; outline: none; }
         .form-select-tarkov option { background: var(--bg-dark); color: var(--text-main); }
         .form-select-tarkov option:disabled { color: var(--text-sub); opacity: 0.5; }
-        #map { height: 600px; background: var(--bg-dark); border: 1px solid var(--border-dark); overflow: visible !important; }
-        .leaflet-container { overflow: hidden; }
+        #map { height: 600px; background: var(--bg-dark); border: 1px solid var(--border-dark); overflow: hidden !important; position: relative; }
+        .leaflet-container { overflow: hidden !important; }
         .leaflet-pane { overflow: visible !important; }
         .leaflet-map-pane { overflow: visible !important; }
         .leaflet-tooltip-pane { overflow: visible !important; z-index: 9999 !important; }
@@ -972,6 +972,25 @@
         </div>
         
         <!-- Correction Dialog (for editing marker positions) -->
+        <!-- Missing Markers Analysis Modal -->
+        <div id="missingMarkersModal" class="modal-overlay" style="display: none;">
+            <div class="modal-dialog" style="max-width: 900px; max-height: 80vh; overflow: hidden; display: flex; flex-direction: column;">
+                <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-bottom: 1px solid var(--border-dark);">
+                    <h4 style="margin: 0;">📋 Missing Markers Analysis</h4>
+                    <button class="btn-tarkov" onclick="closeMissingMarkersModal()" style="padding: 5px 10px;">✕</button>
+                </div>
+                <div class="modal-body" style="padding: 15px 20px; overflow-y: auto; flex: 1;">
+                    <div class="text-sub mb-3">
+                        Objectives that likely need map markers but don't have GPS coordinates yet.
+                        <br>Types: visit, mark, find, locate, plantItem, place, pickup, extract
+                    </div>
+                    <div id="missingMarkersContent">
+                        <div class="text-center text-sub">Loading analysis...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <div id="correctionDialogOverlay" class="correction-dialog-overlay" style="display: none;">
             <div class="correction-dialog">
                 <h4>📍 Save Marker Correction</h4>
@@ -1238,6 +1257,7 @@
                             <span>Scroll to zoom | Drag to pan | Click markers for details</span>
                             <span class="marker-count" id="markerCount">0 markers</span>
                             <button class="btn-tarkov" onclick="toggleMarkerCreator()" id="markerCreatorBtn" title="Create new quest markers">🎯 Add Markers</button>
+                            <button class="btn-tarkov" onclick="showMissingMarkersAnalysis()" title="Show objectives that need markers">📋 Missing</button>
                             <button class="btn-tarkov" onclick="resetMapView()">Reset View</button>
                         </div>
                         <div id="map"></div>
@@ -4233,6 +4253,10 @@
             
             imageBounds = [[0, 0], [currentMapHeight, currentMapWidth]];
             
+            // Create Leaflet bounds object for pad() method
+            const leafletBounds = L.latLngBounds(imageBounds);
+            const paddedBounds = leafletBounds.pad(0.1); // 10% padding for maxBounds
+            
             // Get map container dimensions to calculate optimal zoom
             const mapContainer = document.getElementById('map');
             const containerWidth = mapContainer.clientWidth;
@@ -4256,8 +4280,8 @@
                 zoomSnap: 0.25,
                 zoomDelta: 0.5,
                 attributionControl: false,
-                maxBounds: imageBounds,  // Restrict panning to image bounds
-                maxBoundsViscosity: 1.0  // Hard boundary (no elastic effect)
+                maxBounds: paddedBounds,      // Restrict panning/zooming
+                maxBoundsViscosity: 1.0       // Hard boundary (no elastic effect)
             });
             
             currentMapLayer = L.imageOverlay(cfg.file, imageBounds).addTo(mapInstance);
@@ -4265,8 +4289,8 @@
             // Fit bounds and set view to show full map centered
             mapInstance.fitBounds(imageBounds);
             
-            // Ensure the map stays within bounds after any zoom
-            mapInstance.setMaxBounds(imageBounds);
+            // Set padded max bounds again after fitBounds (important!)
+            mapInstance.setMaxBounds(paddedBounds);
             
             questMarkersLayer = L.layerGroup().addTo(mapInstance);
             
