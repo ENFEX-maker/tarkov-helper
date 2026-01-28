@@ -652,6 +652,51 @@
         .placing-marker-mode #map { cursor: crosshair !important; }
         .placing-marker-mode .leaflet-container { cursor: crosshair !important; }
         
+        /* Floor Controls */
+        .floor-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid var(--border-dark);
+        }
+        .floor-controls-label {
+            font-size: 0.7rem;
+            color: var(--text-sub);
+            text-align: center;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .floor-btn {
+            width: 32px;
+            height: 32px;
+            border: 1px solid var(--border-dark);
+            background: var(--bg-card);
+            color: var(--text-sub);
+            font-size: 0.8rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-radius: 3px;
+        }
+        .floor-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-beige);
+            border-color: var(--eft-gold);
+        }
+        .floor-btn.active {
+            background: var(--eft-gold);
+            color: var(--bg-dark);
+            border-color: var(--eft-gold);
+        }
+        
         /* Edit Mode Button */
         .edit-mode-toggle {
             background: var(--bg-element);
@@ -2084,25 +2129,18 @@
             }
             
             const mapKey = document.getElementById('mapSelect')?.value || 'customs';
-            const mapCfg = MAP_CONFIG[mapKey] || { scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true };
             
-            // Get click coordinates
+            // Get click coordinates (Leaflet CRS.Simple)
             const leafletX = e.latlng.lng;
             const leafletY = e.latlng.lat;
             
             // Convert Leaflet coords back to percent
-            let pixelX = leafletX;
-            let pixelY = mapCfg.invertLeafletY !== false ? (currentMapHeight - leafletY) : leafletY;
+            // Leaflet Y is inverted: pixelY = mapHeight - leafletY
+            const pixelX = leafletX;
+            const pixelY = currentMapHeight - leafletY;
             
-            let leftPercent = (pixelX / currentMapWidth) * 100;
-            let topPercent = (pixelY / currentMapHeight) * 100;
-            
-            // Reverse map-specific corrections
-            if (mapCfg.flipY) {
-                topPercent = 100 - topPercent;
-            }
-            leftPercent = (leftPercent - mapCfg.offsetX) / mapCfg.scaleX;
-            topPercent = (topPercent - mapCfg.offsetY) / mapCfg.scaleY;
+            const leftPercent = (pixelX / currentMapWidth) * 100;
+            const topPercent = (pixelY / currentMapHeight) * 100;
             
             // Save to database
             await saveManualMarker(selectedObjectiveForPlacement, leftPercent, topPercent, mapKey);
@@ -2271,23 +2309,13 @@
             // Get new position from marker
             const newLatLng = marker.getLatLng();
             const mapKey = document.getElementById('mapSelect')?.value || activeMapTab || 'customs';
-            const mapCfg = MAP_CONFIG[mapKey] || { scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true };
             
             // Convert Leaflet coordinates back to percent
-            // Reverse the conversion from drawQuestMarkers
-            let pixelX = newLatLng.lng;
-            let pixelY = mapCfg.invertLeafletY !== false ? (currentMapHeight - newLatLng.lat) : newLatLng.lat;
+            const pixelX = newLatLng.lng;
+            const pixelY = currentMapHeight - newLatLng.lat;
             
-            // Convert pixel to percent
-            let newLeftPercent = (pixelX / currentMapWidth) * 100;
-            let newTopPercent = (pixelY / currentMapHeight) * 100;
-            
-            // Reverse map-specific corrections
-            if (mapCfg.flipY) {
-                newTopPercent = 100 - newTopPercent;
-            }
-            newLeftPercent = (newLeftPercent - mapCfg.offsetX) / mapCfg.scaleX;
-            newTopPercent = (newTopPercent - mapCfg.offsetY) / mapCfg.scaleY;
+            const newLeftPercent = (pixelX / currentMapWidth) * 100;
+            const newTopPercent = (pixelY / currentMapHeight) * 100;
             
             // Calculate delta
             const deltaLeft = newLeftPercent - data.originalLeftPercent;
@@ -2327,18 +2355,11 @@
             // Reset marker to original position
             if (pendingCorrection && pendingCorrection.marker) {
                 const data = pendingCorrection.marker._questData;
-                const mapKey = pendingCorrection.mapKey;
-                const mapCfg = MAP_CONFIG[mapKey] || { scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true };
                 
                 // Recalculate original position
-                let correctedLeftPct = data.originalLeftPercent * mapCfg.scaleX + mapCfg.offsetX;
-                let correctedTopPct = data.originalTopPercent * mapCfg.scaleY + mapCfg.offsetY;
-                if (mapCfg.flipY) {
-                    correctedTopPct = 100 - correctedTopPct;
-                }
-                const pixelX = (correctedLeftPct / 100) * currentMapWidth;
-                const pixelY = (correctedTopPct / 100) * currentMapHeight;
-                const leafletY = mapCfg.invertLeafletY !== false ? (currentMapHeight - pixelY) : pixelY;
+                const pixelX = (data.originalLeftPercent / 100) * currentMapWidth;
+                const pixelY = (data.originalTopPercent / 100) * currentMapHeight;
+                const leafletY = currentMapHeight - pixelY;
                 
                 pendingCorrection.marker.setLatLng([leafletY, pixelX]);
             }
@@ -2499,26 +2520,89 @@
         const STORAGE_KEY_AMMO = 'tarkov_planner_ammo_v3';
         const STORAGE_KEY_QUEST_ITEMS = 'tarkov_planner_quest_items_v1';
         
-        // Map configuration - using tarkovdata SVG maps (coordinates match 1:1)
-        // Map coordinate correction factors
-        // The tarkovdata GPS coordinates (leftPercent, topPercent) are designed for tarkovdata SVG maps
-        // They should work 1:1 without offsets if using the original SVGs from the repo
-        // scaleX/scaleY: multiply the percent value
-        // offsetX/offsetY: add after scaling (in percent) - should be 0 for original SVGs
-        // flipY: if true, invert Y axis (100 - topPercent) BEFORE pixel conversion
-        // invertLeafletY: if false, don't do (height - pixelY) for Leaflet
+        // ============================================================================
+        // SVG MAP CONFIGURATION
+        // Using official SVG maps from TarkovTracker/tarkovdata GitHub
+        // GPS coordinates (leftPercent, topPercent) from objective_gps.json map 1:1 to SVG viewBox
+        // ============================================================================
+        const SVG_BASE_URL = 'https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/svg/';
+        
         const MAP_CONFIG = {
-            customs:     { file: 'maps/Customs.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
-            woods:       { file: 'maps/Woods.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
-            shoreline:   { file: 'maps/Shoreline.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
-            interchange: { file: 'maps/Interchange.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
-            reserve:     { file: 'maps/Reserve.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
-            lighthouse:  { file: 'maps/Lighthouse.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
-            streets:     { file: 'maps/StreetsOfTarkov.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
-            groundzero:  { file: 'maps/GroundZero.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
-            factory:     { file: 'maps/Factory.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
-            labs:        { file: 'maps/Labs.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true }
+            customs: { 
+                file: SVG_BASE_URL + 'Customs.svg',
+                width: 1062.48, height: 535.17,
+                floors: ['Ground_Level'],
+                defaultFloor: 'Ground_Level',
+                hasMultiFloor: false
+            },
+            woods: { 
+                file: SVG_BASE_URL + 'Woods.svg',
+                width: 1401.87, height: 1420.60,
+                floors: ['Ground_Level'],
+                defaultFloor: 'Ground_Level',
+                hasMultiFloor: false
+            },
+            shoreline: { 
+                file: SVG_BASE_URL + 'Shoreline.svg',
+                width: 1559.57, height: 1032.49,
+                floors: ['Ground_Level', 'Underground_Level', 'First_Floor', 'Second_Floor', 'Third_Floor'],
+                defaultFloor: 'Ground_Level',
+                hasMultiFloor: true
+            },
+            interchange: { 
+                file: SVG_BASE_URL + 'Interchange.svg',
+                width: 977.10, height: 977.10,
+                floors: ['Ground_Level', 'First_Floor', 'Second_Floor'],
+                defaultFloor: 'Ground_Level',
+                hasMultiFloor: true
+            },
+            reserve: { 
+                file: SVG_BASE_URL + 'Reserve.svg',
+                width: 827.29, height: 761.16,
+                floors: ['Ground_Level', 'Bunkers'],
+                defaultFloor: 'Ground_Level',
+                hasMultiFloor: true
+            },
+            lighthouse: { 
+                file: SVG_BASE_URL + 'Lighthouse.svg',
+                width: 1059.38, height: 1722.95,
+                floors: ['Ground_Level'],
+                defaultFloor: 'Ground_Level',
+                hasMultiFloor: false
+            },
+            streets: { 
+                file: SVG_BASE_URL + 'StreetsOfTarkov.svg',
+                width: 605.32, height: 831.58,
+                floors: ['Ground_Level', 'Underground_Level', 'First_Floor', 'Second_Floor', 'Third_Floor', 'Fourth_Floor', 'Fifth_Floor'],
+                defaultFloor: 'Ground_Level',
+                hasMultiFloor: true
+            },
+            groundzero: { 
+                file: SVG_BASE_URL + 'GroundZero.svg',
+                width: 348.93, height: 488.45,
+                floors: ['Ground_Level', 'Underground_Level', 'First_Floor', 'Second_Floor', 'Third_Floor'],
+                defaultFloor: 'Ground_Level',
+                hasMultiFloor: true
+            },
+            factory: { 
+                file: SVG_BASE_URL + 'Factory.svg',
+                width: 131.57, height: 141.80,
+                floors: ['Basement', 'Ground_Floor', 'Second_Floor', 'Third_Floor'],
+                defaultFloor: 'Ground_Floor',
+                hasMultiFloor: true
+            },
+            labs: { 
+                file: SVG_BASE_URL + 'Labs.svg',
+                width: 720, height: 586,
+                floors: ['Technical_Level', 'First_Level', 'Second_Level'],
+                defaultFloor: 'Technical_Level',
+                hasMultiFloor: true
+            }
         };
+        
+        // Current floor state
+        let currentFloor = null;
+        let svgElement = null;
 
         // ============================================================================
         // STAT DEFINITIONS - All available stats per category from the game
@@ -2953,8 +3037,8 @@
             const legend = document.getElementById('mapLegend');
             const legendItems = document.getElementById('legendItems');
             
-            // Get map config for coordinate corrections
-            const mapCfg = MAP_CONFIG[mapKey] || { scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false };
+            // Get map config
+            const mapCfg = MAP_CONFIG[mapKey] || {};
             
             // Load marker corrections from database
             const corrections = await loadMarkerCorrections(mapKey);
@@ -3086,35 +3170,26 @@
             const correctionKey = `${loc.questId}|${loc.objectiveIndex}`;
             const correction = corrections[correctionKey];
             
-            let baseLeftPercent = loc.leftPercent;
-            let baseTopPercent = loc.topPercent;
+            let leftPercent = loc.leftPercent;
+            let topPercent = loc.topPercent;
             let hasCorrection = false;
             
             if (correction) {
-                baseLeftPercent = correction.correctedLeftPercent;
-                baseTopPercent = correction.correctedTopPercent;
+                leftPercent = correction.correctedLeftPercent;
+                topPercent = correction.correctedTopPercent;
                 hasCorrection = true;
             }
             
-            // Apply map-specific coordinate corrections
-            let correctedLeftPct = baseLeftPercent * mapCfg.scaleX + mapCfg.offsetX;
-            let correctedTopPct = baseTopPercent * mapCfg.scaleY + mapCfg.offsetY;
+            // Simple coordinate conversion: percent to Leaflet coordinates
+            // leftPercent/topPercent are designed for the SVG viewBox
+            const pixelX = (leftPercent / 100) * mapWidth;
+            const pixelY = (topPercent / 100) * mapHeight;
             
-            // Optional Y-axis flip (before pixel conversion)
-            if (mapCfg.flipY) {
-                correctedTopPct = 100 - correctedTopPct;
-            }
-            
-            // Convert percent to pixel coordinates
-            const pixelX = (correctedLeftPct / 100) * mapWidth;
-            const pixelY = (correctedTopPct / 100) * mapHeight;
-            
-            // Leaflet CRS.Simple: optionally invert Y
+            // Leaflet CRS.Simple: Y is inverted (0 at bottom, height at top)
             const leafletX = pixelX;
-            const leafletY = mapCfg.invertLeafletY !== false ? (mapHeight - pixelY) : pixelY;
+            const leafletY = mapHeight - pixelY;
             
             // Create custom div icon with number
-            const sourceIndicator = loc.source === 'manual' ? '✓' : '';
             const markerHtml = `
                 <div style="position: relative; width: 24px; height: 24px;">
                     <div style="width: 24px; height: 24px; border-radius: 50%; background: ${color.fill}; border: 3px solid ${color.border};"></div>
@@ -3130,10 +3205,11 @@
                 iconAnchor: [12, 12]
             });
             
-            // Create marker with draggable option (disabled by default)
+            // Create marker with floor info for visibility filtering
             const marker = L.marker([leafletY, leafletX], { 
                 icon: icon,
-                draggable: false
+                draggable: false,
+                floor: loc.floor || 'Ground_Level'
             });
             
             // Store metadata for corrections system
@@ -3143,11 +3219,12 @@
                 objectiveId: loc.objectiveId,
                 objectiveIndex: loc.objectiveIndex,
                 mapKey: loc.mapKey,
-                originalLeftPercent: baseLeftPercent,
-                originalTopPercent: baseTopPercent,
+                originalLeftPercent: leftPercent,
+                originalTopPercent: topPercent,
                 description: loc.description,
                 hasDbCorrection: hasCorrection,
-                source: loc.source
+                source: loc.source,
+                floor: loc.floor
             };
             
             // Enable dragging if in edit mode
@@ -3182,6 +3259,8 @@
             }[loc.type] || 'obj-find';
             
             const sourceLabel = loc.source === 'manual' ? '<span style="color: #4CAF50; font-size: 0.7rem;">✓ Manual</span>' : '';
+            const floorLabel = loc.floor && loc.floor !== 'Ground_Level' && loc.floor !== 'Ground_Floor' 
+                ? `<div class="popup-footer">📍 Floor: ${formatFloorName(loc.floor)}</div>` : '';
             
             const popupContent = `
                 <div class="quest-marker-popup">
@@ -3190,7 +3269,7 @@
                     ${sourceLabel}
                     <h6>${loc.questName}</h6>
                     <p>${loc.description}</p>
-                    ${loc.floor && loc.floor !== 'Ground_Level' ? `<div class="popup-footer">📍 Floor: ${loc.floor.replace(/_/g, ' ')}</div>` : ''}
+                    ${floorLabel}
                 </div>
             `;
             
@@ -4151,50 +4230,38 @@
                 mapInstance = null;
             }
             
-            const isSvg = cfg.file.toLowerCase().endsWith('.svg');
+            // Store map dimensions from config
+            currentMapWidth = cfg.width;
+            currentMapHeight = cfg.height;
+            currentMapOffsetX = 0;
+            currentMapOffsetY = 0;
+            currentFloor = cfg.defaultFloor;
             
             try {
-                if (isSvg) {
-                    // For SVG: fetch and parse viewBox to get dimensions
-                    const response = await fetch(cfg.file);
-                    if (!response.ok) throw new Error('SVG not found');
-                    const svgText = await response.text();
-                    
-                    // Parse viewBox from SVG
-                    const viewBoxMatch = svgText.match(/viewBox=["']([^"']+)["']/);
-                    if (viewBoxMatch) {
-                        const [minX, minY, width, height] = viewBoxMatch[1].split(/\s+/).map(Number);
-                        currentMapOffsetX = minX || 0;
-                        currentMapOffsetY = minY || 0;
-                        currentMapWidth = width;
-                        currentMapHeight = height;
-                        console.log(`SVG viewBox: minX=${minX}, minY=${minY}, width=${width}, height=${height}`);
-                    } else {
-                        // Fallback: try width/height attributes
-                        const widthMatch = svgText.match(/width=["'](\d+)/);
-                        const heightMatch = svgText.match(/height=["'](\d+)/);
-                        currentMapWidth = widthMatch ? parseInt(widthMatch[1]) : 1000;
-                        currentMapHeight = heightMatch ? parseInt(heightMatch[1]) : 1000;
-                        currentMapOffsetX = 0;
-                        currentMapOffsetY = 0;
-                    }
-                } else {
-                    // For raster images: use Image object
-                    const img = new Image();
-                    img.src = cfg.file;
-                    await new Promise((resolve, reject) => {
-                        img.onload = resolve;
-                        img.onerror = reject;
-                    });
-                    currentMapWidth = img.naturalWidth;
-                    currentMapHeight = img.naturalHeight;
+                // Fetch SVG content
+                const response = await fetch(cfg.file);
+                if (!response.ok) throw new Error('SVG not found');
+                const svgText = await response.text();
+                
+                // Parse SVG to get actual viewBox (may differ slightly)
+                const viewBoxMatch = svgText.match(/viewBox=["']([^"']+)["']/);
+                if (viewBoxMatch) {
+                    const [minX, minY, width, height] = viewBoxMatch[1].split(/\s+/).map(Number);
+                    currentMapWidth = width;
+                    currentMapHeight = height;
+                    currentMapOffsetX = minX || 0;
+                    currentMapOffsetY = minY || 0;
                 }
+                
+                console.log(`Loading ${mapName} SVG: ${currentMapWidth}x${currentMapHeight}, floors: ${cfg.floors.join(', ')}`);
+                
             } catch (e) {
                 document.getElementById('map').innerHTML = `
                     <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--eft-red);">
                         <div class="text-center">
-                            <div style="font-size: 2rem;">!</div>
+                            <div style="font-size: 2rem;">⚠</div>
                             <div>Map not found: ${cfg.file}</div>
+                            <div class="text-sub small mt-2">Check network connection</div>
                         </div>
                     </div>
                 `;
@@ -4203,47 +4270,133 @@
             
             imageBounds = [[0, 0], [currentMapHeight, currentMapWidth]];
             
-            // Get map container dimensions to calculate optimal zoom
+            // Get map container dimensions
             const mapContainer = document.getElementById('map');
             const containerWidth = mapContainer.clientWidth;
             const containerHeight = mapContainer.clientHeight;
             
-            // Calculate the zoom level that makes the image fit exactly in the container
-            // This will be our minZoom (can't zoom out further than full image visible)
+            // Calculate zoom levels
             const zoomX = Math.log2(containerWidth / currentMapWidth);
             const zoomY = Math.log2(containerHeight / currentMapHeight);
             const fitZoom = Math.min(zoomX, zoomY);
+            const calculatedMinZoom = Math.floor(fitZoom * 4) / 4;
             
-            // Set minZoom slightly below fitZoom to allow small margin, but not too much
-            const calculatedMinZoom = Math.floor(fitZoom * 4) / 4; // Round to nearest 0.25
-            
-            console.log(`Map zoom calculation: container=${containerWidth}x${containerHeight}, image=${currentMapWidth}x${currentMapHeight}, fitZoom=${fitZoom.toFixed(2)}, minZoom=${calculatedMinZoom}`);
+            console.log(`Map zoom: container=${containerWidth}x${containerHeight}, fitZoom=${fitZoom.toFixed(2)}, minZoom=${calculatedMinZoom}`);
             
             mapInstance = L.map('map', {
                 crs: L.CRS.Simple,
                 minZoom: calculatedMinZoom,
-                maxZoom: 5,  // Allow much more zoom in for detail work
+                maxZoom: 5,
                 zoomSnap: 0.25,
                 zoomDelta: 0.5,
                 attributionControl: false,
-                maxBounds: imageBounds,  // Restrict panning to image bounds
-                maxBoundsViscosity: 1.0  // Hard boundary (no elastic effect)
+                maxBounds: imageBounds,
+                maxBoundsViscosity: 1.0
             });
             
+            // Load SVG as image overlay
             currentMapLayer = L.imageOverlay(cfg.file, imageBounds).addTo(mapInstance);
             
-            // Fit bounds and set view to show full map centered
             mapInstance.fitBounds(imageBounds);
-            
-            // Ensure the map stays within bounds after any zoom
             mapInstance.setMaxBounds(imageBounds);
             
             questMarkersLayer = L.layerGroup().addTo(mapInstance);
             
-            // Draw quest markers only for selected quests
+            // Setup floor controls if multi-floor map
+            setupFloorControls(mapName, cfg);
+            
+            // Draw quest markers
             await drawQuestMarkers(mapName, currentMapWidth, currentMapHeight, questNames, selectedQuests);
             
             setTimeout(() => mapInstance.invalidateSize(), 200);
+        }
+        
+        function setupFloorControls(mapName, cfg) {
+            // Remove existing floor controls
+            const existingControls = document.getElementById('floorControls');
+            if (existingControls) {
+                existingControls.remove();
+            }
+            
+            // Only show floor controls for multi-floor maps
+            if (!cfg.hasMultiFloor || cfg.floors.length <= 1) {
+                return;
+            }
+            
+            // Create floor control panel
+            const floorControls = document.createElement('div');
+            floorControls.id = 'floorControls';
+            floorControls.className = 'floor-controls';
+            floorControls.innerHTML = `
+                <div class="floor-controls-label">Floor</div>
+                ${cfg.floors.map((floor, idx) => `
+                    <button class="floor-btn ${floor === cfg.defaultFloor ? 'active' : ''}" 
+                            onclick="switchFloor('${mapName}', '${floor}')"
+                            title="${formatFloorName(floor)}">
+                        ${getFloorShortName(floor)}
+                    </button>
+                `).reverse().join('')}
+            `;
+            
+            document.getElementById('map').appendChild(floorControls);
+        }
+        
+        function getFloorShortName(floor) {
+            const shortNames = {
+                'Ground_Level': 'G',
+                'Ground_Floor': 'G',
+                'Underground_Level': 'U',
+                'Basement': 'B',
+                'Bunkers': 'BK',
+                'First_Floor': '1',
+                'First_Level': '1',
+                'Second_Floor': '2',
+                'Second_Level': '2',
+                'Third_Floor': '3',
+                'Fourth_Floor': '4',
+                'Fifth_Floor': '5',
+                'Technical_Level': 'T'
+            };
+            return shortNames[floor] || floor.charAt(0);
+        }
+        
+        function formatFloorName(floor) {
+            return floor.replace(/_/g, ' ');
+        }
+        
+        function switchFloor(mapName, floor) {
+            currentFloor = floor;
+            
+            // Update button states
+            document.querySelectorAll('.floor-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Update marker visibility based on floor
+            updateMarkerVisibility(floor);
+            
+            console.log(`Switched to floor: ${floor}`);
+        }
+        
+        function updateMarkerVisibility(floor) {
+            if (!questMarkersLayer) return;
+            
+            questMarkersLayer.eachLayer(marker => {
+                if (marker.options && marker.options.floor) {
+                    const markerFloor = marker.options.floor;
+                    // Show marker if it matches current floor or if floor is Ground_Level/Ground_Floor (default)
+                    const isVisible = markerFloor === floor || 
+                                     markerFloor === 'Ground_Level' || 
+                                     floor === 'Ground_Level' ||
+                                     !markerFloor;
+                    
+                    if (marker._icon) {
+                        marker._icon.style.opacity = isVisible ? '1' : '0.3';
+                        marker._icon.style.pointerEvents = isVisible ? 'auto' : 'none';
+                    }
+                }
+            });
         }
         
         function resetMapView() {
