@@ -2051,10 +2051,13 @@
                     
                     if (shouldShow) {
                         const option = document.createElement('option');
+                        // Generate a fallback ID if obj.id is missing
+                        const objectiveId = obj.id || `${quest.id}-obj-${objIndex + 1}`;
+                        
                         option.value = JSON.stringify({
                             questId: quest.id,
                             questName: quest.name,
-                            objectiveId: obj.id,
+                            objectiveId: objectiveId,
                             objectiveIndex: objIndex + 1,
                             type: obj.type || 'unknown',
                             description: obj.description || `Objective ${objIndex + 1}`,
@@ -2152,6 +2155,13 @@
                 return;
             }
             
+            // Validate objective data
+            if (!objective || !objective.questId || !objective.objectiveId) {
+                console.error('Invalid objective data:', objective);
+                alert('Error: Missing objective data. Please re-select the objective.');
+                return;
+            }
+            
             const hint = document.getElementById('markerCreatorHint');
             hint.innerHTML = '💾 Saving marker...';
             
@@ -2160,13 +2170,15 @@
                     user_id: currentUser.id,
                     quest_id: objective.questId,
                     objective_id: objective.objectiveId,
-                    objective_index: objective.objectiveIndex,
+                    objective_index: objective.objectiveIndex || 1,
                     map_name: mapKey,
                     left_percent: leftPercent,
                     top_percent: topPercent,
-                    quest_name: objective.questName,
-                    objective_description: objective.description
+                    quest_name: objective.questName || 'Unknown Quest',
+                    objective_description: objective.description || 'Objective'
                 };
+                
+                console.log('Saving marker with data:', markerData);
                 
                 const { data, error } = await supabaseClient
                     .from('quest_marker_positions')
@@ -4271,18 +4283,26 @@
             
             imageBounds = [[0, 0], [currentMapHeight, currentMapWidth]];
             
+            // Extended bounds with padding to prevent zooming outside
+            const padding = 50;
+            const extendedBounds = [
+                [-padding, -padding], 
+                [currentMapHeight + padding, currentMapWidth + padding]
+            ];
+            
             // Get map container dimensions
             const mapContainer = document.getElementById('map');
             const containerWidth = mapContainer.clientWidth;
             const containerHeight = mapContainer.clientHeight;
             
-            // Calculate zoom levels
+            // Calculate zoom levels - ensure we can see the whole map
             const zoomX = Math.log2(containerWidth / currentMapWidth);
             const zoomY = Math.log2(containerHeight / currentMapHeight);
             const fitZoom = Math.min(zoomX, zoomY);
-            const calculatedMinZoom = Math.floor(fitZoom * 4) / 4;
+            // More restrictive minZoom to prevent excessive zoom out
+            const calculatedMinZoom = fitZoom - 0.5;
             
-            console.log(`Map zoom: container=${containerWidth}x${containerHeight}, fitZoom=${fitZoom.toFixed(2)}, minZoom=${calculatedMinZoom}`);
+            console.log(`Map zoom: container=${containerWidth}x${containerHeight}, fitZoom=${fitZoom.toFixed(2)}, minZoom=${calculatedMinZoom.toFixed(2)}`);
             
             mapInstance = L.map('map', {
                 crs: L.CRS.Simple,
@@ -4291,7 +4311,7 @@
                 zoomSnap: 0.25,
                 zoomDelta: 0.5,
                 attributionControl: false,
-                maxBounds: imageBounds,
+                maxBounds: extendedBounds,
                 maxBoundsViscosity: 1.0
             });
             
@@ -4299,7 +4319,7 @@
             currentMapLayer = L.imageOverlay(cfg.file, imageBounds).addTo(mapInstance);
             
             mapInstance.fitBounds(imageBounds);
-            mapInstance.setMaxBounds(imageBounds);
+            mapInstance.setMaxBounds(extendedBounds);
             
             questMarkersLayer = L.layerGroup().addTo(mapInstance);
             
@@ -4420,7 +4440,7 @@
                     const zoomX = Math.log2(containerWidth / currentMapWidth);
                     const zoomY = Math.log2(containerHeight / currentMapHeight);
                     const fitZoom = Math.min(zoomX, zoomY);
-                    const calculatedMinZoom = Math.floor(fitZoom * 4) / 4;
+                    const calculatedMinZoom = fitZoom - 0.5;
                     
                     mapInstance.setMinZoom(calculatedMinZoom);
                     mapInstance.invalidateSize();
