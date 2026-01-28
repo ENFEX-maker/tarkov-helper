@@ -2532,90 +2532,26 @@
         const STORAGE_KEY_AMMO = 'tarkov_planner_ammo_v3';
         const STORAGE_KEY_QUEST_ITEMS = 'tarkov_planner_quest_items_v1';
         
-        // ============================================================================
-        // SVG MAP CONFIGURATION
-        // Using official SVG maps from TarkovTracker/tarkovdata
-        // GPS coordinates (leftPercent, topPercent) from objective_gps.json map 1:1 to SVG viewBox
-        // Maps are hosted locally in /maps/ folder (copy from tarkovdata/svg/)
-        // ============================================================================
-        const SVG_BASE_URL = 'maps/';
-        
+        // Map configuration - using tarkovdata SVG maps (coordinates match 1:1)
+        // Map coordinate correction factors
+        // The tarkovdata GPS coordinates (leftPercent, topPercent) are designed for tarkovdata SVG maps
+        // They should work 1:1 without offsets if using the original SVGs from the repo
+        // scaleX/scaleY: multiply the percent value
+        // offsetX/offsetY: add after scaling (in percent) - should be 0 for original SVGs
+        // flipY: if true, invert Y axis (100 - topPercent) BEFORE pixel conversion
+        // invertLeafletY: if false, don't do (height - pixelY) for Leaflet
         const MAP_CONFIG = {
-            customs: { 
-                file: SVG_BASE_URL + 'Customs.svg',
-                width: 1062.48, height: 535.17,
-                floors: ['Ground_Level'],
-                defaultFloor: 'Ground_Level',
-                hasMultiFloor: false
-            },
-            woods: { 
-                file: SVG_BASE_URL + 'Woods.svg',
-                width: 1401.87, height: 1420.60,
-                floors: ['Ground_Level'],
-                defaultFloor: 'Ground_Level',
-                hasMultiFloor: false
-            },
-            shoreline: { 
-                file: SVG_BASE_URL + 'Shoreline.svg',
-                width: 1559.57, height: 1032.49,
-                floors: ['Ground_Level', 'Underground_Level', 'First_Floor', 'Second_Floor', 'Third_Floor'],
-                defaultFloor: 'Ground_Level',
-                hasMultiFloor: true
-            },
-            interchange: { 
-                file: SVG_BASE_URL + 'Interchange.svg',
-                width: 977.10, height: 977.10,
-                floors: ['Ground_Level', 'First_Floor', 'Second_Floor'],
-                defaultFloor: 'Ground_Level',
-                hasMultiFloor: true
-            },
-            reserve: { 
-                file: SVG_BASE_URL + 'Reserve.svg',
-                width: 827.29, height: 761.16,
-                floors: ['Ground_Level', 'Bunkers'],
-                defaultFloor: 'Ground_Level',
-                hasMultiFloor: true
-            },
-            lighthouse: { 
-                file: SVG_BASE_URL + 'Lighthouse.svg',
-                width: 1059.38, height: 1722.95,
-                floors: ['Ground_Level'],
-                defaultFloor: 'Ground_Level',
-                hasMultiFloor: false
-            },
-            streets: { 
-                file: SVG_BASE_URL + 'StreetsOfTarkov.svg',
-                width: 605.32, height: 831.58,
-                floors: ['Ground_Level', 'Underground_Level', 'First_Floor', 'Second_Floor', 'Third_Floor', 'Fourth_Floor', 'Fifth_Floor'],
-                defaultFloor: 'Ground_Level',
-                hasMultiFloor: true
-            },
-            groundzero: { 
-                file: SVG_BASE_URL + 'GroundZero.svg',
-                width: 348.93, height: 488.45,
-                floors: ['Ground_Level', 'Underground_Level', 'First_Floor', 'Second_Floor', 'Third_Floor'],
-                defaultFloor: 'Ground_Level',
-                hasMultiFloor: true
-            },
-            factory: { 
-                file: SVG_BASE_URL + 'Factory.svg',
-                width: 131.57, height: 141.80,
-                floors: ['Basement', 'Ground_Floor', 'Second_Floor', 'Third_Floor'],
-                defaultFloor: 'Ground_Floor',
-                hasMultiFloor: true
-            },
-            labs: { 
-                file: SVG_BASE_URL + 'Labs.svg',
-                width: 720, height: 586,
-                floors: ['Technical_Level', 'First_Level', 'Second_Level'],
-                defaultFloor: 'Technical_Level',
-                hasMultiFloor: true
-            }
+            customs:     { file: 'maps/Customs.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
+            woods:       { file: 'maps/Woods.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
+            shoreline:   { file: 'maps/Shoreline.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
+            interchange: { file: 'maps/Interchange.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
+            reserve:     { file: 'maps/Reserve.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
+            lighthouse:  { file: 'maps/Lighthouse.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
+            streets:     { file: 'maps/StreetsOfTarkov.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
+            groundzero:  { file: 'maps/GroundZero.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
+            factory:     { file: 'maps/Factory.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
+            labs:        { file: 'maps/Labs.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true }
         };
-        
-        // Current floor state
-        let currentFloor = null;
-        let svgElement = null;
 
         // ============================================================================
         // STAT DEFINITIONS - All available stats per category from the game
@@ -3109,12 +3045,14 @@
                 if (!quest.objectives) return;
                 
                 quest.objectives.forEach((obj, objIdx) => {
-                    const manualKey = `${quest.id}|${obj.id}`;
+                    // Use same ID logic as when saving markers
+                    const objectiveId = obj.id || `${quest.id}-obj-${objIdx + 1}`;
+                    const manualKey = `${quest.id}|${objectiveId}`;
                     const manualMarker = manualMarkerLookup[manualKey];
                     
                     if (manualMarker) {
                         // Draw this manual marker
-                        const objectiveKey = `${quest.id}|${obj.id}|${mapKey}`;
+                        const objectiveKey = `${quest.id}|${objectiveId}|${mapKey}`;
                         if (drawnObjectives.has(objectiveKey)) return;
                         drawnObjectives.add(objectiveKey);
                         
@@ -3122,7 +3060,7 @@
                             questId: quest.id,
                             questName: quest.name,
                             objectiveIndex: manualMarker.objectiveIndex || (objIdx + 1),
-                            objectiveId: obj.id,
+                            objectiveId: objectiveId,
                             type: obj.type || 'unknown',
                             description: manualMarker.description || obj.description || `Objective ${objIdx + 1}`,
                             leftPercent: manualMarker.leftPercent,
@@ -4243,38 +4181,50 @@
                 mapInstance = null;
             }
             
-            // Store map dimensions from config
-            currentMapWidth = cfg.width;
-            currentMapHeight = cfg.height;
-            currentMapOffsetX = 0;
-            currentMapOffsetY = 0;
-            currentFloor = cfg.defaultFloor;
+            const isSvg = cfg.file.toLowerCase().endsWith('.svg');
             
             try {
-                // Fetch SVG content
-                const response = await fetch(cfg.file);
-                if (!response.ok) throw new Error('SVG not found');
-                const svgText = await response.text();
-                
-                // Parse SVG to get actual viewBox (may differ slightly)
-                const viewBoxMatch = svgText.match(/viewBox=["']([^"']+)["']/);
-                if (viewBoxMatch) {
-                    const [minX, minY, width, height] = viewBoxMatch[1].split(/\s+/).map(Number);
-                    currentMapWidth = width;
-                    currentMapHeight = height;
-                    currentMapOffsetX = minX || 0;
-                    currentMapOffsetY = minY || 0;
+                if (isSvg) {
+                    // For SVG: fetch and parse viewBox to get dimensions
+                    const response = await fetch(cfg.file);
+                    if (!response.ok) throw new Error('SVG not found');
+                    const svgText = await response.text();
+                    
+                    // Parse viewBox from SVG
+                    const viewBoxMatch = svgText.match(/viewBox=["']([^"']+)["']/);
+                    if (viewBoxMatch) {
+                        const [minX, minY, width, height] = viewBoxMatch[1].split(/\s+/).map(Number);
+                        currentMapOffsetX = minX || 0;
+                        currentMapOffsetY = minY || 0;
+                        currentMapWidth = width;
+                        currentMapHeight = height;
+                        console.log(`SVG viewBox: minX=${minX}, minY=${minY}, width=${width}, height=${height}`);
+                    } else {
+                        // Fallback: try width/height attributes
+                        const widthMatch = svgText.match(/width=["'](\d+)/);
+                        const heightMatch = svgText.match(/height=["'](\d+)/);
+                        currentMapWidth = widthMatch ? parseInt(widthMatch[1]) : 1000;
+                        currentMapHeight = heightMatch ? parseInt(heightMatch[1]) : 1000;
+                        currentMapOffsetX = 0;
+                        currentMapOffsetY = 0;
+                    }
+                } else {
+                    // For raster images: use Image object
+                    const img = new Image();
+                    img.src = cfg.file;
+                    await new Promise((resolve, reject) => {
+                        img.onload = resolve;
+                        img.onerror = reject;
+                    });
+                    currentMapWidth = img.naturalWidth;
+                    currentMapHeight = img.naturalHeight;
                 }
-                
-                console.log(`Loading ${mapName} SVG: ${currentMapWidth}x${currentMapHeight}, floors: ${cfg.floors.join(', ')}`);
-                
             } catch (e) {
                 document.getElementById('map').innerHTML = `
                     <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--eft-red);">
                         <div class="text-center">
-                            <div style="font-size: 2rem;">⚠</div>
+                            <div style="font-size: 2rem;">!</div>
                             <div>Map not found: ${cfg.file}</div>
-                            <div class="text-sub small mt-2">Check network connection</div>
                         </div>
                     </div>
                 `;
@@ -4283,141 +4233,51 @@
             
             imageBounds = [[0, 0], [currentMapHeight, currentMapWidth]];
             
-            // Extended bounds with padding to prevent zooming outside
-            const padding = 50;
-            const extendedBounds = [
-                [-padding, -padding], 
-                [currentMapHeight + padding, currentMapWidth + padding]
-            ];
-            
-            // Get map container dimensions
+            // Get map container dimensions to calculate optimal zoom
             const mapContainer = document.getElementById('map');
             const containerWidth = mapContainer.clientWidth;
             const containerHeight = mapContainer.clientHeight;
             
-            // Calculate zoom levels - ensure we can see the whole map
+            // Calculate the zoom level that makes the image fit exactly in the container
+            // This will be our minZoom (can't zoom out further than full image visible)
             const zoomX = Math.log2(containerWidth / currentMapWidth);
             const zoomY = Math.log2(containerHeight / currentMapHeight);
             const fitZoom = Math.min(zoomX, zoomY);
-            // More restrictive minZoom to prevent excessive zoom out
-            const calculatedMinZoom = fitZoom - 0.5;
             
-            console.log(`Map zoom: container=${containerWidth}x${containerHeight}, fitZoom=${fitZoom.toFixed(2)}, minZoom=${calculatedMinZoom.toFixed(2)}`);
+            // Set minZoom slightly below fitZoom to allow small margin, but not too much
+            const calculatedMinZoom = Math.floor(fitZoom * 4) / 4; // Round to nearest 0.25
+            
+            console.log(`Map zoom calculation: container=${containerWidth}x${containerHeight}, image=${currentMapWidth}x${currentMapHeight}, fitZoom=${fitZoom.toFixed(2)}, minZoom=${calculatedMinZoom}`);
             
             mapInstance = L.map('map', {
                 crs: L.CRS.Simple,
                 minZoom: calculatedMinZoom,
-                maxZoom: 5,
+                maxZoom: 5,  // Allow much more zoom in for detail work
                 zoomSnap: 0.25,
                 zoomDelta: 0.5,
                 attributionControl: false,
-                maxBounds: extendedBounds,
-                maxBoundsViscosity: 1.0
+                maxBounds: imageBounds,  // Restrict panning to image bounds
+                maxBoundsViscosity: 1.0  // Hard boundary (no elastic effect)
             });
             
-            // Load SVG as image overlay
             currentMapLayer = L.imageOverlay(cfg.file, imageBounds).addTo(mapInstance);
             
+            // Fit bounds and set view to show full map centered
             mapInstance.fitBounds(imageBounds);
-            mapInstance.setMaxBounds(extendedBounds);
+            
+            // Ensure the map stays within bounds after any zoom
+            mapInstance.setMaxBounds(imageBounds);
             
             questMarkersLayer = L.layerGroup().addTo(mapInstance);
             
-            // Setup floor controls if multi-floor map
-            setupFloorControls(mapName, cfg);
-            
-            // Draw quest markers
+            // Draw quest markers only for selected quests
             await drawQuestMarkers(mapName, currentMapWidth, currentMapHeight, questNames, selectedQuests);
             
             setTimeout(() => mapInstance.invalidateSize(), 200);
         }
         
-        function setupFloorControls(mapName, cfg) {
-            // Remove existing floor controls
-            const existingControls = document.getElementById('floorControls');
-            if (existingControls) {
-                existingControls.remove();
-            }
-            
-            // Only show floor controls for multi-floor maps
-            if (!cfg.hasMultiFloor || cfg.floors.length <= 1) {
-                return;
-            }
-            
-            // Create floor control panel
-            const floorControls = document.createElement('div');
-            floorControls.id = 'floorControls';
-            floorControls.className = 'floor-controls';
-            floorControls.innerHTML = `
-                <div class="floor-controls-label">Floor</div>
-                ${cfg.floors.map((floor, idx) => `
-                    <button class="floor-btn ${floor === cfg.defaultFloor ? 'active' : ''}" 
-                            onclick="switchFloor('${mapName}', '${floor}')"
-                            title="${formatFloorName(floor)}">
-                        ${getFloorShortName(floor)}
-                    </button>
-                `).reverse().join('')}
-            `;
-            
-            document.getElementById('map').appendChild(floorControls);
-        }
-        
-        function getFloorShortName(floor) {
-            const shortNames = {
-                'Ground_Level': 'G',
-                'Ground_Floor': 'G',
-                'Underground_Level': 'U',
-                'Basement': 'B',
-                'Bunkers': 'BK',
-                'First_Floor': '1',
-                'First_Level': '1',
-                'Second_Floor': '2',
-                'Second_Level': '2',
-                'Third_Floor': '3',
-                'Fourth_Floor': '4',
-                'Fifth_Floor': '5',
-                'Technical_Level': 'T'
-            };
-            return shortNames[floor] || floor.charAt(0);
-        }
-        
         function formatFloorName(floor) {
-            return floor.replace(/_/g, ' ');
-        }
-        
-        function switchFloor(mapName, floor) {
-            currentFloor = floor;
-            
-            // Update button states
-            document.querySelectorAll('.floor-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            event.target.classList.add('active');
-            
-            // Update marker visibility based on floor
-            updateMarkerVisibility(floor);
-            
-            console.log(`Switched to floor: ${floor}`);
-        }
-        
-        function updateMarkerVisibility(floor) {
-            if (!questMarkersLayer) return;
-            
-            questMarkersLayer.eachLayer(marker => {
-                if (marker.options && marker.options.floor) {
-                    const markerFloor = marker.options.floor;
-                    // Show marker if it matches current floor or if floor is Ground_Level/Ground_Floor (default)
-                    const isVisible = markerFloor === floor || 
-                                     markerFloor === 'Ground_Level' || 
-                                     floor === 'Ground_Level' ||
-                                     !markerFloor;
-                    
-                    if (marker._icon) {
-                        marker._icon.style.opacity = isVisible ? '1' : '0.3';
-                        marker._icon.style.pointerEvents = isVisible ? 'auto' : 'none';
-                    }
-                }
-            });
+            return floor ? floor.replace(/_/g, ' ') : 'Ground Level';
         }
         
         function resetMapView() {
@@ -4440,7 +4300,7 @@
                     const zoomX = Math.log2(containerWidth / currentMapWidth);
                     const zoomY = Math.log2(containerHeight / currentMapHeight);
                     const fitZoom = Math.min(zoomX, zoomY);
-                    const calculatedMinZoom = fitZoom - 0.5;
+                    const calculatedMinZoom = Math.floor(fitZoom * 4) / 4;
                     
                     mapInstance.setMinZoom(calculatedMinZoom);
                     mapInstance.invalidateSize();
