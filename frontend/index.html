@@ -110,8 +110,7 @@
         .form-select-tarkov:focus, .form-control-tarkov:focus { background: var(--bg-hover); border-color: var(--eft-gold); color: var(--text-main); box-shadow: none; outline: none; }
         .form-select-tarkov option { background: var(--bg-dark); color: var(--text-main); }
         .form-select-tarkov option:disabled { color: var(--text-sub); opacity: 0.5; }
-        .map-container-wrapper { height: 600px; overflow: hidden; position: relative; border: 1px solid var(--border-dark); }
-        #map { height: 100%; background: var(--bg-dark); overflow: visible !important; }
+        #map { height: 600px; background: var(--bg-dark); border: 1px solid var(--border-dark); overflow: visible !important; }
         .leaflet-container { overflow: hidden; }
         .leaflet-pane { overflow: visible !important; }
         .leaflet-map-pane { overflow: visible !important; }
@@ -1148,9 +1147,7 @@
                             <span class="marker-count" id="markerCount">0 markers</span>
                             <button class="btn-tarkov" onclick="resetMapView()">Reset View</button>
                         </div>
-                        <div class="map-container-wrapper">
-                            <div id="map"></div>
-                        </div>
+                        <div id="map"></div>
                         <div id="mapLegend" class="map-legend" style="display: none;">
                             <div class="legend-title">Quest Colors</div>
                             <div id="legendItems" class="legend-items"></div>
@@ -2340,15 +2337,202 @@
         // TARKOVDATA INTEGRATION - Quest Locations
         // ============================================================================
         
+        // Fallback URL for quests without zones in tarkov.dev
         const TARKOVDATA_QUESTS_URL = 'https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/quests.json';
         
         async function loadQuestLocationsData() {
+            try {
+                // First, try to load from tarkov.dev API (has game coordinates in zones)
+                const query = `{
+                    tasks {
+                        id
+                        name
+                        objectives {
+                            id
+                            type
+                            description
+                            maps {
+                                id
+                                name
+                                normalizedName
+                            }
+                            zones {
+                                id
+                                map {
+                                    id
+                                    normalizedName
+                                }
+                                position {
+                                    x
+                                    y
+                                    z
+                                }
+                            }
+                        }
+                    }
+                }`;
+                
+                const response = await fetch('https://api.tarkov.dev/graphql', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query })
+                });
+                
+                if (!response.ok) throw new Error('Failed to load from tarkov.dev');
+                
+                const data = await response.json();
+                
+                if (data.errors) {
+                    console.error('GraphQL errors:', data.errors);
+                    throw new Error('GraphQL errors');
+                }
+                
+                const tasks = data?.data?.tasks || [];
+                
+                // Parse quest locations
+                questLocationsData = { byMap: {}, byQuestName: {} };
+                let totalLocations = 0;
+                let questsWithZones = 0;
+                
+                tasks.forEach(task => {
+                    const questTitle = (task.name || '').toLowerCase().trim();
+                    let objIndex = 0;
+                    
+                    if (task.objectives) {
+                        task.objectives.forEach(obj => {
+                            // Check if objective has zones with positions
+                            if (obj.zones && obj.zones.length > 0) {
+                                obj.zones.forEach((zone, zoneIndex) => {
+                                    if (zone.position && zone.map) {
+                                        objIndex++;
+                                        const mapKey = zone.map.normalizedName || getMapKeyFromName(zone.map.name);
+                                        if (!mapKey) return;
+                                        
+                                        // Store game coordinates - will be converted when drawing markers
+                                        const locData = {
+                                            questId: task.id,
+                                            questName: task.name,
+                                            objectiveIndex: objIndex,
+                                            objectiveId: obj.id,
+                                            type: obj.type || 'unknown',
+                                            description: obj.description || `${obj.type || 'Objective'} #${objIndex}`,
+                                            target: '',
+                                            tool: '',
+                                            // Store game coordinates for conversion at render time
+                                            gameX: zone.position.x,
+                                            gameZ: zone.position.z,
+                                            useGameCoords: true,
+                                            floor: 'Ground_Level',
+                                            mapKey: mapKey,
+                                            source: 'tarkov.dev'
+                                        };
+                                        
+                                        // Index by map
+                                        if (!questLocationsData.byMap[mapKey]) {
+                                            questLocationsData.byMap[mapKey] = [];
+                                        }
+                                        questLocationsData.byMap[mapKey].push(locData);
+                                        
+                                        // Index by quest name (lowercase for matching)
+                                        if (!questLocationsData.byQuestName[questTitle]) {
+                                            questLocationsData.byQuestName[questTitle] = [];
+                                        }
+                                        questLocationsData.byQuestName[questTitle].push(locData);
+                                        
+                                        totalLocations++;
+                                    }
+                                });
+                                if (objIndex > 0) questsWithZones++;
+                            } else if (obj.maps && obj.maps.length > 0) {
+                                // Objective has maps but no specific zones - store without coords
+                                // These won't show markers but will be used for map filtering
+                            }
+                        });
+                    }
+                });
+                
+                console.log('Quest locations loaded from tarkov.dev:', totalLocations, 'objectives from', questsWithZones, 'quests with zones');
+                
+                // Also try to supplement with tarkovdata for quests that have GPS percentages
+                await supplementWithTarkovdata();
+                
+                return questLocationsData;
+            } catch (error) {
+                console.error('Error loading quest locations from tarkov.dev:', error);
+                // Fallback to tarkovdata only
+                return await loadQuestLocationsFromTarkovdata();
+            }
+        }
+        
+        async function supplementWithTarkovdata() {
+            try {
+                const response = await fetch(TARKOVDATA_QUESTS_URL);
+                if (!response.ok) return;
+                const data = await response.json();
+                
+                let supplemented = 0;
+                
+                for (const [questId, quest] of Object.entries(data)) {
+                    const questTitle = (quest.title || quest.name || '').toLowerCase().trim();
+                    
+                    // Skip if we already have locations for this quest from tarkov.dev
+                    if (questLocationsData.byQuestName[questTitle]?.length > 0) continue;
+                    
+                    if (quest.objectives) {
+                        let objIndex = 0;
+                        quest.objectives.forEach(obj => {
+                            if (obj.gps && obj.gps.leftPercent !== undefined && obj.gps.topPercent !== undefined) {
+                                const mapKey = getMapKeyFromLocation(obj.location, quest);
+                                if (!mapKey) return;
+                                
+                                objIndex++;
+                                
+                                const locData = {
+                                    questId: questId,
+                                    questName: quest.title || quest.name || `Quest ${questId}`,
+                                    objectiveIndex: objIndex,
+                                    objectiveId: obj.id,
+                                    type: obj.type || 'unknown',
+                                    description: obj.target || `${obj.type || 'Objective'} #${objIndex}`,
+                                    target: obj.target || '',
+                                    tool: obj.tool || '',
+                                    leftPercent: obj.gps.leftPercent,
+                                    topPercent: obj.gps.topPercent,
+                                    floor: obj.gps.floor || 'Ground_Level',
+                                    mapKey: mapKey,
+                                    source: 'tarkovdata'
+                                };
+                                
+                                if (!questLocationsData.byMap[mapKey]) {
+                                    questLocationsData.byMap[mapKey] = [];
+                                }
+                                questLocationsData.byMap[mapKey].push(locData);
+                                
+                                if (!questLocationsData.byQuestName[questTitle]) {
+                                    questLocationsData.byQuestName[questTitle] = [];
+                                }
+                                questLocationsData.byQuestName[questTitle].push(locData);
+                                
+                                supplemented++;
+                            }
+                        });
+                    }
+                }
+                
+                if (supplemented > 0) {
+                    console.log('Supplemented with', supplemented, 'objectives from tarkovdata');
+                }
+            } catch (err) {
+                console.error('Error supplementing with tarkovdata:', err);
+            }
+        }
+        
+        async function loadQuestLocationsFromTarkovdata() {
             try {
                 const response = await fetch(TARKOVDATA_QUESTS_URL);
                 if (!response.ok) throw new Error('Failed to load tarkovdata');
                 const data = await response.json();
                 
-                // Parse quest locations - index by quest name for matching
                 questLocationsData = { byMap: {}, byQuestName: {} };
                 let totalLocations = 0;
                 
@@ -2364,67 +2548,27 @@
                                 
                                 objIndex++;
                                 
-                                // Build human-readable description - filter out raw MongoDB IDs
-                                const isMongoId = (str) => /^[a-f0-9]{24}$/i.test(str);
-                                
-                                // Get readable type label
-                                const typeLabels = {
-                                    'mark': 'Mark location',
-                                    'find': 'Find item',
-                                    'pickup': 'Pick up item',
-                                    'place': 'Place item',
-                                    'locate': 'Locate',
-                                    'key': 'Use key',
-                                    'shoot': 'Shoot',
-                                    'kill': 'Eliminate target',
-                                    'extract': 'Extract',
-                                    'visit': 'Visit location',
-                                    'build': 'Build/Install',
-                                    'plantItem': 'Plant item',
-                                    'giveItem': 'Hand over item',
-                                    'findItem': 'Find in raid'
-                                };
-                                
-                                const typeLabel = typeLabels[obj.type] || (obj.type ? obj.type.charAt(0).toUpperCase() + obj.type.slice(1) : 'Objective');
-                                
-                                // Build description from available fields, excluding IDs
-                                let description = typeLabel;
-                                if (obj.target && !isMongoId(obj.target)) {
-                                    description = obj.target;
-                                }
-                                // Don't include 'tool' if it's a raw ID
-                                if (obj.tool && !isMongoId(obj.tool)) {
-                                    description += ` (using ${obj.tool})`;
-                                }
-                                
-                                // Truncate and clean up
-                                description = description.substring(0, 100).trim();
-                                if (!description || description === typeLabel) {
-                                    description = `${typeLabel} #${objIndex}`;
-                                }
-                                
                                 const locData = {
                                     questId: questId,
                                     questName: quest.title || quest.name || `Quest ${questId}`,
                                     objectiveIndex: objIndex,
                                     objectiveId: obj.id,
                                     type: obj.type || 'unknown',
-                                    description: description,
+                                    description: obj.target || `${obj.type || 'Objective'} #${objIndex}`,
                                     target: obj.target || '',
                                     tool: obj.tool || '',
                                     leftPercent: obj.gps.leftPercent,
                                     topPercent: obj.gps.topPercent,
                                     floor: obj.gps.floor || 'Ground_Level',
-                                    mapKey: mapKey
+                                    mapKey: mapKey,
+                                    source: 'tarkovdata'
                                 };
                                 
-                                // Index by map
                                 if (!questLocationsData.byMap[mapKey]) {
                                     questLocationsData.byMap[mapKey] = [];
                                 }
                                 questLocationsData.byMap[mapKey].push(locData);
                                 
-                                // Index by quest name (lowercase for matching)
                                 if (!questLocationsData.byQuestName[questTitle]) {
                                     questLocationsData.byQuestName[questTitle] = [];
                                 }
@@ -2436,12 +2580,34 @@
                     }
                 }
                 
-                console.log('Quest locations loaded:', totalLocations, 'objectives');
+                console.log('Quest locations loaded from tarkovdata:', totalLocations, 'objectives');
                 return questLocationsData;
             } catch (error) {
                 console.error('Error loading quest locations:', error);
                 return null;
             }
+        }
+        
+        function getMapKeyFromName(mapName) {
+            if (!mapName) return null;
+            const name = mapName.toLowerCase();
+            const mapping = {
+                'customs': 'customs',
+                'factory': 'factory',
+                'woods': 'woods',
+                'shoreline': 'shoreline',
+                'interchange': 'interchange',
+                'reserve': 'reserve',
+                'the lab': 'labs',
+                'laboratory': 'labs',
+                'labs': 'labs',
+                'lighthouse': 'lighthouse',
+                'streets of tarkov': 'streets',
+                'streets': 'streets',
+                'ground zero': 'groundzero',
+                'groundzero': 'groundzero'
+            };
+            return mapping[name] || null;
         }
         
         function getMapKeyFromLocation(locationId, quest) {
@@ -2563,9 +2729,83 @@
                     const correctionKey = `${loc.questId}|${loc.objectiveIndex}`;
                     const correction = corrections[correctionKey];
                     
-                    // Use corrected coordinates if available, otherwise original
-                    let baseLeftPercent = loc.leftPercent;
-                    let baseTopPercent = loc.topPercent;
+                    // Handle game coordinates from tarkov.dev API
+                    let baseLeftPercent, baseTopPercent;
+                    
+                    if (loc.useGameCoords && loc.gameX !== undefined && loc.gameZ !== undefined) {
+                        // Convert game coordinates to pixel coordinates
+                        const coords = convertGameCoordsToMap(loc.gameX, loc.gameZ, mapKey);
+                        if (!coords) return;
+                        
+                        // Convert to percentage
+                        baseLeftPercent = (coords.x / mapWidth) * 100;
+                        baseTopPercent = (coords.y / mapHeight) * 100;
+                        
+                        // For game coords, skip the scale/offset/flip since convertGameCoordsToMap handles it
+                        // Go directly to leaflet coords
+                        const leafletX = coords.x;
+                        const leafletY = coords.y;
+                        
+                        markerCount++;
+                        
+                        // Create marker for game-coords location
+                        const markerHtml = `
+                            <div style="position: relative; width: 24px; height: 24px;">
+                                <div style="width: 24px; height: 24px; border-radius: 50%; background: ${color.fill}; border: 3px solid ${color.border};"></div>
+                                <div style="position: absolute; top: -6px; right: -6px; background: #c4b896; color: #000; font-weight: 700; font-size: 10px; width: 14px; height: 14px; line-height: 14px; text-align: center; border-radius: 50%;">${loc.objectiveIndex || markerCount}</div>
+                            </div>
+                        `;
+                        
+                        const icon = L.divIcon({
+                            html: markerHtml,
+                            className: 'quest-marker-icon',
+                            iconSize: [24, 24],
+                            iconAnchor: [12, 12]
+                        });
+                        
+                        const marker = L.marker([leafletY, leafletX], { 
+                            icon: icon,
+                            draggable: false
+                        });
+                        
+                        marker._questData = {
+                            questId: loc.questId,
+                            questName: loc.questName,
+                            objectiveIndex: loc.objectiveIndex,
+                            description: loc.description,
+                            originalLeftPercent: baseLeftPercent,
+                            originalTopPercent: baseTopPercent,
+                            mapKey: mapKey,
+                            hasDbCorrection: false,
+                            source: loc.source
+                        };
+                        
+                        if (isEditMode && marker.dragging) {
+                            marker.dragging.enable();
+                            marker._icon?.classList.add('leaflet-marker-draggable');
+                        }
+                        
+                        marker.on('dragend', (e) => showCorrectionDialog(marker, e));
+                        
+                        const popupContent = `
+                            <div style="min-width: 180px;">
+                                <div style="background: ${color.fill}; color: #000; padding: 4px 8px; margin: -12px -15px 10px; font-weight: 600; font-size: 0.85rem;">
+                                    #${loc.objectiveIndex} <span style="font-weight: normal;">MARK</span>
+                                </div>
+                                <strong>${qName}</strong><br>
+                                <span style="color: #a0a0a0; font-size: 0.85rem;">${loc.description}</span>
+                            </div>
+                        `;
+                        marker.bindPopup(popupContent, { className: 'tarkov-popup', maxWidth: 300 });
+                        marker.bindTooltip(`${qName} #${loc.objectiveIndex}`, { direction: 'top' });
+                        
+                        questMarkersLayer.addLayer(marker);
+                        return;
+                    }
+                    
+                    // Original percent-based coordinates from tarkovdata
+                    baseLeftPercent = loc.leftPercent;
+                    baseTopPercent = loc.topPercent;
                     let hasCorrection = false;
                     
                     if (correction) {
