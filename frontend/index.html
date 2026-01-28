@@ -140,6 +140,9 @@
         .quest-marker-popup .obj-type { display: inline-block; padding: 3px 10px; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 8px; font-weight: 600; letter-spacing: 1px; }
         .quest-marker-popup .obj-num { display: inline-block; background: var(--eft-gold); color: #000; font-weight: 700; padding: 3px 8px; font-size: 0.8rem; margin-right: 8px; }
         .quest-marker-popup .popup-footer { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border-dark); font-size: 0.75rem; color: var(--text-sub); }
+        .quest-marker-popup .marker-note-display { background: rgba(158, 143, 107, 0.15); border-left: 3px solid var(--eft-gold); padding: 8px 10px; margin: 10px 0; font-size: 0.85rem; color: var(--text-beige); font-style: italic; }
+        .quest-marker-popup .popup-note-btn { display: block; width: 100%; margin-top: 10px; padding: 6px 10px; background: var(--bg-element); border: 1px solid var(--border-dark); color: var(--text-sub); font-size: 0.75rem; cursor: pointer; transition: all 0.2s; }
+        .quest-marker-popup .popup-note-btn:hover { background: var(--bg-hover); color: var(--eft-gold); border-color: var(--eft-gold); }
         .obj-pickup { background: #2d5a2d; color: #7fff7f; }
         .obj-place { background: #5a5a2d; color: #ffff7f; }
         .obj-mark { background: #5a2d5a; color: #ff7fff; }
@@ -3303,6 +3306,13 @@
             const floorLabel = loc.floor && loc.floor !== 'Ground_Level' && loc.floor !== 'Ground_Floor' 
                 ? `<div class="popup-footer">📍 Floor: ${formatFloorName(loc.floor)}</div>` : '';
             
+            // Get any existing note for this quest marker
+            const noteKey = `quest|${loc.questId}-${loc.objectiveId}`;
+            const existingNote = getMarkerNote('quest', `${loc.questId}-${loc.objectiveId}`);
+            const noteHtml = existingNote 
+                ? `<div class="marker-note-display">📝 ${existingNote}</div>` 
+                : '';
+            
             const popupContent = `
                 <div class="quest-marker-popup">
                     <span class="obj-num">#${loc.objectiveIndex || (markerIndex + 1)}</span>
@@ -3310,7 +3320,11 @@
                     ${sourceLabel}
                     <h6>${loc.questName}</h6>
                     <p>${loc.description}</p>
+                    ${noteHtml}
                     ${floorLabel}
+                    <button class="popup-note-btn" onclick="showMarkerNoteDialog('quest', '${loc.questId}-${loc.objectiveId}', '${loc.questName.replace(/'/g, "\\'")} #${loc.objectiveIndex}', 'Quest Objective')">
+                        ${existingNote ? '✏️ Edit Note' : '📝 Add Note'}
+                    </button>
                 </div>
             `;
             
@@ -7285,7 +7299,8 @@
                 if (extractsEnabled) {
                     await renderExtractMarkers();
                 }
-                // Quest markers would need similar re-render
+                // Re-render quest markers to show updated notes
+                await refreshQuestMarkers();
                 
                 pendingMarkerNote = null;
                 document.getElementById('markerNotesDialogOverlay').style.display = 'none';
@@ -7314,6 +7329,8 @@
             if (extractsEnabled) {
                 await renderExtractMarkers();
             }
+            // Re-render quest markers to show updated notes
+            await refreshQuestMarkers();
             
             pendingMarkerNote = null;
             document.getElementById('markerNotesDialogOverlay').style.display = 'none';
