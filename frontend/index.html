@@ -1981,6 +1981,76 @@
         // MARKER CREATOR SYSTEM - Manually place quest markers
         // ============================================================================
         
+        function showMissingMarkersAnalysis() {
+            // Analyze which objectives are missing GPS coordinates
+            if (!selectedQuestsForMarkers || selectedQuestsForMarkers.length === 0) {
+                alert('Please select some quests first using "Plan Raid".');
+                return;
+            }
+            
+            const mapKey = document.getElementById('mapSelect')?.value || 'customs';
+            const missing = [];
+            const hasGps = [];
+            
+            selectedQuestsForMarkers.forEach(quest => {
+                if (!quest.objectives) return;
+                
+                quest.objectives.forEach((obj, idx) => {
+                    const objectiveId = obj.id || `${quest.id}-obj-${idx + 1}`;
+                    
+                    // Check if this objective has GPS data in questLocationsData
+                    let hasGpsData = false;
+                    if (questLocationsData?.byObjectiveId?.[objectiveId]) {
+                        hasGpsData = true;
+                    }
+                    
+                    // Check if there's a manual marker for this objective
+                    let hasManualMarker = false;
+                    if (manualMarkersCache) {
+                        const mapMarkers = manualMarkersCache[mapKey] || [];
+                        hasManualMarker = mapMarkers.some(m => 
+                            m.questId === quest.id && m.objectiveId === objectiveId
+                        );
+                    }
+                    
+                    const entry = {
+                        questName: quest.name,
+                        questId: quest.id,
+                        objectiveIndex: idx + 1,
+                        objectiveId: objectiveId,
+                        description: obj.description || `Objective ${idx + 1}`,
+                        type: obj.type || 'unknown'
+                    };
+                    
+                    if (hasGpsData || hasManualMarker) {
+                        hasGps.push({ ...entry, source: hasManualMarker ? 'manual' : 'gps' });
+                    } else {
+                        missing.push(entry);
+                    }
+                });
+            });
+            
+            // Show results in an alert or modal
+            let message = `=== Missing Markers Analysis for ${mapKey.toUpperCase()} ===\n\n`;
+            message += `✅ Have markers: ${hasGps.length}\n`;
+            message += `❌ Missing markers: ${missing.length}\n\n`;
+            
+            if (missing.length > 0) {
+                message += `--- MISSING (need manual placement) ---\n`;
+                missing.forEach(m => {
+                    message += `• ${m.questName} #${m.objectiveIndex}: ${m.description.substring(0, 50)}...\n`;
+                });
+            }
+            
+            if (missing.length === 0) {
+                message += `\n🎉 All objectives have markers!`;
+            }
+            
+            alert(message);
+            console.log('Missing markers:', missing);
+            console.log('Have markers:', hasGps);
+        }
+        
         function toggleMarkerCreator() {
             if (!currentUser) {
                 alert('Please login to create markers.');
