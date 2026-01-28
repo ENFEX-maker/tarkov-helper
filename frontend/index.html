@@ -2736,74 +2736,42 @@
         
         // Fallback URL for quests without zones in tarkov.dev
         const TARKOVDATA_QUESTS_URL = 'https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/quests.json';
+        const TARKOVDATA_GPS_URL = 'https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/objective_gps.json';
+        const TARKOVDATA_MAPS_URL = 'https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/maps.json';
+        
+        // tdevId to mapKey mapping (from tarkovdata maps.json)
+        const TDEV_ID_TO_MAP = {
+            '55f2d3fd4bdc2d5f408b4567': 'factory',
+            '56f40101d2720b2a4d8b45d6': 'customs',
+            '5704e3c2d2720bac5b8b4567': 'woods',
+            '5704e554d2720bac5b8b456e': 'shoreline',
+            '5714dbc024597771384a510d': 'interchange',
+            '5b0fc42d86f7744a585f9105': 'labs',
+            '5704e5fad2720bc05b8b4567': 'reserve',
+            '5704e4dad2720bb55b8b4567': 'lighthouse',
+            '5714dc692459777137212e12': 'streets',
+            '653e6760052c01c1c805532f': 'groundzero',
+            // Also handle night factory
+            '59fc81d786f774390775787e': 'factory'
+        };
+        
+        // Global GPS data cache (loaded from objective_gps.json)
+        let objectiveGpsData = null;
         
         async function loadQuestLocationsData() {
-            // Load from tarkovdata (has GPS percentages for ~197 objectives)
-            // tarkov.dev API does NOT have zone/position data for quest objectives
-            return await loadQuestLocationsFromTarkovdata();
-        }
-        
-        async function supplementWithTarkovdata() {
             try {
-                const response = await fetch(TARKOVDATA_QUESTS_URL);
-                if (!response.ok) return;
-                const data = await response.json();
-                
-                let supplemented = 0;
-                
-                for (const [questId, quest] of Object.entries(data)) {
-                    const questTitle = (quest.title || quest.name || '').toLowerCase().trim();
-                    
-                    // Skip if we already have locations for this quest from tarkov.dev
-                    if (questLocationsData.byQuestName[questTitle]?.length > 0) continue;
-                    
-                    if (quest.objectives) {
-                        let objIndex = 0;
-                        quest.objectives.forEach(obj => {
-                            if (obj.gps && obj.gps.leftPercent !== undefined && obj.gps.topPercent !== undefined) {
-                                const mapKey = getMapKeyFromLocation(obj.location, quest);
-                                if (!mapKey) return;
-                                
-                                objIndex++;
-                                
-                                const locData = {
-                                    questId: questId,
-                                    questName: quest.title || quest.name || `Quest ${questId}`,
-                                    objectiveIndex: objIndex,
-                                    objectiveId: obj.id,
-                                    type: obj.type || 'unknown',
-                                    description: obj.target || `${obj.type || 'Objective'} #${objIndex}`,
-                                    target: obj.target || '',
-                                    tool: obj.tool || '',
-                                    leftPercent: obj.gps.leftPercent,
-                                    topPercent: obj.gps.topPercent,
-                                    floor: obj.gps.floor || 'Ground_Level',
-                                    mapKey: mapKey,
-                                    source: 'tarkovdata'
-                                };
-                                
-                                if (!questLocationsData.byMap[mapKey]) {
-                                    questLocationsData.byMap[mapKey] = [];
-                                }
-                                questLocationsData.byMap[mapKey].push(locData);
-                                
-                                if (!questLocationsData.byQuestName[questTitle]) {
-                                    questLocationsData.byQuestName[questTitle] = [];
-                                }
-                                questLocationsData.byQuestName[questTitle].push(locData);
-                                
-                                supplemented++;
-                            }
-                        });
-                    }
-                }
-                
-                if (supplemented > 0) {
-                    console.log('Supplemented with', supplemented, 'objectives from tarkovdata');
+                // Load objective_gps.json - the PRIMARY source for GPS coordinates!
+                const gpsResponse = await fetch(TARKOVDATA_GPS_URL);
+                if (gpsResponse.ok) {
+                    objectiveGpsData = await gpsResponse.json();
+                    console.log('Loaded objective_gps.json:', Object.keys(objectiveGpsData).length, 'GPS entries');
                 }
             } catch (err) {
-                console.error('Error supplementing with tarkovdata:', err);
+                console.error('Error loading objective_gps.json:', err);
             }
+            
+            // Now load quests.json to get quest names and objective descriptions
+            return await loadQuestLocationsFromTarkovdata();
         }
         
         async function loadQuestLocationsFromTarkovdata() {
@@ -2812,54 +2780,97 @@
                 if (!response.ok) throw new Error('Failed to load tarkovdata');
                 const data = await response.json();
                 
-                questLocationsData = { byMap: {}, byQuestName: {} };
+                questLocationsData = { byMap: {}, byQuestName: {}, byObjectiveId: {} };
                 let totalLocations = 0;
+                let fromGpsFile = 0;
+                let fromEmbedded = 0;
                 
-                for (const [questId, quest] of Object.entries(data)) {
+                // tarkovdata is an array
+                data.forEach((quest, arrayIndex) => {
+                    // Use gameId for matching with tarkov.dev API, fallback to array index
+                    const questId = quest.gameId || `tarkovdata-${arrayIndex}`;
                     const questTitle = (quest.title || quest.name || '').toLowerCase().trim();
                     
                     if (quest.objectives) {
-                        let objIndex = 0;
-                        quest.objectives.forEach(obj => {
-                            if (obj.gps && obj.gps.leftPercent !== undefined && obj.gps.topPercent !== undefined) {
-                                const mapKey = getMapKeyFromLocation(obj.location, quest);
-                                if (!mapKey) return;
-                                
-                                objIndex++;
-                                
+                        quest.objectives.forEach((obj, objIdx) => {
+                            const objIndex = objIdx + 1;
+                            const objectiveId = obj.id?.toString();
+                            
+                            // Try to get GPS from objective_gps.json first (primary source)
+                            let gpsData = null;
+                            let mapKey = null;
+                            let source = 'none';
+                            
+                            if (objectiveGpsData && objectiveId && objectiveGpsData[objectiveId]) {
+                                const gps = objectiveGpsData[objectiveId];
+                                mapKey = TDEV_ID_TO_MAP[gps.map];
+                                if (mapKey) {
+                                    gpsData = {
+                                        leftPercent: gps.leftPercent,
+                                        topPercent: gps.topPercent,
+                                        floor: gps.floor || 'Ground_Level'
+                                    };
+                                    source = 'objective_gps.json';
+                                    fromGpsFile++;
+                                }
+                            }
+                            
+                            // Fallback: Check if GPS is embedded in quests.json
+                            if (!gpsData && obj.gps && obj.gps.leftPercent !== undefined) {
+                                mapKey = getMapKeyFromLocation(obj.location, quest);
+                                if (mapKey) {
+                                    gpsData = {
+                                        leftPercent: obj.gps.leftPercent,
+                                        topPercent: obj.gps.topPercent,
+                                        floor: obj.gps.floor || 'Ground_Level'
+                                    };
+                                    source = 'quests.json';
+                                    fromEmbedded++;
+                                }
+                            }
+                            
+                            // If we have GPS data, add it
+                            if (gpsData && mapKey) {
                                 const locData = {
                                     questId: questId,
                                     questName: quest.title || quest.name || `Quest ${questId}`,
                                     objectiveIndex: objIndex,
-                                    objectiveId: obj.id,
+                                    objectiveId: objectiveId,
                                     type: obj.type || 'unknown',
                                     description: obj.target || `${obj.type || 'Objective'} #${objIndex}`,
                                     target: obj.target || '',
                                     tool: obj.tool || '',
-                                    leftPercent: obj.gps.leftPercent,
-                                    topPercent: obj.gps.topPercent,
-                                    floor: obj.gps.floor || 'Ground_Level',
+                                    leftPercent: gpsData.leftPercent,
+                                    topPercent: gpsData.topPercent,
+                                    floor: gpsData.floor,
                                     mapKey: mapKey,
-                                    source: 'tarkovdata'
+                                    source: source
                                 };
                                 
+                                // Index by map
                                 if (!questLocationsData.byMap[mapKey]) {
                                     questLocationsData.byMap[mapKey] = [];
                                 }
                                 questLocationsData.byMap[mapKey].push(locData);
                                 
+                                // Index by quest name (lowercase for matching)
                                 if (!questLocationsData.byQuestName[questTitle]) {
                                     questLocationsData.byQuestName[questTitle] = [];
                                 }
                                 questLocationsData.byQuestName[questTitle].push(locData);
                                 
+                                // Index by objective ID for direct lookup
+                                if (objectiveId) {
+                                    questLocationsData.byObjectiveId[objectiveId] = locData;
+                                }
+                                
                                 totalLocations++;
                             }
                         });
                     }
-                }
+                });
                 
-                console.log('Quest locations loaded from tarkovdata:', totalLocations, 'objectives');
+                console.log(`Quest locations loaded: ${totalLocations} total (${fromGpsFile} from objective_gps.json, ${fromEmbedded} from embedded quests.json)`);
                 return questLocationsData;
             } catch (error) {
                 console.error('Error loading quest locations:', error);
@@ -2890,17 +2901,20 @@
         }
         
         function getMapKeyFromLocation(locationId, quest) {
+            // CORRECTED MAPPING based on tarkovdata analysis:
+            // Verified via boss locations: Tagilla(Factory), Killa(Interchange), 
+            // Sanitar(Shoreline), Glukhar(Reserve), and known quest locations
             const locationMap = {
-                0: 'customs',
-                1: 'factory',
-                2: 'woods',
-                3: 'shoreline',
-                4: 'interchange',
-                5: 'lighthouse',
-                6: 'reserve',
-                7: 'labs',
-                8: 'streets',
-                9: 'groundzero'
+                0: 'factory',      // Tagilla, Factory quests
+                1: 'customs',      // Background Check, Customs quests
+                2: 'woods',        // Shootout Picnic, Woods quests
+                3: 'shoreline',    // Sanitar, Shoreline quests
+                4: 'interchange',  // Killa, Interchange quests
+                5: 'labs',         // TerraGroup Employee, Labs quests
+                6: 'reserve',      // Glukhar, Reserve quests
+                7: 'lighthouse',   // Long Road, Lighthouse quests
+                8: 'streets',      // Streets of Tarkov (not in tarkovdata yet)
+                9: 'groundzero'    // Ground Zero (not in tarkovdata yet)
             };
             
             if (locationId !== undefined && locationMap[locationId]) {
