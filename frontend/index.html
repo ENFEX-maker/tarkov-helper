@@ -2687,7 +2687,11 @@
         const MAP_CONFIG = {
             customs:     { file: 'maps/Customs.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true,
                            floors: [
-                               { id: 'ground', label: 'Ground', short: 'G', default: true, svgLayers: null }
+                               { id: 'ground', label: 'Ground', short: 'G', default: true, svgLayers: ['Ground_Level'] },
+                               { id: 'underground', label: 'Underground', short: 'U', svgLayers: ['Underground_Level'] },
+                               { id: 'floor_1', label: '1st Floor', short: '1', svgLayers: ['First_Floor'] },
+                               { id: 'floor_2', label: '2nd Floor', short: '2', svgLayers: ['Second_Floor'] },
+                               { id: 'floor_3', label: '3rd Floor', short: '3', svgLayers: ['Third_Floor'] }
                            ]},
             woods:       { file: 'maps/Woods.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true,
                            floors: [
