@@ -111,6 +111,20 @@
         .form-select-tarkov option:disabled { color: var(--text-sub); opacity: 0.5; }
         #map { height: 600px; background: var(--bg-dark); border: 1px solid var(--border-dark); overflow: hidden !important; position: relative; }
         .leaflet-container { overflow: hidden !important; }
+        
+        /* Floor Tabs */
+        .floor-tabs { position: absolute; top: 10px; right: 10px; z-index: 1000; display: flex; flex-direction: column; gap: 2px; background: rgba(30, 30, 30, 0.95); border: 1px solid var(--border-dark); border-radius: 4px; padding: 4px; }
+        .floor-tabs-label { font-size: 0.65rem; text-transform: uppercase; color: var(--text-sub); text-align: center; padding: 2px 0; border-bottom: 1px solid var(--border-dark); margin-bottom: 2px; }
+        .floor-tab { padding: 6px 12px; font-size: 0.75rem; background: var(--bg-element); border: 1px solid var(--border-dark); color: var(--text-sub); cursor: pointer; transition: all 0.2s; text-align: center; min-width: 40px; }
+        .floor-tab:hover { background: var(--bg-hover); color: var(--text-main); }
+        .floor-tab.active { background: var(--eft-gold); color: #000; font-weight: 600; border-color: var(--eft-gold); }
+        .floor-tab .marker-count { display: inline-block; background: rgba(255,255,255,0.2); padding: 1px 5px; border-radius: 8px; font-size: 0.65rem; margin-left: 4px; }
+        .floor-tab.active .marker-count { background: rgba(0,0,0,0.2); }
+        
+        /* Other floors indicator */
+        .other-floors-hint { position: absolute; bottom: 10px; right: 10px; z-index: 1000; background: rgba(196, 30, 58, 0.9); color: #fff; padding: 8px 14px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; display: none; animation: pulse-hint 2s infinite; cursor: pointer; }
+        .other-floors-hint:hover { background: rgba(196, 30, 58, 1); }
+        @keyframes pulse-hint { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
         .leaflet-pane { overflow: visible !important; }
         .leaflet-map-pane { overflow: visible !important; }
         .leaflet-tooltip-pane { overflow: visible !important; z-index: 9999 !important; }
@@ -652,6 +666,8 @@
         }
         .marker-creator-panel .btn-row { display: flex; gap: 8px; }
         .marker-creator-panel .btn-row button { flex: 1; font-size: 0.8rem; padding: 6px 10px; }
+        .marker-creator-panel .floor-select-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .marker-creator-panel .floor-select-row label { font-size: 0.8rem; color: var(--text-sub); white-space: nowrap; }
         .placing-marker-mode #map { cursor: crosshair !important; }
         .placing-marker-mode .leaflet-container { cursor: crosshair !important; }
         
@@ -1250,6 +1266,12 @@
                             <select id="objectiveSelect" class="objective-select" onchange="onObjectiveSelectChange()">
                                 <option value="">-- Select a quest objective --</option>
                             </select>
+                            <div class="floor-select-row" id="floorSelectRow" style="display: none;">
+                                <label>Floor:</label>
+                                <select id="markerFloorSelect" class="objective-select" style="flex: 1;">
+                                    <option value="ground">Ground</option>
+                                </select>
+                            </div>
                             <div class="btn-row">
                                 <button class="btn-tarkov" onclick="cancelMarkerCreation()">❌ Cancel</button>
                                 <button class="btn-tarkov" id="deleteMarkerBtn" onclick="deleteSelectedMarker()" style="display: none; background: rgba(140, 59, 59, 0.3);">🗑️ Delete</button>
@@ -1263,7 +1285,10 @@
                             <button class="btn-tarkov" onclick="showMissingMarkersAnalysis()" title="Show objectives that need markers">📋 Missing</button>
                             <button class="btn-tarkov" onclick="resetMapView()">Reset View</button>
                         </div>
-                        <div id="map"></div>
+                        <div id="map">
+                            <div id="floorTabs" class="floor-tabs" style="display: none;"></div>
+                            <div id="otherFloorsHint" class="other-floors-hint" onclick="showOtherFloorsMarkers()">⚠️ <span id="otherFloorsCount">0</span> markers on other floors</div>
+                        </div>
                         <div id="mapLegend" class="map-legend" style="display: none;">
                             <div class="legend-title">Quest Colors</div>
                             <div id="legendItems" class="legend-items"></div>
@@ -2072,6 +2097,7 @@
                 btn.innerHTML = '🎯 Creating...';
                 document.body.classList.add('placing-marker-mode');
                 populateObjectiveSelect();
+                populateFloorSelect();
                 
                 // Add click handler to map
                 if (mapInstance) {
@@ -2080,6 +2106,24 @@
             } else {
                 cancelMarkerCreation();
             }
+        }
+        
+        function populateFloorSelect() {
+            const mapKey = document.getElementById('mapSelect')?.value || 'customs';
+            const cfg = MAP_CONFIG[mapKey];
+            const floorSelect = document.getElementById('markerFloorSelect');
+            const floorRow = document.getElementById('floorSelectRow');
+            
+            if (!cfg || !cfg.floors || cfg.floors.length <= 1) {
+                floorRow.style.display = 'none';
+                return;
+            }
+            
+            floorSelect.innerHTML = cfg.floors.map(floor => 
+                `<option value="${floor.id}" ${floor.default ? 'selected' : ''}>${floor.label}</option>`
+            ).join('');
+            
+            floorRow.style.display = 'flex';
         }
         
         function cancelMarkerCreation() {
@@ -2225,6 +2269,7 @@
             }
             
             const mapKey = document.getElementById('mapSelect')?.value || 'customs';
+            const selectedFloor = document.getElementById('markerFloorSelect')?.value || 'ground';
             
             // Get click coordinates (Leaflet CRS.Simple)
             const leafletX = e.latlng.lng;
@@ -2238,11 +2283,11 @@
             const leftPercent = (pixelX / currentMapWidth) * 100;
             const topPercent = (pixelY / currentMapHeight) * 100;
             
-            // Save to database
-            await saveManualMarker(selectedObjectiveForPlacement, leftPercent, topPercent, mapKey);
+            // Save to database with floor info
+            await saveManualMarker(selectedObjectiveForPlacement, leftPercent, topPercent, mapKey, selectedFloor);
         }
         
-        async function saveManualMarker(objective, leftPercent, topPercent, mapKey) {
+        async function saveManualMarker(objective, leftPercent, topPercent, mapKey, floor = 'ground') {
             if (!supabaseClient || !currentUser) {
                 alert('Unable to save. Please ensure you are logged in.');
                 return;
@@ -2268,7 +2313,8 @@
                     left_percent: leftPercent,
                     top_percent: topPercent,
                     quest_name: objective.questName || 'Unknown Quest',
-                    objective_description: objective.description || 'Objective'
+                    objective_description: objective.description || 'Objective',
+                    floor: floor
                 };
                 
                 console.log('Saving marker with data:', markerData);
@@ -2380,6 +2426,7 @@
                         leftPercent: parseFloat(m.left_percent),
                         topPercent: parseFloat(m.top_percent),
                         mapKey: m.map_name,
+                        floor: m.floor || 'ground',
                         source: 'manual'
                     });
                 });
@@ -2399,6 +2446,10 @@
             const mapKey = document.getElementById('mapSelect')?.value || activeMapTab || 'customs';
             if (questMarkersLayer && mapInstance) {
                 await drawQuestMarkers(mapKey, currentMapWidth, currentMapHeight, selectedQuestNamesForMarkers, selectedQuestsForMarkers);
+                // Update floor marker counts and visibility
+                updateFloorMarkerCounts();
+                updateOtherFloorsHint();
+                updateMarkerFloorVisibility();
             }
         }
         
@@ -2634,17 +2685,73 @@
         // flipY: if true, invert Y axis (100 - topPercent) BEFORE pixel conversion
         // invertLeafletY: if false, don't do (height - pixelY) for Leaflet
         const MAP_CONFIG = {
-            customs:     { file: 'maps/Customs.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
-            woods:       { file: 'maps/Woods.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
-            shoreline:   { file: 'maps/Shoreline.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
-            interchange: { file: 'maps/Interchange.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
-            reserve:     { file: 'maps/Reserve.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
-            lighthouse:  { file: 'maps/Lighthouse.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
-            streets:     { file: 'maps/StreetsOfTarkov.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
-            groundzero:  { file: 'maps/GroundZero.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
-            factory:     { file: 'maps/Factory.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true },
-            labs:        { file: 'maps/Labs.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true }
+            customs:     { file: 'maps/Customs.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true,
+                           floors: [
+                               { id: 'ground', label: 'Ground', short: 'G', default: true, svgLayers: null }
+                           ]},
+            woods:       { file: 'maps/Woods.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true,
+                           floors: [
+                               { id: 'ground', label: 'Ground', short: 'G', default: true, svgLayers: null }
+                           ]},
+            shoreline:   { file: 'maps/Shoreline.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true,
+                           floors: [
+                               { id: 'ground', label: 'Ground', short: 'G', default: true, svgLayers: ['Ground_Level'] },
+                               { id: 'underground', label: 'Underground', short: 'U', svgLayers: ['Underground_Level'] },
+                               { id: 'floor_1', label: 'Resort 1F', short: '1', svgLayers: ['First_Floor'] },
+                               { id: 'floor_2', label: 'Resort 2F', short: '2', svgLayers: ['Second_Floor'] },
+                               { id: 'floor_3', label: 'Resort 3F', short: '3', svgLayers: ['Third_Floor'] }
+                           ]},
+            interchange: { file: 'maps/Interchange.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true,
+                           floors: [
+                               { id: 'ground', label: 'Ground/Parking', short: 'G', default: true, svgLayers: ['Ground_Level'] },
+                               { id: 'floor_1', label: '1st Floor', short: '1', svgLayers: ['First_Floor'] },
+                               { id: 'floor_2', label: '2nd Floor', short: '2', svgLayers: ['Second_Floor'] }
+                           ]},
+            reserve:     { file: 'maps/Reserve.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true,
+                           floors: [
+                               { id: 'ground', label: 'Ground', short: 'G', default: true, svgLayers: ['Ground_Level'] },
+                               { id: 'bunkers', label: 'Bunkers/D-2', short: 'BK', svgLayers: ['Bunkers'] }
+                           ]},
+            lighthouse:  { file: 'maps/Lighthouse.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true,
+                           floors: [
+                               { id: 'ground', label: 'Ground', short: 'G', default: true, svgLayers: null }
+                           ]},
+            streets:     { file: 'maps/StreetsOfTarkov.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true,
+                           floors: [
+                               { id: 'ground', label: 'Ground', short: 'G', default: true, svgLayers: ['Ground_Level'] },
+                               { id: 'underground', label: 'Underground', short: 'U', svgLayers: ['Underground_Level'] },
+                               { id: 'floor_1', label: '1st Floor', short: '1', svgLayers: ['First_Floor'] },
+                               { id: 'floor_2', label: '2nd Floor', short: '2', svgLayers: ['Second_Floor'] },
+                               { id: 'floor_3', label: '3rd Floor', short: '3', svgLayers: ['Third_Floor'] },
+                               { id: 'floor_4', label: '4th Floor', short: '4', svgLayers: ['Fourth_Floor'] },
+                               { id: 'floor_5', label: '5th Floor', short: '5', svgLayers: ['Fifth_Floor'] }
+                           ]},
+            groundzero:  { file: 'maps/GroundZero.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true,
+                           floors: [
+                               { id: 'ground', label: 'Ground', short: 'G', default: true, svgLayers: ['Ground_Level'] },
+                               { id: 'underground', label: 'Underground', short: 'U', svgLayers: ['Underground_Level'] },
+                               { id: 'floor_1', label: '1st Floor', short: '1', svgLayers: ['First_Floor'] },
+                               { id: 'floor_2', label: '2nd Floor', short: '2', svgLayers: ['Second_Floor'] },
+                               { id: 'floor_3', label: '3rd Floor', short: '3', svgLayers: ['Third_Floor'] }
+                           ]},
+            factory:     { file: 'maps/Factory.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true,
+                           floors: [
+                               { id: 'ground', label: 'Ground', short: 'G', default: true, svgLayers: ['Ground_Floor'] },
+                               { id: 'floor_2', label: '2nd Floor', short: '2', svgLayers: ['Second_Floor'] },
+                               { id: 'floor_3', label: '3rd Floor', short: '3', svgLayers: ['Third_Floor'] },
+                               { id: 'basement', label: 'Basement/Tunnels', short: 'B', svgLayers: ['Basement'] }
+                           ]},
+            labs:        { file: 'maps/Labs.svg', scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, flipY: false, invertLeafletY: true,
+                           floors: [
+                               { id: 'technical', label: 'Technical Level', short: 'T', default: true, svgLayers: ['Technical_Level'] },
+                               { id: 'floor_1', label: '1st Level', short: '1', svgLayers: ['First_Level'] },
+                               { id: 'floor_2', label: '2nd Level', short: '2', svgLayers: ['Second_Level'] }
+                           ]}
         };
+        
+        // Current floor state
+        let currentFloor = 'ground';
+        let currentSvgElement = null; // Reference to embedded SVG DOM
 
         // ============================================================================
         // STAT DEFINITIONS - All available stats per category from the game
@@ -3159,6 +3266,7 @@
                             leftPercent: manualMarker.leftPercent,
                             topPercent: manualMarker.topPercent,
                             mapKey: mapKey,
+                            floor: manualMarker.floor || 'ground',
                             source: 'manual'
                         };
                         
@@ -3253,7 +3361,7 @@
             const marker = L.marker([leafletY, leafletX], { 
                 icon: icon,
                 draggable: false,
-                floor: loc.floor || 'Ground_Level'
+                floor: loc.floor || 'ground'
             });
             
             // Store metadata for corrections system
@@ -3303,8 +3411,8 @@
             }[loc.type] || 'obj-find';
             
             const sourceLabel = loc.source === 'manual' ? '<span style="color: #4CAF50; font-size: 0.7rem;">✓ Manual</span>' : '';
-            const floorLabel = loc.floor && loc.floor !== 'Ground_Level' && loc.floor !== 'Ground_Floor' 
-                ? `<div class="popup-footer">📍 Floor: ${formatFloorName(loc.floor)}</div>` : '';
+            const floorLabel = loc.floor && loc.floor !== 'ground' 
+                ? `<div class="popup-footer">📍 Floor: ${getFloorLabel(loc.floor, loc.mapKey)}</div>` : '';
             
             // Get any existing note for this quest marker
             const noteKey = `quest|${loc.questId}-${loc.objectiveId}`;
@@ -4285,14 +4393,18 @@
                 mapInstance = null;
             }
             
+            // Reset SVG element reference
+            currentSvgElement = null;
+            
             const isSvg = cfg.file.toLowerCase().endsWith('.svg');
+            let svgText = null;
             
             try {
                 if (isSvg) {
                     // For SVG: fetch and parse viewBox to get dimensions
                     const response = await fetch(cfg.file);
                     if (!response.ok) throw new Error('SVG not found');
-                    const svgText = await response.text();
+                    svgText = await response.text();
                     
                     // Parse viewBox from SVG
                     const viewBoxMatch = svgText.match(/viewBox=["']([^"']+)["']/);
@@ -4368,7 +4480,31 @@
                 maxBoundsViscosity: 1.0       // Hard boundary (no elastic effect)
             });
             
-            currentMapLayer = L.imageOverlay(cfg.file, imageBounds).addTo(mapInstance);
+            // Load SVG with DOM access for layer control, or image for raster
+            if (isSvg && svgText && cfg.floors && cfg.floors.length > 1) {
+                // Parse SVG text into DOM element for layer control
+                const parser = new DOMParser();
+                const svgDoc = parser.parseFromString(svgText, 'image/svg+xml');
+                const svgElement = svgDoc.documentElement;
+                
+                // Store reference for layer manipulation
+                currentSvgElement = svgElement;
+                
+                // Use L.svgOverlay for DOM access
+                currentMapLayer = L.svgOverlay(svgElement, imageBounds).addTo(mapInstance);
+                
+                // Set default floor visibility
+                const defaultFloor = cfg.floors.find(f => f.default) || cfg.floors[0];
+                currentFloor = defaultFloor.id;
+                
+                // Don't hide layers initially - show all, just highlight active
+                // updateSvgLayerVisibility(cfg, currentFloor);
+                
+                console.log(`Loaded SVG with layer control, floors: ${cfg.floors.map(f => f.id).join(', ')}`);
+            } else {
+                // Use image overlay for simple maps or raster images
+                currentMapLayer = L.imageOverlay(cfg.file, imageBounds).addTo(mapInstance);
+            }
             
             // Fit bounds and set view to show full map centered
             mapInstance.fitBounds(imageBounds);
@@ -4378,14 +4514,229 @@
             
             questMarkersLayer = L.layerGroup().addTo(mapInstance);
             
+            // Setup floor tabs for multi-level maps
+            setupFloorTabs(mapName);
+            
             // Draw quest markers only for selected quests
             await drawQuestMarkers(mapName, currentMapWidth, currentMapHeight, questNames, selectedQuests);
+            
+            // Update floor marker counts and hint
+            updateFloorMarkerCounts();
+            updateOtherFloorsHint();
             
             setTimeout(() => mapInstance.invalidateSize(), 200);
         }
         
         function formatFloorName(floor) {
             return floor ? floor.replace(/_/g, ' ') : 'Ground Level';
+        }
+        
+        // ============================================================================
+        // FLOOR SYSTEM - Multi-level map support
+        // ============================================================================
+        
+        function setupFloorTabs(mapName) {
+            const cfg = MAP_CONFIG[mapName];
+            const tabsContainer = document.getElementById('floorTabs');
+            
+            if (!cfg || !cfg.floors || cfg.floors.length <= 1) {
+                tabsContainer.style.display = 'none';
+                return;
+            }
+            
+            // Set default floor
+            const defaultFloor = cfg.floors.find(f => f.default) || cfg.floors[0];
+            currentFloor = defaultFloor.id;
+            
+            // Build tabs HTML (reversed so highest floor is at top)
+            const floorsReversed = [...cfg.floors].reverse();
+            tabsContainer.innerHTML = `
+                <div class="floor-tabs-label">Floor</div>
+                ${floorsReversed.map(floor => `
+                    <button class="floor-tab ${floor.id === currentFloor ? 'active' : ''}" 
+                            data-floor="${floor.id}"
+                            onclick="switchFloor('${floor.id}')"
+                            title="${floor.label}">
+                        ${floor.short}
+                        <span class="marker-count" id="floor-count-${floor.id}">0</span>
+                    </button>
+                `).join('')}
+            `;
+            
+            tabsContainer.style.display = 'flex';
+        }
+        
+        function switchFloor(floorId) {
+            const mapKey = document.getElementById('mapSelect')?.value || 'customs';
+            const cfg = MAP_CONFIG[mapKey];
+            
+            currentFloor = floorId;
+            
+            // Update tab states
+            document.querySelectorAll('.floor-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.floor === floorId);
+            });
+            
+            // Update SVG layer visibility if we have layer info
+            if (cfg && cfg.floors && currentSvgElement) {
+                updateSvgLayerVisibility(cfg, floorId);
+            }
+            
+            // Update marker visibility
+            updateMarkerFloorVisibility();
+            
+            // Update other floors hint
+            updateOtherFloorsHint();
+            
+            console.log(`Switched to floor: ${floorId}`);
+        }
+        
+        function updateSvgLayerVisibility(cfg, activeFloorId) {
+            if (!currentSvgElement) return;
+            
+            // Get the active floor config
+            const activeFloor = cfg.floors.find(f => f.id === activeFloorId);
+            
+            // Collect all SVG layer IDs from all floors
+            const allLayerIds = [];
+            cfg.floors.forEach(floor => {
+                if (floor.svgLayers) {
+                    floor.svgLayers.forEach(layerId => {
+                        if (!allLayerIds.includes(layerId)) {
+                            allLayerIds.push(layerId);
+                        }
+                    });
+                }
+            });
+            
+            // If no layers defined, don't hide anything
+            if (allLayerIds.length === 0) return;
+            
+            // Get active layer IDs for current floor
+            const activeLayerIds = activeFloor?.svgLayers || [];
+            
+            // Update visibility of each layer
+            allLayerIds.forEach(layerId => {
+                const layerElement = currentSvgElement.getElementById(layerId);
+                if (layerElement) {
+                    const shouldShow = activeLayerIds.includes(layerId) || activeLayerIds.length === 0;
+                    layerElement.style.opacity = shouldShow ? '1' : '0.15';
+                    layerElement.style.transition = 'opacity 0.3s ease';
+                }
+            });
+            
+            console.log(`SVG layers updated: showing ${activeLayerIds.join(', ') || 'all'}`);
+        }
+        
+        function updateMarkerFloorVisibility() {
+            if (!questMarkersLayer) return;
+            
+            questMarkersLayer.eachLayer(marker => {
+                const markerFloor = marker.options?.floor || 'ground';
+                const isCurrentFloor = markerFloor === currentFloor;
+                
+                if (marker._icon) {
+                    if (isCurrentFloor) {
+                        marker._icon.style.opacity = '1';
+                        marker._icon.style.filter = 'none';
+                        marker._icon.style.pointerEvents = 'auto';
+                    } else {
+                        marker._icon.style.opacity = '0.25';
+                        marker._icon.style.filter = 'grayscale(100%)';
+                        marker._icon.style.pointerEvents = 'none';
+                    }
+                }
+            });
+        }
+        
+        function updateFloorMarkerCounts() {
+            const mapKey = document.getElementById('mapSelect')?.value || 'customs';
+            const cfg = MAP_CONFIG[mapKey];
+            
+            if (!cfg || !cfg.floors) return;
+            
+            // Count markers per floor
+            const counts = {};
+            cfg.floors.forEach(f => counts[f.id] = 0);
+            
+            if (questMarkersLayer) {
+                questMarkersLayer.eachLayer(marker => {
+                    const floor = marker.options?.floor || 'ground';
+                    if (counts[floor] !== undefined) {
+                        counts[floor]++;
+                    } else {
+                        counts['ground']++; // Default to ground
+                    }
+                });
+            }
+            
+            // Update tab counts
+            cfg.floors.forEach(floor => {
+                const countEl = document.getElementById(`floor-count-${floor.id}`);
+                if (countEl) {
+                    countEl.textContent = counts[floor.id] || 0;
+                    countEl.style.display = counts[floor.id] > 0 ? 'inline-block' : 'none';
+                }
+            });
+            
+            return counts;
+        }
+        
+        function updateOtherFloorsHint() {
+            const mapKey = document.getElementById('mapSelect')?.value || 'customs';
+            const cfg = MAP_CONFIG[mapKey];
+            const hintEl = document.getElementById('otherFloorsHint');
+            
+            if (!cfg || !cfg.floors || cfg.floors.length <= 1) {
+                hintEl.style.display = 'none';
+                return;
+            }
+            
+            // Count markers NOT on current floor
+            let otherCount = 0;
+            if (questMarkersLayer) {
+                questMarkersLayer.eachLayer(marker => {
+                    const floor = marker.options?.floor || 'ground';
+                    if (floor !== currentFloor) {
+                        otherCount++;
+                    }
+                });
+            }
+            
+            const countEl = document.getElementById('otherFloorsCount');
+            if (countEl) countEl.textContent = otherCount;
+            
+            hintEl.style.display = otherCount > 0 ? 'block' : 'none';
+        }
+        
+        function showOtherFloorsMarkers() {
+            const mapKey = document.getElementById('mapSelect')?.value || 'customs';
+            const cfg = MAP_CONFIG[mapKey];
+            
+            if (!cfg || !cfg.floors) return;
+            
+            // Find floors with markers
+            const floorsWithMarkers = [];
+            if (questMarkersLayer) {
+                questMarkersLayer.eachLayer(marker => {
+                    const floor = marker.options?.floor || 'ground';
+                    if (floor !== currentFloor && !floorsWithMarkers.includes(floor)) {
+                        floorsWithMarkers.push(floor);
+                    }
+                });
+            }
+            
+            if (floorsWithMarkers.length > 0) {
+                // Switch to first floor with markers
+                switchFloor(floorsWithMarkers[0]);
+            }
+        }
+        
+        function getFloorLabel(floorId, mapKey) {
+            const cfg = MAP_CONFIG[mapKey];
+            if (!cfg || !cfg.floors) return floorId;
+            const floor = cfg.floors.find(f => f.id === floorId);
+            return floor ? floor.label : floorId;
         }
         
         function resetMapView() {
