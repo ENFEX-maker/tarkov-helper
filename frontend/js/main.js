@@ -835,7 +835,7 @@ async function renderMapAreas(mapKey) {
     if (mapAreasLayer) {
         mapAreasLayer.clearLayers();
     } else {
-        mapAreasLayer = L.layerGroup({ pane: 'areasPane' }).addTo(mapInstance);
+        mapAreasLayer = L.layerGroup().addTo(mapInstance);
     }
     
     const areas = await loadMapAreas(mapKey);
@@ -881,13 +881,13 @@ async function renderMapAreas(mapKey) {
         
         const polygon = L.polygon(latLngs, {
             color: area.area_color || '#9E8F6B',
-            weight: 3,
+            weight: 4,
             opacity: 1,
-            fillOpacity: 0.35,
+            fillOpacity: 0.4,
             floor: area.floor || 'ground',
             areaId: area.id,
-            areaName: area.area_name,
-            pane: 'areasPane'
+            areaName: area.area_name
+            // Removed pane to test - polygon goes to default overlayPane
         });
         
         // Add popup with area info and delete button
@@ -911,6 +911,11 @@ async function renderMapAreas(mapKey) {
         mapAreasLayer.addLayer(polygon);
         console.log(`renderMapAreas: Added polygon for "${area.area_name}"`);
     });
+    
+    // Bring areas to front (above SVG map)
+    if (mapAreasLayer) {
+        mapAreasLayer.bringToFront();
+    }
     
     // Apply floor visibility
     updateAreaFloorVisibility();
@@ -3335,9 +3340,16 @@ async function initMap(mapName, questNames = [], selectedQuests = []) {
         // Store reference for layer manipulation
         currentSvgElement = svgElement;
         
-        // Use L.svgOverlay for DOM access - put it in tilePane so it's below other layers
+        // Create custom pane for SVG map with low z-index
+        if (!mapInstance.getPane('svgMapPane')) {
+            mapInstance.createPane('svgMapPane');
+            mapInstance.getPane('svgMapPane').style.zIndex = 200;
+            mapInstance.getPane('svgMapPane').style.pointerEvents = 'none';
+        }
+        
+        // Use L.svgOverlay for DOM access - put it in custom pane so it's below other layers
         currentMapLayer = L.svgOverlay(svgElement, imageBounds, { 
-            pane: 'tilePane',
+            pane: 'svgMapPane',
             interactive: false 
         }).addTo(mapInstance);
         
