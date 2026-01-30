@@ -848,9 +848,8 @@ async function renderMapAreas(mapKey) {
         fillColor: '#00FF00',
         fillOpacity: 0.5
     }).addTo(mapInstance);
-    testPolygon.bindTooltip('TEST POLYGON - DELETE ME', { permanent: true });
-    console.log('DEBUG: Added test polygon at center:', testCenter, 'size:', testSize);
-    console.log('DEBUG: Test polygon bounds:', testPolygon.getBounds());
+    testPolygon.bindTooltip('TEST CENTER', { permanent: true });
+    console.log('DEBUG: Test polygon at center:', testCenter);
     
     const areas = await loadMapAreas(mapKey);
     
@@ -893,7 +892,17 @@ async function renderMapAreas(mapKey) {
         console.log(`  LatLngs [lat,lng]:`, JSON.stringify(latLngs));
         console.log(`  Map bounds: height=${currentMapHeight}, width=${currentMapWidth}`);
         
-        // Create polygon and add directly to map (not to layer group) for testing
+        // DEBUG: Also create a BLUE polygon using the SAME coordinates to verify
+        const debugPolygon = L.polygon(latLngs, {
+            color: '#0000FF',
+            weight: 8,
+            fillColor: '#0000FF',
+            fillOpacity: 0.7
+        }).addTo(mapInstance);
+        debugPolygon.bindTooltip('DEBUG: ' + area.area_name, { permanent: true, direction: 'top' });
+        console.log('DEBUG: Blue polygon bounds:', debugPolygon.getBounds());
+        
+        // Create the actual area polygon
         const polygon = L.polygon(latLngs, {
             color: area.area_color || '#FF0000',
             weight: 5,
@@ -931,12 +940,13 @@ async function renderMapAreas(mapKey) {
         
         // Force bring to front
         polygon.bringToFront();
+        debugPolygon.bringToFront();
         
         console.log(`renderMapAreas: Added polygon for "${area.area_name}", bounds:`, polygon.getBounds());
     });
     
-    // Apply floor visibility
-    updateAreaFloorVisibility();
+    // DON'T apply floor visibility for now - let's see if polygons show without it
+    // updateAreaFloorVisibility();
     
     console.log(`Rendered ${areas.length} map areas for ${mapKey}, current floor: ${currentFloor}`);
 }
