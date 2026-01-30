@@ -824,19 +824,15 @@ async function renderMapAreas(mapKey) {
         return;
     }
     
-    // Create custom pane for areas (between tiles and markers)
-    if (!mapInstance.getPane('areasPane')) {
-        mapInstance.createPane('areasPane');
-        mapInstance.getPane('areasPane').style.zIndex = 550; // Above SVG overlay, below markers
-        mapInstance.getPane('areasPane').style.pointerEvents = 'auto';
-    }
-    
     // Clear existing areas layer
     if (mapAreasLayer) {
         mapAreasLayer.clearLayers();
-    } else {
-        mapAreasLayer = L.layerGroup().addTo(mapInstance);
+        mapInstance.removeLayer(mapAreasLayer);
     }
+    
+    // Create new layer group and add directly to map
+    mapAreasLayer = L.layerGroup();
+    mapAreasLayer.addTo(mapInstance);
     
     const areas = await loadMapAreas(mapKey);
     
@@ -866,29 +862,33 @@ async function renderMapAreas(mapKey) {
             return;
         }
         
-        // Points are stored as [x, y] (Leaflet lng, lat)
-        // Leaflet needs [lat, lng] which is [y, x]
+        // Points are stored as [x, y] which is [lng, lat] in Leaflet terms
+        // Leaflet L.polygon needs [lat, lng] which is [y, x]
         const latLngs = points.map(p => {
-            const x = parseFloat(p[0]);
-            const y = parseFloat(p[1]);
+            const x = parseFloat(p[0]); // lng
+            const y = parseFloat(p[1]); // lat
             return [y, x]; // [lat, lng]
         });
         
         console.log(`renderMapAreas: Drawing "${area.area_name}" with ${points.length} points`);
-        console.log(`  Raw points:`, JSON.stringify(points));
-        console.log(`  LatLngs for Leaflet:`, JSON.stringify(latLngs));
+        console.log(`  Raw points [x,y]:`, JSON.stringify(points));
+        console.log(`  LatLngs [lat,lng]:`, JSON.stringify(latLngs));
         console.log(`  Map bounds: height=${currentMapHeight}, width=${currentMapWidth}`);
         
+        // Create polygon and add directly to map (not to layer group) for testing
         const polygon = L.polygon(latLngs, {
-            color: area.area_color || '#9E8F6B',
-            weight: 4,
+            color: area.area_color || '#FF0000',
+            weight: 5,
             opacity: 1,
-            fillOpacity: 0.4,
+            fillColor: area.area_color || '#FF0000',
+            fillOpacity: 0.5,
             floor: area.floor || 'ground',
             areaId: area.id,
             areaName: area.area_name
-            // Removed pane to test - polygon goes to default overlayPane
         });
+        
+        // Add directly to map first to test
+        polygon.addTo(mapInstance);
         
         // Add popup with area info and delete button
         const popupContent = `
@@ -903,19 +903,19 @@ async function renderMapAreas(mapKey) {
         
         // Add label tooltip
         polygon.bindTooltip(area.area_name, {
-            permanent: false,
+            permanent: true,
             direction: 'center',
             className: 'area-polygon-label'
         });
         
+        // Also add to layer group for management
         mapAreasLayer.addLayer(polygon);
-        console.log(`renderMapAreas: Added polygon for "${area.area_name}"`);
+        
+        // Force bring to front
+        polygon.bringToFront();
+        
+        console.log(`renderMapAreas: Added polygon for "${area.area_name}", bounds:`, polygon.getBounds());
     });
-    
-    // Bring areas to front (above SVG map)
-    if (mapAreasLayer) {
-        mapAreasLayer.bringToFront();
-    }
     
     // Apply floor visibility
     updateAreaFloorVisibility();
