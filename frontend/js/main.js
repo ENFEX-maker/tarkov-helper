@@ -834,6 +834,24 @@ async function renderMapAreas(mapKey) {
     mapAreasLayer = L.layerGroup();
     mapAreasLayer.addTo(mapInstance);
     
+    // DEBUG: Create a test polygon in the center of the map
+    const testCenter = [currentMapHeight / 2, currentMapWidth / 2];
+    const testSize = 20;
+    const testPolygon = L.polygon([
+        [testCenter[0] - testSize, testCenter[1] - testSize],
+        [testCenter[0] - testSize, testCenter[1] + testSize],
+        [testCenter[0] + testSize, testCenter[1] + testSize],
+        [testCenter[0] + testSize, testCenter[1] - testSize]
+    ], {
+        color: '#00FF00',
+        weight: 5,
+        fillColor: '#00FF00',
+        fillOpacity: 0.5
+    }).addTo(mapInstance);
+    testPolygon.bindTooltip('TEST POLYGON - DELETE ME', { permanent: true });
+    console.log('DEBUG: Added test polygon at center:', testCenter, 'size:', testSize);
+    console.log('DEBUG: Test polygon bounds:', testPolygon.getBounds());
+    
     const areas = await loadMapAreas(mapKey);
     
     if (areas.length === 0) {
