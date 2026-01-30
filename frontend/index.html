@@ -751,6 +751,31 @@
         .drawing-area-mode #map { cursor: crosshair !important; }
         .drawing-area-mode .leaflet-container { cursor: crosshair !important; }
         
+        /* Area Panel Tabs */
+        .area-panel-tabs { display: flex; gap: 4px; margin-bottom: 12px; border-bottom: 1px solid var(--border-dark); padding-bottom: 8px; }
+        .area-tab { flex: 1; background: var(--bg-element); border: 1px solid var(--border-dark); color: var(--text-sub); padding: 6px 10px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; }
+        .area-tab:hover { background: var(--bg-hover); color: var(--text-main); }
+        .area-tab.active { background: #2196F3; color: #fff; border-color: #2196F3; }
+        .area-tab-content { display: none; }
+        .area-tab-content.active { display: block; }
+        
+        /* Areas List */
+        .area-list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 0.8rem; color: var(--text-sub); }
+        .areas-list { max-height: 200px; overflow-y: auto; border: 1px solid var(--border-dark); background: var(--bg-dark); }
+        .areas-list:empty::after { content: 'No areas saved'; display: block; padding: 15px; text-align: center; color: var(--text-sub); font-size: 0.8rem; }
+        .areas-loading { padding: 15px; text-align: center; color: var(--text-sub); font-size: 0.8rem; }
+        .area-list-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--border-dark); }
+        .area-list-item:last-child { border-bottom: none; }
+        .area-list-item:hover { background: var(--bg-hover); }
+        .area-list-item .area-color-dot { width: 12px; height: 12px; border-radius: 2px; flex-shrink: 0; }
+        .area-list-item .area-info { flex: 1; min-width: 0; }
+        .area-list-item .area-name { font-size: 0.85rem; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .area-list-item .area-floor { font-size: 0.7rem; color: var(--text-sub); }
+        .area-list-item .area-actions { display: flex; gap: 4px; }
+        .area-list-item .area-action-btn { background: none; border: 1px solid var(--border-dark); color: var(--text-sub); padding: 2px 6px; font-size: 0.7rem; cursor: pointer; }
+        .area-list-item .area-action-btn:hover { background: var(--bg-hover); color: var(--text-main); }
+        .area-list-item .area-action-btn.delete:hover { background: rgba(196, 30, 58, 0.3); color: var(--eft-red); border-color: var(--eft-red); }
+        
         /* Map Area Polygons */
         .area-polygon-label {
             background: rgba(0,0,0,0.7);
@@ -1370,37 +1395,58 @@
                         
                         <!-- Area Drawing Panel -->
                         <div id="areaDrawingPanel" class="area-drawing-panel">
-                            <h6>🔲 Draw Map Area</h6>
-                            <div class="creator-hint" id="areaDrawingHint">
-                                Click on the map to add points. Close the shape by clicking near the first point or press "Complete".
+                            <div class="area-panel-tabs">
+                                <button class="area-tab active" onclick="switchAreaTab('draw')" id="areaTabDraw">🔲 Draw</button>
+                                <button class="area-tab" onclick="switchAreaTab('manage')" id="areaTabManage">📋 Manage</button>
                             </div>
-                            <div class="area-input-row">
-                                <label>Name:</label>
-                                <input type="text" id="areaNameInput" placeholder="e.g. Marked Room, Dorms 314" />
+                            
+                            <!-- Draw Tab -->
+                            <div id="areaDrawTab" class="area-tab-content active">
+                                <div class="creator-hint" id="areaDrawingHint">
+                                    Click on the map to add points. Close the shape by clicking near the first point or press "Complete".
+                                </div>
+                                <div class="area-input-row">
+                                    <label>Name:</label>
+                                    <input type="text" id="areaNameInput" placeholder="e.g. Marked Room, Dorms 314" />
+                                </div>
+                                <div class="area-input-row">
+                                    <label>Color:</label>
+                                    <input type="color" id="areaColorInput" value="#9E8F6B" />
+                                    <select id="areaColorPreset" onchange="document.getElementById('areaColorInput').value = this.value">
+                                        <option value="#9E8F6B">Gold</option>
+                                        <option value="#4CAF50">Green</option>
+                                        <option value="#2196F3">Blue</option>
+                                        <option value="#F44336">Red</option>
+                                        <option value="#9C27B0">Purple</option>
+                                        <option value="#FF9800">Orange</option>
+                                    </select>
+                                </div>
+                                <div class="area-input-row" id="areaFloorRow" style="display: none;">
+                                    <label>Floor:</label>
+                                    <select id="areaFloorSelect"></select>
+                                </div>
+                                <div class="area-points-info">
+                                    Points: <span id="areaPointsCount">0</span> | 
+                                    <button class="btn-sm" onclick="undoLastAreaPoint()">↩ Undo</button>
+                                </div>
+                                <div class="btn-row">
+                                    <button class="btn-tarkov" onclick="completeAreaDrawing()" id="completeAreaBtn" disabled>✅ Complete</button>
+                                </div>
                             </div>
-                            <div class="area-input-row">
-                                <label>Color:</label>
-                                <input type="color" id="areaColorInput" value="#9E8F6B" />
-                                <select id="areaColorPreset" onchange="document.getElementById('areaColorInput').value = this.value">
-                                    <option value="#9E8F6B">Gold</option>
-                                    <option value="#4CAF50">Green</option>
-                                    <option value="#2196F3">Blue</option>
-                                    <option value="#F44336">Red</option>
-                                    <option value="#9C27B0">Purple</option>
-                                    <option value="#FF9800">Orange</option>
-                                </select>
+                            
+                            <!-- Manage Tab -->
+                            <div id="areaManageTab" class="area-tab-content">
+                                <div class="area-list-header">
+                                    <span>Saved Areas on this Map</span>
+                                    <button class="btn-sm" onclick="refreshAreasList()">🔄</button>
+                                </div>
+                                <div id="areasList" class="areas-list">
+                                    <div class="areas-loading">Loading...</div>
+                                </div>
                             </div>
-                            <div class="area-input-row" id="areaFloorRow" style="display: none;">
-                                <label>Floor:</label>
-                                <select id="areaFloorSelect"></select>
-                            </div>
-                            <div class="area-points-info">
-                                Points: <span id="areaPointsCount">0</span> | 
-                                <button class="btn-sm" onclick="undoLastAreaPoint()">↩ Undo</button>
-                            </div>
-                            <div class="btn-row">
-                                <button class="btn-tarkov" onclick="cancelAreaDrawing()">❌ Cancel</button>
-                                <button class="btn-tarkov" onclick="completeAreaDrawing()" id="completeAreaBtn" disabled>✅ Complete</button>
+                            
+                            <div class="btn-row" style="margin-top: 10px; border-top: 1px solid var(--border-dark); padding-top: 10px;">
+                                <button class="btn-tarkov" onclick="closeAreaPanel()">✖ Close</button>
                             </div>
                         </div>
                         
@@ -1408,7 +1454,7 @@
                             <span>Scroll to zoom | Drag to pan | Click markers for details</span>
                             <span class="marker-count" id="markerCount">0 markers</span>
                             <button class="btn-tarkov" onclick="toggleMarkerCreator()" id="markerCreatorBtn" title="Create new quest markers">🎯 Add Markers</button>
-                            <button class="btn-tarkov" onclick="toggleAreaDrawing()" id="areaDrawingBtn" title="Draw custom areas on the map">🔲 Draw Area</button>
+                            <button class="btn-tarkov" onclick="toggleAreaPanel()" id="areaDrawingBtn" title="Draw and manage custom areas">🔲 Areas</button>
                             <button class="btn-tarkov" onclick="showMissingMarkersAnalysis()" title="Show objectives that need markers">📋 Missing</button>
                             <button class="btn-tarkov" onclick="resetMapView()">Reset View</button>
                         </div>
@@ -2765,32 +2811,71 @@
         }
         
         async function renderMapAreas(mapKey) {
-            if (!mapInstance) return;
+            if (!mapInstance) {
+                console.log('renderMapAreas: No map instance');
+                return;
+            }
+            
+            // Create custom pane for areas (between tiles and markers)
+            if (!mapInstance.getPane('areasPane')) {
+                mapInstance.createPane('areasPane');
+                mapInstance.getPane('areasPane').style.zIndex = 450; // Above overlayPane (400), below markerPane (600)
+            }
             
             // Clear existing areas layer
             if (mapAreasLayer) {
                 mapAreasLayer.clearLayers();
             } else {
-                mapAreasLayer = L.layerGroup().addTo(mapInstance);
+                mapAreasLayer = L.layerGroup({ pane: 'areasPane' }).addTo(mapInstance);
             }
             
             const areas = await loadMapAreas(mapKey);
             
-            areas.forEach(area => {
+            if (areas.length === 0) {
+                console.log('renderMapAreas: No areas found for', mapKey);
+                return;
+            }
+            
+            console.log(`renderMapAreas: Processing ${areas.length} areas for ${mapKey}`);
+            
+            areas.forEach((area, idx) => {
                 // Convert stored points to Leaflet coordinates
-                const points = area.polygon_points || [];
-                if (points.length < 3) return;
+                let points = area.polygon_points || [];
                 
-                const latLngs = points.map(p => [p[1], p[0]]); // [lat, lng] = [y, x]
+                // Handle if points is a string (JSONB might return string in some cases)
+                if (typeof points === 'string') {
+                    try {
+                        points = JSON.parse(points);
+                    } catch (e) {
+                        console.error('Failed to parse polygon_points:', e);
+                        return;
+                    }
+                }
+                
+                if (!Array.isArray(points) || points.length < 3) {
+                    console.log(`renderMapAreas: Area "${area.area_name}" has invalid points:`, points);
+                    return;
+                }
+                
+                // Points are stored as [x, y] (Leaflet lng, lat)
+                // Leaflet needs [lat, lng] which is [y, x]
+                const latLngs = points.map(p => {
+                    const x = parseFloat(p[0]);
+                    const y = parseFloat(p[1]);
+                    return [y, x]; // [lat, lng]
+                });
+                
+                console.log(`renderMapAreas: Drawing "${area.area_name}" with ${points.length} points:`, latLngs.slice(0, 2), '...');
                 
                 const polygon = L.polygon(latLngs, {
                     color: area.area_color || '#9E8F6B',
-                    weight: 2,
-                    opacity: 0.8,
-                    fillOpacity: 0.2,
+                    weight: 3,
+                    opacity: 1,
+                    fillOpacity: 0.35,
                     floor: area.floor || 'ground',
                     areaId: area.id,
-                    areaName: area.area_name
+                    areaName: area.area_name,
+                    pane: 'areasPane'
                 });
                 
                 // Add popup with area info and delete button
@@ -2812,12 +2897,13 @@
                 });
                 
                 mapAreasLayer.addLayer(polygon);
+                console.log(`renderMapAreas: Added polygon for "${area.area_name}"`);
             });
             
             // Apply floor visibility
             updateAreaFloorVisibility();
             
-            console.log(`Rendered ${areas.length} map areas`);
+            console.log(`Rendered ${areas.length} map areas for ${mapKey}, current floor: ${currentFloor}`);
         }
         
         function updateAreaFloorVisibility() {
@@ -2827,19 +2913,21 @@
                 const areaFloor = polygon.options?.floor || 'ground';
                 const isCurrentFloor = areaFloor === currentFloor;
                 
+                console.log(`Area floor: "${areaFloor}", current: "${currentFloor}", match: ${isCurrentFloor}`);
+                
                 if (isCurrentFloor) {
-                    polygon.setStyle({ opacity: 0.8, fillOpacity: 0.2 });
+                    polygon.setStyle({ opacity: 1, fillOpacity: 0.3 });
                     if (polygon._path) polygon._path.style.pointerEvents = 'auto';
                 } else {
-                    polygon.setStyle({ opacity: 0.15, fillOpacity: 0.05 });
+                    polygon.setStyle({ opacity: 0.2, fillOpacity: 0.05 });
                     if (polygon._path) polygon._path.style.pointerEvents = 'none';
                 }
             });
         }
         
-        function toggleAreaDrawing() {
+        function toggleAreaPanel() {
             if (!currentUser) {
-                alert('Please login to draw areas.');
+                alert('Please login to manage areas.');
                 showLoginModal();
                 return;
             }
@@ -2852,28 +2940,146 @@
             const panel = document.getElementById('areaDrawingPanel');
             const btn = document.getElementById('areaDrawingBtn');
             
-            isAreaDrawingActive = !isAreaDrawingActive;
+            const isOpen = panel.classList.contains('active');
             
-            if (isAreaDrawingActive) {
+            if (isOpen) {
+                closeAreaPanel();
+            } else {
                 panel.classList.add('active');
                 btn.classList.add('active');
-                btn.innerHTML = '🔲 Drawing...';
-                document.body.classList.add('drawing-area-mode');
                 
                 // Setup floor select
                 setupAreaFloorSelect();
                 
-                // Reset drawing state
-                currentAreaPoints = [];
-                updateAreaPointsDisplay();
+                // Load areas list
+                refreshAreasList();
                 
-                // Add click handler
-                if (mapInstance) {
-                    mapInstance.on('click', onMapClickForArea);
-                }
-            } else {
-                cancelAreaDrawing();
+                // Default to manage tab if areas exist, otherwise draw tab
+                switchAreaTab('manage');
             }
+        }
+        
+        function closeAreaPanel() {
+            const panel = document.getElementById('areaDrawingPanel');
+            const btn = document.getElementById('areaDrawingBtn');
+            
+            // Stop drawing if active
+            if (isAreaDrawingActive) {
+                stopAreaDrawing();
+            }
+            
+            panel.classList.remove('active');
+            if (btn) {
+                btn.classList.remove('active');
+            }
+        }
+        
+        function switchAreaTab(tabName) {
+            // Update tab buttons
+            document.getElementById('areaTabDraw').classList.toggle('active', tabName === 'draw');
+            document.getElementById('areaTabManage').classList.toggle('active', tabName === 'manage');
+            
+            // Update tab content
+            document.getElementById('areaDrawTab').classList.toggle('active', tabName === 'draw');
+            document.getElementById('areaManageTab').classList.toggle('active', tabName === 'manage');
+            
+            if (tabName === 'draw') {
+                startAreaDrawing();
+            } else {
+                stopAreaDrawing();
+                refreshAreasList();
+            }
+        }
+        
+        function startAreaDrawing() {
+            isAreaDrawingActive = true;
+            currentAreaPoints = [];
+            updateAreaPointsDisplay();
+            document.body.classList.add('drawing-area-mode');
+            
+            if (mapInstance) {
+                mapInstance.on('click', onMapClickForArea);
+            }
+            
+            document.getElementById('areaDrawingHint').innerHTML = 
+                'Click on the map to add points. Close the shape by clicking near the first point or press "Complete".';
+        }
+        
+        function stopAreaDrawing() {
+            isAreaDrawingActive = false;
+            currentAreaPoints = [];
+            document.body.classList.remove('drawing-area-mode');
+            
+            // Remove preview
+            if (currentAreaPreviewLayer && mapInstance) {
+                mapInstance.removeLayer(currentAreaPreviewLayer);
+                currentAreaPreviewLayer = null;
+            }
+            
+            // Remove click handler
+            if (mapInstance) {
+                mapInstance.off('click', onMapClickForArea);
+            }
+            
+            // Reset inputs
+            document.getElementById('areaNameInput').value = '';
+            document.getElementById('areaPointsCount').textContent = '0';
+            document.getElementById('completeAreaBtn').disabled = true;
+        }
+        
+        async function refreshAreasList() {
+            const listContainer = document.getElementById('areasList');
+            const mapKey = document.getElementById('mapSelect')?.value || 'customs';
+            
+            listContainer.innerHTML = '<div class="areas-loading">Loading...</div>';
+            
+            const areas = await loadMapAreas(mapKey);
+            
+            if (areas.length === 0) {
+                listContainer.innerHTML = '<div class="areas-loading">No areas saved for this map</div>';
+                return;
+            }
+            
+            listContainer.innerHTML = areas.map(area => `
+                <div class="area-list-item" data-area-id="${area.id}">
+                    <div class="area-color-dot" style="background: ${area.area_color}"></div>
+                    <div class="area-info">
+                        <div class="area-name">${area.area_name}</div>
+                        <div class="area-floor">Floor: ${getFloorLabel(area.floor, mapKey)}</div>
+                    </div>
+                    <div class="area-actions">
+                        <button class="area-action-btn" onclick="zoomToArea(${area.id})" title="Zoom to area">🔍</button>
+                        <button class="area-action-btn delete" onclick="deleteMapArea(${area.id})" title="Delete area">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        async function zoomToArea(areaId) {
+            if (!mapAreasLayer) return;
+            
+            mapAreasLayer.eachLayer(polygon => {
+                if (polygon.options?.areaId === areaId) {
+                    const bounds = polygon.getBounds();
+                    mapInstance.fitBounds(bounds, { padding: [50, 50] });
+                    
+                    // Flash the polygon
+                    const originalColor = polygon.options.color;
+                    polygon.setStyle({ color: '#fff', weight: 4 });
+                    setTimeout(() => {
+                        polygon.setStyle({ color: originalColor, weight: 3 });
+                    }, 500);
+                }
+            });
+        }
+        
+        // Keep the old function name for backwards compatibility
+        function toggleAreaDrawing() {
+            toggleAreaPanel();
+        }
+        
+        function cancelAreaDrawing() {
+            closeAreaPanel();
         }
         
         function setupAreaFloorSelect() {
@@ -2963,36 +3169,6 @@
             }
         }
         
-        function cancelAreaDrawing() {
-            const panel = document.getElementById('areaDrawingPanel');
-            const btn = document.getElementById('areaDrawingBtn');
-            
-            isAreaDrawingActive = false;
-            currentAreaPoints = [];
-            
-            panel.classList.remove('active');
-            if (btn) {
-                btn.classList.remove('active');
-                btn.innerHTML = '🔲 Draw Area';
-            }
-            document.body.classList.remove('drawing-area-mode');
-            
-            // Remove preview
-            if (currentAreaPreviewLayer && mapInstance) {
-                mapInstance.removeLayer(currentAreaPreviewLayer);
-                currentAreaPreviewLayer = null;
-            }
-            
-            // Remove click handler
-            if (mapInstance) {
-                mapInstance.off('click', onMapClickForArea);
-            }
-            
-            // Reset inputs
-            document.getElementById('areaNameInput').value = '';
-            document.getElementById('areaPointsCount').textContent = '0';
-        }
-        
         async function completeAreaDrawing() {
             if (currentAreaPoints.length < 3) {
                 alert('At least 3 points are required to create an area.');
@@ -3069,6 +3245,12 @@
                 
                 const mapKey = document.getElementById('mapSelect')?.value || 'customs';
                 await renderMapAreas(mapKey);
+                
+                // Also refresh the list in the panel if it's open
+                const panel = document.getElementById('areaDrawingPanel');
+                if (panel.classList.contains('active')) {
+                    await refreshAreasList();
+                }
                 
             } catch (error) {
                 console.error('Error deleting area:', error);
@@ -5141,8 +5323,11 @@
                 // Store reference for layer manipulation
                 currentSvgElement = svgElement;
                 
-                // Use L.svgOverlay for DOM access
-                currentMapLayer = L.svgOverlay(svgElement, imageBounds).addTo(mapInstance);
+                // Use L.svgOverlay for DOM access - put it in tilePane so it's below other layers
+                currentMapLayer = L.svgOverlay(svgElement, imageBounds, { 
+                    pane: 'tilePane',
+                    interactive: false 
+                }).addTo(mapInstance);
                 
                 // Set default floor visibility
                 const defaultFloor = cfg.floors.find(f => f.default) || cfg.floors[0];
