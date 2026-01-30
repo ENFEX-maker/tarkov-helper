@@ -157,6 +157,11 @@
         .quest-marker-popup .marker-note-display { background: rgba(158, 143, 107, 0.15); border-left: 3px solid var(--eft-gold); padding: 8px 10px; margin: 10px 0; font-size: 0.85rem; color: var(--text-beige); font-style: italic; }
         .quest-marker-popup .popup-note-btn { display: block; width: 100%; margin-top: 10px; padding: 6px 10px; background: var(--bg-element); border: 1px solid var(--border-dark); color: var(--text-sub); font-size: 0.75rem; cursor: pointer; transition: all 0.2s; }
         .quest-marker-popup .popup-note-btn:hover { background: var(--bg-hover); color: var(--eft-gold); border-color: var(--eft-gold); }
+        .quest-marker-popup .popup-action-btn { display: block; width: 100%; margin-top: 6px; padding: 6px 10px; border: 1px solid var(--border-dark); font-size: 0.75rem; cursor: pointer; transition: all 0.2s; }
+        .quest-marker-popup .popup-hide-btn { background: rgba(196, 30, 58, 0.2); color: var(--eft-red); }
+        .quest-marker-popup .popup-hide-btn:hover { background: rgba(196, 30, 58, 0.4); border-color: var(--eft-red); }
+        .quest-marker-popup .popup-delete-btn { background: rgba(196, 30, 58, 0.2); color: var(--eft-red); }
+        .quest-marker-popup .popup-delete-btn:hover { background: rgba(196, 30, 58, 0.4); border-color: var(--eft-red); }
         .obj-pickup { background: #2d5a2d; color: #7fff7f; }
         .obj-place { background: #5a5a2d; color: #ffff7f; }
         .obj-mark { background: #5a2d5a; color: #ff7fff; }
@@ -1848,6 +1853,8 @@
         let selectedObjectiveForPlacement = null;
         let manualMarkersCache = null;
         let manualMarkersCacheLoaded = false;
+        let hiddenApiMarkersCache = null;
+        let hiddenApiMarkersCacheLoaded = false;
         
         // ============================================================================
         // AUTH FUNCTIONS
@@ -2383,6 +2390,44 @@
             }
         }
         
+        async function deleteManualMarkerFromPopup(questId, objectiveId, mapKey) {
+            if (!supabaseClient || !currentUser) {
+                alert('Please login to delete markers.');
+                showLoginModal();
+                return;
+            }
+            
+            if (!confirm('Delete this manual marker?')) {
+                return;
+            }
+            
+            try {
+                const { error } = await supabaseClient
+                    .from('quest_marker_positions')
+                    .delete()
+                    .eq('quest_id', questId)
+                    .eq('objective_id', objectiveId)
+                    .eq('map_name', mapKey);
+                
+                if (error) throw error;
+                
+                console.log(`Deleted manual marker: ${questId}/${objectiveId} on ${mapKey}`);
+                
+                // Clear cache and refresh
+                clearManualMarkersCache();
+                await refreshQuestMarkers();
+                
+                // Close popup
+                if (mapInstance) {
+                    mapInstance.closePopup();
+                }
+                
+            } catch (error) {
+                console.error('Error deleting marker:', error);
+                alert('Failed to delete marker: ' + error.message);
+            }
+        }
+        
         function clearManualMarkersCache() {
             manualMarkersCache = null;
             manualMarkersCacheLoaded = false;
@@ -2439,6 +2484,122 @@
             } catch (err) {
                 console.error('Exception loading manual markers:', err);
                 return [];
+            }
+        }
+        
+        // ============================================================================
+        // HIDDEN API MARKERS - Track which API markers should be hidden
+        // ============================================================================
+        
+        async function loadHiddenApiMarkers() {
+            if (hiddenApiMarkersCacheLoaded && hiddenApiMarkersCache) {
+                return hiddenApiMarkersCache;
+            }
+            
+            if (!supabaseClient || !currentUser) {
+                console.log('Supabase/user not available, skipping hidden markers load');
+                return {};
+            }
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('hidden_api_markers')
+                    .select('*')
+                    .eq('user_id', currentUser.id);
+                
+                if (error) {
+                    console.error('Error loading hidden markers:', error);
+                    return {};
+                }
+                
+                // Build lookup: "questId|objectiveIndex|mapKey" -> true
+                hiddenApiMarkersCache = {};
+                (data || []).forEach(m => {
+                    const key = `${m.quest_id}|${m.objective_index}|${m.map_name}`;
+                    hiddenApiMarkersCache[key] = true;
+                });
+                
+                hiddenApiMarkersCacheLoaded = true;
+                console.log(`Loaded hidden API markers: ${Object.keys(hiddenApiMarkersCache).length}`);
+                return hiddenApiMarkersCache;
+                
+            } catch (err) {
+                console.error('Exception loading hidden markers:', err);
+                return {};
+            }
+        }
+        
+        function clearHiddenApiMarkersCache() {
+            hiddenApiMarkersCache = null;
+            hiddenApiMarkersCacheLoaded = false;
+        }
+        
+        function isApiMarkerHidden(questId, objectiveIndex, mapKey) {
+            if (!hiddenApiMarkersCache) return false;
+            const key = `${questId}|${objectiveIndex}|${mapKey}`;
+            return hiddenApiMarkersCache[key] === true;
+        }
+        
+        async function hideApiMarker(questId, objectiveIndex, mapKey, questName) {
+            if (!supabaseClient || !currentUser) {
+                alert('Please login to hide markers.');
+                showLoginModal();
+                return;
+            }
+            
+            const confirmMsg = `Hide this API marker?\n\nQuest: ${questName}\nObjective #${objectiveIndex}\n\nYou can then place a manual marker at the correct location.`;
+            if (!confirm(confirmMsg)) return;
+            
+            try {
+                const { error } = await supabaseClient
+                    .from('hidden_api_markers')
+                    .upsert({
+                        user_id: currentUser.id,
+                        quest_id: questId,
+                        objective_index: objectiveIndex,
+                        map_name: mapKey,
+                        reason: 'wrong_location'
+                    }, {
+                        onConflict: 'user_id,quest_id,objective_index,map_name'
+                    });
+                
+                if (error) throw error;
+                
+                console.log(`Hidden API marker: ${questId} #${objectiveIndex} on ${mapKey}`);
+                
+                // Refresh
+                clearHiddenApiMarkersCache();
+                await loadHiddenApiMarkers();
+                await refreshQuestMarkers();
+                
+            } catch (err) {
+                console.error('Error hiding marker:', err);
+                alert('Failed to hide marker: ' + err.message);
+            }
+        }
+        
+        async function unhideApiMarker(questId, objectiveIndex, mapKey) {
+            if (!supabaseClient || !currentUser) return;
+            
+            try {
+                const { error } = await supabaseClient
+                    .from('hidden_api_markers')
+                    .delete()
+                    .eq('user_id', currentUser.id)
+                    .eq('quest_id', questId)
+                    .eq('objective_index', objectiveIndex)
+                    .eq('map_name', mapKey);
+                
+                if (error) throw error;
+                
+                console.log(`Unhidden API marker: ${questId} #${objectiveIndex} on ${mapKey}`);
+                
+                clearHiddenApiMarkersCache();
+                await loadHiddenApiMarkers();
+                await refreshQuestMarkers();
+                
+            } catch (err) {
+                console.error('Error unhiding marker:', err);
             }
         }
         
@@ -3306,6 +3467,12 @@
                         
                         if (!shouldDraw) return;
                         
+                        // Check if this API marker is hidden by the user
+                        if (isApiMarkerHidden(loc.questId, loc.objectiveIndex, mapKey)) {
+                            console.log(`Skipping hidden API marker: ${loc.questName} #${loc.objectiveIndex}`);
+                            return;
+                        }
+                        
                         drawnObjectives.add(objectiveKey);
                         drawSingleQuestMarker(loc, color, mapCfg, mapWidth, mapHeight, corrections, markerCount);
                         markerCount++;
@@ -3425,6 +3592,12 @@
                 ? `<div class="marker-note-display">📝 ${existingNote}</div>` 
                 : '';
             
+            // Action button: Hide for API markers, Delete for manual markers
+            const isApiMarker = loc.source !== 'manual';
+            const actionBtn = isApiMarker
+                ? `<button class="popup-action-btn popup-hide-btn" onclick="hideApiMarker('${loc.questId}', ${loc.objectiveIndex}, '${loc.mapKey}', '${loc.questName.replace(/'/g, "\\'")}')">🚫 Hide (wrong location)</button>`
+                : `<button class="popup-action-btn popup-delete-btn" onclick="deleteManualMarkerFromPopup('${loc.questId}', '${loc.objectiveId}', '${loc.mapKey}')">🗑️ Delete Marker</button>`;
+            
             const popupContent = `
                 <div class="quest-marker-popup">
                     <span class="obj-num">#${loc.objectiveIndex || (markerIndex + 1)}</span>
@@ -3437,6 +3610,7 @@
                     <button class="popup-note-btn" onclick="showMarkerNoteDialog('quest', '${loc.questId}-${loc.objectiveId}', '${loc.questName.replace(/'/g, "\\'")} #${loc.objectiveIndex}', 'Quest Objective')">
                         ${existingNote ? '✏️ Edit Note' : '📝 Add Note'}
                     </button>
+                    ${actionBtn}
                 </div>
             `;
             
@@ -8489,6 +8663,7 @@
                 { name: 'Hideout Data', fn: loadHideoutData },
                 { name: 'Extract Data', fn: preloadAllExtractData },
                 { name: 'Marker Notes', fn: loadMarkerNotes },
+                { name: 'Hidden Markers', fn: loadHiddenApiMarkers },
                 { name: 'Ammo Database', fn: loadAmmoData },
                 { name: 'Weapons Database', fn: loadWeaponsData },
                 { name: 'Gear Database', fn: loadGearData },
